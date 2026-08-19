@@ -249,7 +249,9 @@ export default async function OverviewPage() {
                       >
                         {event.type}
                       </Link>
-                      <Badge tone="danger">critical</Badge>
+                      <Badge tone={event.isCritical ? 'danger' : 'idle'}>
+                        {event.isCritical ? 'critical' : 'info'}
+                      </Badge>
                     </div>
                     <p className="mt-0.5 truncate font-mono text-[11px] text-[var(--color-fg-muted)]">
                       {event.chargePointId} · {formatRelative(event.timestamp)}

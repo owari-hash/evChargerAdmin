@@ -1,0 +1,140 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ---------------------------------------------------------------------------
+   Design tokens. Light palette on :root, dark overrides under .dark.
+   --------------------------------------------------------------------------- */
+@theme {
+  --color-bg: #f6f7f9;
+  --color-surface: #ffffff;
+  --color-surface-2: #f1f3f6;
+  --color-border: #e2e6ec;
+  --color-border-strong: #cbd2dc;
+
+  --color-fg: #0f1720;
+  --color-fg-muted: #5b6675;
+  --color-fg-subtle: #8a94a3;
+
+  --color-brand: #00a862;
+  --color-brand-fg: #ffffff;
+  --color-brand-soft: #e2f6ec;
+
+  --color-ok: #12855a;
+  --color-ok-soft: #dff5e9;
+  --color-warn: #a4690a;
+  --color-warn-soft: #fdf0d6;
+  --color-danger: #c62f3c;
+  --color-danger-soft: #fce5e7;
+  --color-info: #1f6feb;
+  --color-info-soft: #e3edfd;
+  --color-idle: #6b7686;
+  --color-idle-soft: #eceff3;
+
+  --font-sans: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --font-mono: ui-monospace, SFMono-Regular, 'SF Mono', Menlo, Consolas, 'Liberation Mono', monospace;
+
+  --radius-card: 0.75rem;
+}
+
+.dark {
+  --color-bg: #0b0f14;
+  --color-surface: #121821;
+  --color-surface-2: #19212c;
+  --color-border: #232d3a;
+  --color-border-strong: #33404f;
+
+  --color-fg: #e8edf3;
+  --color-fg-muted: #93a1b3;
+  --color-fg-subtle: #6a798d;
+
+  --color-brand: #21c982;
+  --color-brand-fg: #04120b;
+  --color-brand-soft: #10301f;
+
+  --color-ok: #3ddb92;
+  --color-ok-soft: #10301f;
+  --color-warn: #e8b04b;
+  --color-warn-soft: #33280e;
+  --color-danger: #ff6b78;
+  --color-danger-soft: #3a1a1e;
+  --color-info: #6aa8ff;
+  --color-info-soft: #142440;
+  --color-idle: #8b98aa;
+  --color-idle-soft: #1d2530;
+}
+
+@layer base {
+  * {
+    border-color: var(--color-border);
+  }
+
+  html {
+    color-scheme: light;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
+  body {
+    background-color: var(--color-bg);
+    color: var(--color-fg);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Tabular numbers everywhere numbers are compared down a column. */
+  table,
+  .tnum {
+    font-variant-numeric: tabular-nums;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: var(--color-border-strong);
+    border-radius: 9999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+
+  :focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+  }
+}
+
+@layer utilities {
+  .animate-in-fade {
+    animation: fade-in 0.18s ease-out both;
+  }
+  @keyframes fade-in {
+    from {
+      opacity: 0;
+      transform: translateY(2px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+
+  .pulse-dot {
+    animation: pulse-dot 1.8s ease-in-out infinite;
+  }
+  @keyframes pulse-dot {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.35;
+    }
+  }
+}

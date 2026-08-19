@@ -48,18 +48,18 @@ export function ChargePointsView({ canEdit }: { canEdit: boolean }) {
   return (
     <>
       <PageHeader
-        title="Charge points"
-        description="Every charge point known to the CSMS, with its live connection state."
+        title="Цэнэглэх станц"
+        description="CSMS-д бүртгэлтэй бүх цэнэглэх станц, тэдгээрийн холболтын байдал."
         actions={
           <>
-            <Button variant="ghost" size="sm" onClick={() => void mutate()} aria-label="Refresh">
+            <Button variant="ghost" size="sm" onClick={() => void mutate()} aria-label="Шинэчлэх">
               <RefreshCw className="h-3.5 w-3.5" />
-              Refresh
+              Шинэчлэх
             </Button>
             {canEdit ? (
               <Button variant="primary" size="sm" onClick={() => setCreating(true)}>
                 <Plus className="h-3.5 w-3.5" />
-                Register charge point
+                Станц бүртгэх
               </Button>
             ) : null}
           </>
@@ -72,7 +72,7 @@ export function ChargePointsView({ canEdit }: { canEdit: boolean }) {
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--color-fg-subtle)]" />
             <Input
               className="pl-8"
-              placeholder="Search by id, name, vendor or model…"
+              placeholder="Дугаар, нэр, үйлдвэрлэгч, загвараар хайх…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -84,11 +84,11 @@ export function ChargePointsView({ canEdit }: { canEdit: boolean }) {
               setOnline(e.target.value);
               setPage(1);
             }}
-            aria-label="Connection filter"
+            aria-label="Холболтын шүүлтүүр"
           >
-            <option value="">All states</option>
-            <option value="true">Online only</option>
-            <option value="false">Offline only</option>
+            <option value="">Бүх төлөв</option>
+            <option value="true">Зөвхөн онлайн</option>
+            <option value="false">Зөвхөн офлайн</option>
           </Select>
         </FilterBar>
 
@@ -96,23 +96,23 @@ export function ChargePointsView({ canEdit }: { canEdit: boolean }) {
           <Table>
             <THead>
               <tr>
-                <TH>Charge point</TH>
-                <TH>State</TH>
-                <TH>Connectors</TH>
-                <TH>Vendor / model</TH>
-                <TH>Firmware</TH>
-                <TH>Registration</TH>
-                <TH align="right">Last seen</TH>
+                <TH>Цэнэглэх станц</TH>
+                <TH>Холболт</TH>
+                <TH>Холбогч</TH>
+                <TH>Үйлдвэрлэгч / загвар</TH>
+                <TH>Программ</TH>
+                <TH>Бүртгэл</TH>
+                <TH align="right">Сүүлд холбогдсон</TH>
               </tr>
             </THead>
             <TBody>
               {isLoading && !data ? (
                 <TableLoading colSpan={7} />
               ) : error ? (
-                <TableEmpty colSpan={7}>Could not load charge points.</TableEmpty>
+                <TableEmpty colSpan={7}>Станцын мэдээлэл ачаалж чадсангүй.</TableEmpty>
               ) : rows.length === 0 ? (
                 <TableEmpty colSpan={7}>
-                  {debounced || online ? 'No charge points match these filters.' : 'No charge points registered yet.'}
+                  {debounced || online ? 'Энэ шүүлтүүрт тохирох станц алга.' : 'Одоогоор станц бүртгэгдээгүй байна.'}
                 </TableEmpty>
               ) : (
                 rows.map((cp) => (
@@ -136,13 +136,13 @@ export function ChargePointsView({ canEdit }: { canEdit: boolean }) {
                         {(cp.connectors ?? [])
                           .filter((c) => c.connectorId > 0)
                           .map((c) => (
-                            <span key={c.connectorId} title={`Connector ${c.connectorId}`}>
+                            <span key={c.connectorId} title={`${c.connectorId} дугаар холбогч`}>
                               <ConnectorStatusBadge status={c.status} />
                             </span>
                           ))}
                         {!(cp.connectors ?? []).some((c) => c.connectorId > 0) ? (
                           <span className="text-xs text-[var(--color-fg-subtle)]">
-                            None reported
+                            Мэдээлээгүй
                           </span>
                         ) : null}
                       </div>
@@ -178,19 +178,19 @@ export function ChargePointsView({ canEdit }: { canEdit: boolean }) {
               setLimit(n);
               setPage(1);
             }}
-            label="charge points"
+            label="станц"
           />
         ) : null}
 
         {!isLoading && !error && rows.length === 0 && !debounced && !online && canEdit ? (
           <EmptyState
             icon={<Zap className="h-8 w-8" />}
-            title="No charge points yet"
-            description="Register one here, or let it self-register on first connect if OCPP_ALLOW_ANONYMOUS is enabled."
+            title="Одоогоор станц алга"
+            description="Эндээс бүртгэх, эсвэл OCPP_ALLOW_ANONYMOUS идэвхтэй бол станц анх холбогдохдоо өөрөө бүртгэгдэнэ."
             action={
               <Button variant="primary" size="sm" onClick={() => setCreating(true)}>
                 <Plus className="h-3.5 w-3.5" />
-                Register charge point
+                Станц бүртгэх
               </Button>
             }
           />
@@ -199,7 +199,7 @@ export function ChargePointsView({ canEdit }: { canEdit: boolean }) {
 
       {data ? (
         <p className="mt-3 text-xs text-[var(--color-fg-subtle)]">
-          {formatNumber(data.total)} registered · refreshes every 15s
+          {formatNumber(data.total)} бүртгэлтэй · 15 секунд тутам шинэчилнэ
         </p>
       ) : null}
 

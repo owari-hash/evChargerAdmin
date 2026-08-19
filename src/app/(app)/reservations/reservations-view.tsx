@@ -13,6 +13,7 @@ import { Button, Card, EmptyState, Input, PageHeader, Select } from '@/component
 import { ReservationBadge } from '@/components/ui/status';
 import { ConfirmModal } from '@/components/ui/modal';
 import { FilterBar, Pagination } from '@/components/ui/pagination';
+import { RESERVATION_STATE, mn } from '@/lib/mn';
 import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty, TableLoading } from '@/components/ui/table';
 
 export function ReservationsView({ canOperate }: { canOperate: boolean }) {
@@ -50,9 +51,9 @@ export function ReservationsView({ canOperate }: { canOperate: boolean }) {
         { reservationId: cancelling.reservationId ?? cancelling.id },
       );
       if (res.status === 'Accepted') {
-        toast.success('Reservation cancelled');
+        toast.success('Захиалга цуцлагдлаа');
       } else {
-        toast.warning(`The charge point answered ${res.status ?? 'unknown'}.`);
+        toast.warning(`Станц ${res.status ?? 'тодорхойгүй'} гэж хариулав.`);
       }
       setCancelling(null);
       void mutate();
@@ -66,12 +67,12 @@ export function ReservationsView({ canOperate }: { canOperate: boolean }) {
   return (
     <>
       <PageHeader
-        title="Reservations"
-        description="Connector holds created with ReserveNow."
+        title="Захиалга"
+        description="ReserveNow командаар үүсгэсэн холбогчийн захиалга."
         actions={
           <Button variant="ghost" size="sm" onClick={() => void mutate()}>
             <RefreshCw className="h-3.5 w-3.5" />
-            Refresh
+            Шинэчлэх
           </Button>
         }
       />
@@ -85,18 +86,18 @@ export function ReservationsView({ canOperate }: { canOperate: boolean }) {
               setState(e.target.value);
               setPage(1);
             }}
-            aria-label="State"
+            aria-label="Төлөв"
           >
-            <option value="">All states</option>
+            <option value="">Бүх төлөв</option>
             {RESERVATION_STATES.map((s) => (
               <option key={s} value={s}>
-                {s}
+                {mn(RESERVATION_STATE, s)}
               </option>
             ))}
           </Select>
           <Input
             className="w-auto min-w-[180px]"
-            placeholder="Charge point id"
+            placeholder="Станцын дугаар"
             value={chargePointId}
             onChange={(e) => setChargePointId(e.target.value)}
           />
@@ -106,14 +107,14 @@ export function ReservationsView({ canOperate }: { canOperate: boolean }) {
           <Table>
             <THead>
               <tr>
-                <TH>Reservation</TH>
-                <TH>State</TH>
-                <TH>Charge point</TH>
-                <TH>Connector</TH>
-                <TH>Tag</TH>
-                <TH>Expires</TH>
-                <TH>Session</TH>
-                <TH align="right">Created</TH>
+                <TH>Захиалга</TH>
+                <TH>Төлөв</TH>
+                <TH>Цэнэглэх станц</TH>
+                <TH>Холбогч</TH>
+                <TH>Карт</TH>
+                <TH>Дуусах</TH>
+                <TH>Цэнэглэлт</TH>
+                <TH align="right">Үүсгэсэн</TH>
                 <TH align="right" />
               </tr>
             </THead>
@@ -121,9 +122,9 @@ export function ReservationsView({ canOperate }: { canOperate: boolean }) {
               {isLoading && !data ? (
                 <TableLoading colSpan={9} />
               ) : error ? (
-                <TableEmpty colSpan={9}>Could not load reservations.</TableEmpty>
+                <TableEmpty colSpan={9}>Захиалгыг ачаалж чадсангүй.</TableEmpty>
               ) : rows.length === 0 ? (
-                <TableEmpty colSpan={9}>No reservations match these filters.</TableEmpty>
+                <TableEmpty colSpan={9}>Энэ шүүлтүүрт тохирох захиалга алга.</TableEmpty>
               ) : (
                 rows.map((r) => {
                   const id = r.reservationId ?? r.id;
@@ -174,7 +175,7 @@ export function ReservationsView({ canOperate }: { canOperate: boolean }) {
                         {canOperate && r.state === 'Active' ? (
                           <Button variant="ghost" size="sm" onClick={() => setCancelling(r)}>
                             <XCircle className="h-3.5 w-3.5" />
-                            Cancel
+                            Цуцлах
                           </Button>
                         ) : null}
                       </TD>
@@ -196,15 +197,15 @@ export function ReservationsView({ canOperate }: { canOperate: boolean }) {
               setLimit(n);
               setPage(1);
             }}
-            label="reservations"
+            label="захиалга"
           />
         ) : null}
 
         {!isLoading && !error && rows.length === 0 && !state && !debouncedCp ? (
           <EmptyState
             icon={<CalendarClock className="h-8 w-8" />}
-            title="No reservations"
-            description="Create one from a charge point's command console with Reserve now."
+            title="Захиалга алга"
+            description="Станцын командын самбараас «Захиалга үүсгэх» командаар үүсгэнэ үү."
           />
         ) : null}
       </Card>
@@ -214,13 +215,13 @@ export function ReservationsView({ canOperate }: { canOperate: boolean }) {
         onClose={() => setCancelling(null)}
         onConfirm={() => void cancel()}
         loading={busy}
-        title="Cancel reservation?"
-        confirmLabel="Send CancelReservation"
+        title="Захиалгыг цуцлах уу?"
+        confirmLabel="CancelReservation илгээх"
         message={
           <>
-            Releases the hold on connector {cancelling?.connectorId} of{' '}
-            <span className="font-mono font-medium">{cancelling?.chargePointId}</span>. The connector
-            becomes available to any driver.
+            <span className="font-mono font-medium">{cancelling?.chargePointId}</span> станцын{' '}
+            {cancelling?.connectorId} дугаар холбогчийн захиалгыг чөлөөлнө. Холбогч бүх жолоочид
+            нээлттэй болно.
           </>
         }
       />

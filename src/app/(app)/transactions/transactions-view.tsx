@@ -17,6 +17,7 @@ import { TRANSACTION_STATUSES, type Paginated, type Transaction } from '@/lib/ty
 import { Button, Card, Input, PageHeader, Select } from '@/components/ui/primitives';
 import { TransactionStatusBadge } from '@/components/ui/status';
 import { FilterBar, Pagination } from '@/components/ui/pagination';
+import { TRANSACTION_STATUS, mn } from '@/lib/mn';
 import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty, TableLoading } from '@/components/ui/table';
 
 export function TransactionsView({
@@ -76,12 +77,12 @@ export function TransactionsView({
   return (
     <>
       <PageHeader
-        title="Charging sessions"
-        description="Every transaction recorded by the CSMS, newest first."
+        title="Цэнэглэлтүүд"
+        description="CSMS-д бүртгэгдсэн бүх цэнэглэлт, шинэ нь эхэндээ."
         actions={
           <Button variant="ghost" size="sm" onClick={() => void mutate()}>
             <RefreshCw className="h-3.5 w-3.5" />
-            Refresh
+            Шинэчлэх
           </Button>
         }
       />
@@ -95,24 +96,24 @@ export function TransactionsView({
               setStatus(e.target.value);
               setPage(1);
             }}
-            aria-label="Status"
+            aria-label="Төлөв"
           >
-            <option value="">All statuses</option>
+            <option value="">Бүх төлөв</option>
             {TRANSACTION_STATUSES.map((s) => (
               <option key={s} value={s}>
-                {s}
+                {mn(TRANSACTION_STATUS, s)}
               </option>
             ))}
           </Select>
           <Input
             className="w-auto min-w-[160px]"
-            placeholder="Charge point id"
+            placeholder="Станцын дугаар"
             value={chargePointId}
             onChange={(e) => setChargePointId(e.target.value)}
           />
           <Input
             className="w-auto min-w-[140px]"
-            placeholder="ID tag"
+            placeholder="RFID карт"
             value={idTag}
             onChange={(e) => setIdTag(e.target.value)}
           />
@@ -124,7 +125,7 @@ export function TransactionsView({
               setFrom(e.target.value);
               setPage(1);
             }}
-            aria-label="From date"
+            aria-label="Эхлэх огноо"
           />
           <Input
             className="w-auto"
@@ -134,7 +135,7 @@ export function TransactionsView({
               setTo(e.target.value);
               setPage(1);
             }}
-            aria-label="To date"
+            aria-label="Дуусах огноо"
           />
           {status || chargePointId || idTag || from || to ? (
             <Button
@@ -149,7 +150,7 @@ export function TransactionsView({
                 setPage(1);
               }}
             >
-              Clear
+              Цэвэрлэх
             </Button>
           ) : null}
         </FilterBar>
@@ -158,25 +159,25 @@ export function TransactionsView({
           <Table>
             <THead>
               <tr>
-                <TH>Session</TH>
-                <TH>Status</TH>
-                <TH>Charge point</TH>
-                <TH>Tag</TH>
-                <TH>Started</TH>
-                <TH align="right">Duration</TH>
-                <TH align="right">Energy</TH>
-                <TH align="right">Power</TH>
-                <TH align="right">Cost</TH>
-                <TH>Stop reason</TH>
+                <TH>Цэнэглэлт</TH>
+                <TH>Төлөв</TH>
+                <TH>Цэнэглэх станц</TH>
+                <TH>Карт</TH>
+                <TH>Эхэлсэн</TH>
+                <TH align="right">Үргэлжилсэн</TH>
+                <TH align="right">Эрчим хүч</TH>
+                <TH align="right">Чадал</TH>
+                <TH align="right">Төлбөр</TH>
+                <TH>Зогссон шалтгаан</TH>
               </tr>
             </THead>
             <TBody>
               {isLoading && !data ? (
                 <TableLoading colSpan={10} />
               ) : error ? (
-                <TableEmpty colSpan={10}>Could not load sessions.</TableEmpty>
+                <TableEmpty colSpan={10}>Цэнэглэлтийг ачаалж чадсангүй.</TableEmpty>
               ) : rows.length === 0 ? (
-                <TableEmpty colSpan={10}>No sessions match these filters.</TableEmpty>
+                <TableEmpty colSpan={10}>Энэ шүүлтүүрт тохирох цэнэглэлт алга.</TableEmpty>
               ) : (
                 rows.map((tx) => {
                   const id = tx.transactionId ?? tx.id;
@@ -243,7 +244,7 @@ export function TransactionsView({
               setLimit(n);
               setPage(1);
             }}
-            label="sessions"
+            label="цэнэглэлт"
           />
         ) : null}
       </Card>

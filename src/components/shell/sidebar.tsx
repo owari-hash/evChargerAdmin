@@ -6,6 +6,7 @@ import { X } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { brand } from '@/lib/config';
 import { visibleSections } from './nav-items';
+import { ROLE } from '@/lib/mn';
 import type { SessionUser } from '@/lib/types';
 import { Button } from '@/components/ui/primitives';
 
@@ -45,11 +46,11 @@ export function Sidebar({
             <div className="min-w-0 leading-tight">
               <div className="truncate text-sm font-semibold">{brand.name}</div>
               <div className="truncate text-[10px] text-[var(--color-fg-subtle)]">
-                OCPP 1.6J Console
+                OCPP 1.6J удирдлага
               </div>
             </div>
           </Link>
-          <Button variant="ghost" size="icon" className="lg:hidden" onClick={onClose} aria-label="Close menu">
+          <Button variant="ghost" size="icon" className="lg:hidden" onClick={onClose} aria-label="Цэс хаах">
             <X className="h-4 w-4" />
           </Button>
         </div>
@@ -93,7 +94,7 @@ export function Sidebar({
         <div className="shrink-0 border-t border-[var(--color-border)] px-4 py-3">
           <p className="truncate text-xs font-medium">{user.email}</p>
           <p className="text-[10px] uppercase tracking-wide text-[var(--color-fg-subtle)]">
-            {user.role}
+            {ROLE[user.role] ?? user.role}
           </p>
         </div>
       </aside>

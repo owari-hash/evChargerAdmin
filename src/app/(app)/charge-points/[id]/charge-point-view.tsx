@@ -65,23 +65,23 @@ export function ChargePointView({
   const connectors = (detail.connectors ?? []).filter((c) => c.connectorId > 0);
 
   const tabs: TabItem[] = [
-    { key: 'overview', label: 'Overview' },
-    { key: 'connectors', label: 'Connectors', badge: <TabCount>{connectors.length}</TabCount> },
+    { key: 'overview', label: 'Тойм' },
+    { key: 'connectors', label: 'Холбогч', badge: <TabCount>{connectors.length}</TabCount> },
     {
       key: 'configuration',
-      label: 'Configuration',
+      label: 'Тохиргоо',
       badge: <TabCount>{detail.configuration?.length ?? 0}</TabCount>,
     },
-    { key: 'commands', label: 'Commands' },
-    { key: 'command-log', label: 'Command log' },
-    { key: 'messages', label: 'OCPP messages' },
+    { key: 'commands', label: 'Команд' },
+    { key: 'command-log', label: 'Командын түүх' },
+    { key: 'messages', label: 'OCPP мессеж' },
   ];
 
   async function disconnect() {
     setBusy(true);
     try {
       await api.post(`charge-points/${encodeURIComponent(detail.id)}/disconnect`);
-      toast.success('WebSocket closed. The charge point should reconnect shortly.');
+      toast.success('WebSocket холболт хаагдлаа. Станц удахгүй дахин холбогдоно.');
       router.refresh();
     } catch (err) {
       toast.error(errorMessage(err));
@@ -110,7 +110,7 @@ export function ChargePointView({
     setBusy(true);
     try {
       await api.del(`charge-points/${encodeURIComponent(detail.id)}`);
-      toast.success(`${detail.id} deleted`);
+      toast.success(`${detail.id} устгагдлаа`);
       router.replace('/charge-points');
     } catch (err) {
       toast.error(errorMessage(err));
@@ -125,7 +125,7 @@ export function ChargePointView({
         className="mb-3 inline-flex items-center gap-1.5 text-xs text-[var(--color-fg-muted)] hover:text-[var(--color-brand)]"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
-        All charge points
+        Бүх цэнэглэх станц
       </Link>
 
       <PageHeader
@@ -134,7 +134,7 @@ export function ChargePointView({
             <span className="font-mono">{detail.id}</span>
             <OnlineBadge online={detail.isOnline} />
             <RegistrationBadge status={detail.registrationStatus} />
-            <Badge tone="idle">Profile {detail.securityProfile}</Badge>
+            <Badge tone="idle">{detail.securityProfile}-р профайл</Badge>
           </span>
         }
         description={
@@ -146,30 +146,30 @@ export function ChargePointView({
                 {detail.address}
               </span>
             ) : null}
-            <span>Last seen {formatRelative(detail.lastSeenAt)}</span>
+            <span>Сүүлд холбогдсон {formatRelative(detail.lastSeenAt)}</span>
           </span>
         }
         actions={
           <>
             <Button variant="ghost" size="sm" onClick={() => router.refresh()}>
               <RefreshCw className="h-3.5 w-3.5" />
-              Refresh
+              Шинэчлэх
             </Button>
             {canOperate && detail.isOnline ? (
               <Button variant="secondary" size="sm" onClick={() => void disconnect()} loading={busy}>
                 <Unplug className="h-3.5 w-3.5" />
-                Force reconnect
+                Дахин холбуулах
               </Button>
             ) : null}
             {canAdmin ? (
               <>
                 <Button variant="secondary" size="sm" onClick={() => setConfirmRotate(true)}>
                   <KeyRound className="h-3.5 w-3.5" />
-                  Rotate key
+                  Түлхүүр шинэчлэх
                 </Button>
                 <Button variant="danger" size="sm" onClick={() => setConfirmDelete(true)}>
                   <Trash2 className="h-3.5 w-3.5" />
-                  Delete
+                  Устгах
                 </Button>
               </>
             ) : null}
@@ -208,16 +208,16 @@ export function ChargePointView({
         onClose={() => setConfirmDelete(false)}
         onConfirm={() => void remove()}
         loading={busy}
-        title="Delete charge point?"
-        confirmLabel="Delete permanently"
+        title="Станцыг устгах уу?"
+        confirmLabel="Бүрмөсөн устгах"
         message={
           <>
             <span className="block">
-              This removes <span className="font-mono font-medium">{detail.id}</span>, its
-              connectors and its cached configuration, and closes the WebSocket.
+              Энэ үйлдэл <span className="font-mono font-medium">{detail.id}</span> станц, түүний
+              холбогч болон хадгалагдсан тохиргоог устгаж, WebSocket холболтыг хаана.
             </span>
             <span className="mt-2 block">
-              Sessions and meter values are kept for reporting. This cannot be undone.
+              Цэнэглэлт болон тоолуурын утга тайланд үлдэнэ. Үйлдлийг буцаах боломжгүй.
             </span>
           </>
         }
@@ -229,16 +229,16 @@ export function ChargePointView({
         onConfirm={() => void rotateKey()}
         loading={busy}
         tone="primary"
-        title="Rotate AuthorizationKey?"
-        confirmLabel="Generate new key"
+        title="AuthorizationKey шинэчлэх үү?"
+        confirmLabel="Шинэ түлхүүр үүсгэх"
         message={
           <>
             <span className="block">
-              A new key is generated and pushed to the charge point with
-              ChangeConfiguration. It will reconnect using the new credentials.
+              Шинэ түлхүүр үүсгэж ChangeConfiguration командаар станц руу илгээнэ. Станц шинэ
+              нэвтрэх мэдээллээр дахин холбогдоно.
             </span>
             <span className="mt-2 block">
-              If the charge point is offline the push fails and you must set the key manually.
+              Хэрэв станц офлайн байвал илгээлт амжилтгүй болох тул түлхүүрийг гараар оруулна.
             </span>
           </>
         }
@@ -247,11 +247,11 @@ export function ChargePointView({
       <Modal
         open={rotatedKey !== null}
         onClose={() => setRotatedKey(null)}
-        title="New AuthorizationKey"
-        description="Shown once — it is stored hashed."
+        title="Шинэ AuthorizationKey"
+        description="Ганц удаа харагдана — хэшлэгдэж хадгалагдана."
         footer={
           <Button variant="primary" onClick={() => setRotatedKey(null)}>
-            I have saved it
+            Хадгаллаа
           </Button>
         }
       >
@@ -259,7 +259,7 @@ export function ChargePointView({
           <code className="flex-1 overflow-x-auto rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 font-mono text-xs">
             {rotatedKey}
           </code>
-          <CopyButton value={rotatedKey ?? ''} variant="secondary" label="Copy" />
+          <CopyButton value={rotatedKey ?? ''} variant="secondary" label="Хуулах" />
         </div>
       </Modal>
     </>
@@ -276,25 +276,25 @@ function OverviewTab({ detail }: { detail: ChargePointDetail }) {
       <div className="space-y-4 xl:col-span-2">
         <Card>
           <CardHeader
-            title="Active sessions"
-            description={`${formatNumber(active.length)} in progress on this charge point`}
+            title="Идэвхтэй цэнэглэлт"
+            description={`Энэ станц дээр ${formatNumber(active.length)} цэнэглэлт үргэлжилж байна`}
           />
           <TableWrap>
             <Table>
               <THead>
                 <tr>
-                  <TH>Session</TH>
-                  <TH>Connector</TH>
-                  <TH>Tag</TH>
-                  <TH align="right">Energy</TH>
-                  <TH align="right">Power</TH>
-                  <TH align="right">SoC</TH>
-                  <TH align="right">Duration</TH>
+                  <TH>Цэнэглэлт</TH>
+                  <TH>Холбогч</TH>
+                  <TH>Карт</TH>
+                  <TH align="right">Эрчим хүч</TH>
+                  <TH align="right">Чадал</TH>
+                  <TH align="right">Цэнэг</TH>
+                  <TH align="right">Үргэлжилсэн</TH>
                 </tr>
               </THead>
               <TBody>
                 {active.length === 0 ? (
-                  <TableEmpty colSpan={7}>Nothing charging right now.</TableEmpty>
+                  <TableEmpty colSpan={7}>Одоогоор цэнэглэж буй зүйл алга.</TableEmpty>
                 ) : (
                   active.map((tx) => (
                     <TR key={tx.transactionId ?? tx.id}>
@@ -330,18 +330,18 @@ function OverviewTab({ detail }: { detail: ChargePointDetail }) {
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Card>
-            <CardHeader title="Hardware" />
+            <CardHeader title="Тоног төхөөрөмж" />
             <dl className="divide-y divide-[var(--color-border)] px-5 py-2">
-              <DataRow label="Vendor">{detail.chargePointVendor ?? '—'}</DataRow>
-              <DataRow label="Model">{detail.chargePointModel ?? '—'}</DataRow>
-              <DataRow label="Firmware" mono>
+              <DataRow label="Үйлдвэрлэгч">{detail.chargePointVendor ?? '—'}</DataRow>
+              <DataRow label="Загвар">{detail.chargePointModel ?? '—'}</DataRow>
+              <DataRow label="Программ" mono>
                 {detail.firmwareVersion ?? '—'}
               </DataRow>
-              <DataRow label="Serial" mono>
+              <DataRow label="Сериал дугаар" mono>
                 {detail.chargePointSerialNumber ?? detail.chargeBoxSerialNumber ?? '—'}
               </DataRow>
-              <DataRow label="Meter type">{detail.meterType ?? '—'}</DataRow>
-              <DataRow label="Meter serial" mono>
+              <DataRow label="Тоолуурын төрөл">{detail.meterType ?? '—'}</DataRow>
+              <DataRow label="Тоолуурын сериал" mono>
                 {detail.meterSerialNumber ?? '—'}
               </DataRow>
               <DataRow label="ICCID" mono>
@@ -354,41 +354,41 @@ function OverviewTab({ detail }: { detail: ChargePointDetail }) {
           </Card>
 
           <Card>
-            <CardHeader title="Connection" />
+            <CardHeader title="Холболт" />
             <dl className="divide-y divide-[var(--color-border)] px-5 py-2">
-              <DataRow label="State">
+              <DataRow label="Төлөв">
                 <OnlineBadge online={detail.isOnline} />
               </DataRow>
-              <DataRow label="Protocol" mono>
+              <DataRow label="Протокол" mono>
                 {detail.ocppProtocol ?? 'ocpp1.6'}
               </DataRow>
-              <DataRow label="Security profile">{detail.securityProfile}</DataRow>
-              <DataRow label="Remote address" mono>
+              <DataRow label="Аюулгүй байдлын профайл">{detail.securityProfile}</DataRow>
+              <DataRow label="Алсын хаяг" mono>
                 {detail.remoteAddress ?? '—'}
               </DataRow>
-              <DataRow label="Heartbeat">{detail.heartbeatInterval}s</DataRow>
-              <DataRow label="Last heartbeat">{formatRelative(detail.lastHeartbeatAt)}</DataRow>
-              <DataRow label="Last boot">{formatDateTime(detail.lastBootAt)}</DataRow>
-              <DataRow label="Disconnected at">{formatDateTime(detail.disconnectedAt)}</DataRow>
+              <DataRow label="Амьд дохио">{detail.heartbeatInterval} сек</DataRow>
+              <DataRow label="Сүүлийн амьд дохио">{formatRelative(detail.lastHeartbeatAt)}</DataRow>
+              <DataRow label="Сүүлд асаалт">{formatDateTime(detail.lastBootAt)}</DataRow>
+              <DataRow label="Салсан хугацаа">{formatDateTime(detail.disconnectedAt)}</DataRow>
             </dl>
           </Card>
         </div>
 
         <Card>
-          <CardHeader title="Site" />
+          <CardHeader title="Байршил" />
           <dl className="divide-y divide-[var(--color-border)] px-5 py-2">
-            <DataRow label="Name">{detail.name ?? '—'}</DataRow>
-            <DataRow label="Description">{detail.description ?? '—'}</DataRow>
-            <DataRow label="Address">{detail.address ?? '—'}</DataRow>
-            <DataRow label="Coordinates" mono>
+            <DataRow label="Нэр">{detail.name ?? '—'}</DataRow>
+            <DataRow label="Тайлбар">{detail.description ?? '—'}</DataRow>
+            <DataRow label="Хаяг">{detail.address ?? '—'}</DataRow>
+            <DataRow label="Солбицол" mono>
               {detail.latitude != null && detail.longitude != null
                 ? `${detail.latitude}, ${detail.longitude}`
                 : '—'}
             </DataRow>
-            <DataRow label="Tariff">
+            <DataRow label="Тариф">
               {detail.tariffPerKwh != null ? `${formatMoney(detail.tariffPerKwh)} / kWh` : 'Free'}
             </DataRow>
-            <DataRow label="Tags">
+            <DataRow label="Шошго">
               {detail.tags?.length ? (
                 <span className="flex flex-wrap justify-end gap-1">
                   {detail.tags.map((t) => (
@@ -401,13 +401,13 @@ function OverviewTab({ detail }: { detail: ChargePointDetail }) {
                 '—'
               )}
             </DataRow>
-            <DataRow label="Registered">{formatDateTime(detail.createdAt)}</DataRow>
+            <DataRow label="Бүртгэсэн">{formatDateTime(detail.createdAt)}</DataRow>
           </dl>
         </Card>
       </div>
 
       <Card className="flex flex-col">
-        <CardHeader title="Live activity" description="Events from this charge point" />
+        <CardHeader title="Шууд үйл ажиллагаа" description="Энэ станцаас ирж буй үйл явдал" />
         <LiveFeed
           chargePointId={detail.id}
           height="h-[560px]"
@@ -427,8 +427,8 @@ function ConnectorsTab({ detail }: { detail: ChargePointDetail }) {
       <Card>
         <EmptyState
           icon={<PlugZap className="h-8 w-8" />}
-          title="No connectors reported"
-          description="Connectors appear once the charge point sends its first StatusNotification."
+          title="Холбогч мэдээлээгүй байна"
+          description="Станц эхний StatusNotification илгээмэгц холбогчид харагдана."
         />
       </Card>
     );
@@ -443,9 +443,9 @@ function ConnectorsTab({ detail }: { detail: ChargePointDetail }) {
             <Card key={c.connectorId} className="p-4">
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <p className="text-sm font-semibold">Connector {c.connectorId}</p>
+                  <p className="text-sm font-semibold">{c.connectorId} дугаар холбогч</p>
                   <p className="mt-0.5 text-xs text-[var(--color-fg-muted)]">
-                    {c.availability}
+                    {c.availability === 'Operative' ? 'Ажиллагаатай' : 'Ажиллагаагүй'}
                     {c.info ? ` · ${c.info}` : ''}
                   </p>
                 </div>
@@ -453,10 +453,10 @@ function ConnectorsTab({ detail }: { detail: ChargePointDetail }) {
               </div>
 
               <dl className="mt-3 space-y-0 border-t border-[var(--color-border)] pt-2">
-                <DataRow label="Error">
+                <DataRow label="Алдаа">
                   <ErrorCodeBadge code={c.errorCode} />
                 </DataRow>
-                <DataRow label="Session">
+                <DataRow label="Цэнэглэлт">
                   {c.currentTransactionId ? (
                     <Link
                       href={`/transactions/${c.currentTransactionId}`}
@@ -468,12 +468,12 @@ function ConnectorsTab({ detail }: { detail: ChargePointDetail }) {
                     '—'
                   )}
                 </DataRow>
-                <DataRow label="Meter">{formatWh(c.lastMeterWh)}</DataRow>
-                <DataRow label="Power">{formatPower(c.lastPowerW)}</DataRow>
-                <DataRow label="SoC">
+                <DataRow label="Тоолуур">{formatWh(c.lastMeterWh)}</DataRow>
+                <DataRow label="Чадал">{formatPower(c.lastPowerW)}</DataRow>
+                <DataRow label="Цэнэг">
                   {c.lastSocPercent != null ? `${c.lastSocPercent}%` : '—'}
                 </DataRow>
-                <DataRow label="Updated">{formatRelative(c.statusTimestamp ?? c.updatedAt)}</DataRow>
+                <DataRow label="Шинэчлэгдсэн">{formatRelative(c.statusTimestamp ?? c.updatedAt)}</DataRow>
               </dl>
             </Card>
           ))}
@@ -481,21 +481,21 @@ function ConnectorsTab({ detail }: { detail: ChargePointDetail }) {
 
       <Card>
         <CardHeader
-          title="All connectors"
-          description="Connector 0 represents the charge point as a whole."
+          title="Бүх холбогч"
+          description="0 дугаар холбогч нь станцыг бүхэлд нь илэрхийлнэ."
         />
         <TableWrap>
           <Table>
             <THead>
               <tr>
                 <TH>#</TH>
-                <TH>Status</TH>
-                <TH>Error</TH>
-                <TH>Availability</TH>
-                <TH>Session</TH>
-                <TH align="right">Meter</TH>
-                <TH align="right">Power</TH>
-                <TH align="right">Updated</TH>
+                <TH>Төлөв</TH>
+                <TH>Алдаа</TH>
+                <TH>Ашиглалт</TH>
+                <TH>Цэнэглэлт</TH>
+                <TH align="right">Тоолуур</TH>
+                <TH align="right">Чадал</TH>
+                <TH align="right">Шинэчлэгдсэн</TH>
               </tr>
             </THead>
             <TBody>
@@ -508,7 +508,9 @@ function ConnectorsTab({ detail }: { detail: ChargePointDetail }) {
                   <TD>
                     <ErrorCodeBadge code={c.errorCode} />
                   </TD>
-                  <TD className="text-xs">{c.availability}</TD>
+                  <TD className="text-xs">
+                    {c.availability === 'Operative' ? 'Ажиллагаатай' : 'Ажиллагаагүй'}
+                  </TD>
                   <TD className="text-xs">
                     {c.currentTransactionId ? (
                       <Link

@@ -9,6 +9,7 @@ import { formatNumber, formatPower, formatRelative, formatWh } from '@/lib/forma
 import { CONNECTOR_STATUSES, type Connector, type Paginated } from '@/lib/types';
 import { Badge, Button, Card, Input, PageHeader, Select } from '@/components/ui/primitives';
 import { ConnectorStatusBadge, ErrorCodeBadge, connectorTone } from '@/components/ui/status';
+import { CONNECTOR_STATUS, mn } from '@/lib/mn';
 import { FilterBar, Pagination } from '@/components/ui/pagination';
 import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty, TableLoading } from '@/components/ui/table';
 
@@ -56,12 +57,12 @@ export function ConnectorsView({
   return (
     <>
       <PageHeader
-        title="Connectors"
-        description="Live status of every connector across the network."
+        title="Холбогч"
+        description="Сүлжээн дэх бүх холбогчийн шууд төлөв."
         actions={
           <Button variant="ghost" size="sm" onClick={() => void mutate()}>
             <RefreshCw className="h-3.5 w-3.5" />
-            Refresh
+            Шинэчлэх
           </Button>
         }
       />
@@ -83,7 +84,7 @@ export function ConnectorsView({
               }`}
             >
               <span className="flex items-center gap-2">
-                <Badge tone={connectorTone(s)}>{s}</Badge>
+                <Badge tone={connectorTone(s)}>{mn(CONNECTOR_STATUS, s)}</Badge>
                 <span className="font-semibold tnum">{formatNumber(n)}</span>
               </span>
             </button>
@@ -100,18 +101,18 @@ export function ConnectorsView({
               setStatus(e.target.value);
               setPage(1);
             }}
-            aria-label="Status"
+            aria-label="Төлөв"
           >
-            <option value="">All statuses</option>
+            <option value="">Бүх төлөв</option>
             {CONNECTOR_STATUSES.map((s) => (
               <option key={s} value={s}>
-                {s}
+                {mn(CONNECTOR_STATUS, s)}
               </option>
             ))}
           </Select>
           <Input
             className="w-auto min-w-[180px]"
-            placeholder="Charge point id"
+            placeholder="Станцын дугаар"
             value={chargePointId}
             onChange={(e) => setChargePointId(e.target.value)}
           />
@@ -122,7 +123,7 @@ export function ConnectorsView({
               checked={includeZero}
               onChange={(e) => setIncludeZero(e.target.checked)}
             />
-            Show connector 0
+            0 дугаар холбогчийг харуулах
           </label>
         </FilterBar>
 
@@ -130,25 +131,25 @@ export function ConnectorsView({
           <Table>
             <THead>
               <tr>
-                <TH>Charge point</TH>
+                <TH>Цэнэглэх станц</TH>
                 <TH>#</TH>
-                <TH>Status</TH>
-                <TH>Error</TH>
-                <TH>Availability</TH>
-                <TH>Session</TH>
-                <TH align="right">Meter</TH>
-                <TH align="right">Power</TH>
-                <TH align="right">SoC</TH>
-                <TH align="right">Updated</TH>
+                <TH>Төлөв</TH>
+                <TH>Алдаа</TH>
+                <TH>Ашиглалт</TH>
+                <TH>Цэнэглэлт</TH>
+                <TH align="right">Тоолуур</TH>
+                <TH align="right">Чадал</TH>
+                <TH align="right">Цэнэг</TH>
+                <TH align="right">Шинэчлэгдсэн</TH>
               </tr>
             </THead>
             <TBody>
               {isLoading && !data ? (
                 <TableLoading colSpan={10} />
               ) : error ? (
-                <TableEmpty colSpan={10}>Could not load connectors.</TableEmpty>
+                <TableEmpty colSpan={10}>Холбогчийн мэдээлэл ачаалж чадсангүй.</TableEmpty>
               ) : rows.length === 0 ? (
-                <TableEmpty colSpan={10}>No connectors match these filters.</TableEmpty>
+                <TableEmpty colSpan={10}>Энэ шүүлтүүрт тохирох холбогч алга.</TableEmpty>
               ) : (
                 rows.map((c) => (
                   <TR key={`${c.chargePointId}-${c.connectorId}`}>
@@ -167,7 +168,9 @@ export function ConnectorsView({
                     <TD>
                       <ErrorCodeBadge code={c.errorCode} />
                     </TD>
-                    <TD className="text-xs">{c.availability}</TD>
+                    <TD className="text-xs">
+                      {c.availability === 'Operative' ? 'Ажиллагаатай' : 'Ажиллагаагүй'}
+                    </TD>
                     <TD className="text-xs">
                       {c.currentTransactionId ? (
                         <Link
@@ -209,7 +212,7 @@ export function ConnectorsView({
               setLimit(n);
               setPage(1);
             }}
-            label="connectors"
+            label="холбогч"
           />
         ) : null}
       </Card>

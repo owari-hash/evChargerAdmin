@@ -46,8 +46,8 @@ export function MessagesTab({ chargePointId }: { chargePointId: string }) {
   return (
     <Card>
       <CardHeader
-        title="OCPP message log"
-        description="Every frame exchanged with this charge point, newest first."
+        title="OCPP мессежийн лог"
+        description="Энэ станцтай солилцсон бүх мессеж, шинэ нь эхэндээ."
         actions={
           <>
             <Button
@@ -55,7 +55,7 @@ export function MessagesTab({ chargePointId }: { chargePointId: string }) {
               size="sm"
               onClick={() => setAutoRefresh((v) => !v)}
             >
-              {autoRefresh ? 'Auto-refresh on' : 'Auto-refresh off'}
+              {autoRefresh ? 'Автомат шинэчлэлт асаалттай' : 'Автомат шинэчлэлт унтраалттай'}
             </Button>
             <Button variant="ghost" size="sm" onClick={() => void mutate()}>
               <RefreshCw className="h-3.5 w-3.5" />
@@ -67,7 +67,7 @@ export function MessagesTab({ chargePointId }: { chargePointId: string }) {
       <FilterBar>
         <Input
           className="min-w-[200px] flex-1"
-          placeholder="Filter by action, e.g. StatusNotification"
+          placeholder="Үйлдлээр шүүх, жишээ нь StatusNotification"
           value={action}
           onChange={(e) => setAction(e.target.value)}
         />
@@ -78,7 +78,7 @@ export function MessagesTab({ chargePointId }: { chargePointId: string }) {
             setDirection(e.target.value);
             setPage(1);
           }}
-          aria-label="Direction"
+          aria-label="Чиглэл"
         >
           <option value="">Both directions</option>
           <option value="IN">Inbound (from charge point)</option>
@@ -90,11 +90,11 @@ export function MessagesTab({ chargePointId }: { chargePointId: string }) {
         <Table>
           <THead>
             <tr>
-              <TH>Time</TH>
-              <TH>Dir</TH>
-              <TH>Type</TH>
-              <TH>Action</TH>
-              <TH>Message id</TH>
+              <TH>Хугацаа</TH>
+              <TH>Чиглэл</TH>
+              <TH>Төрөл</TH>
+              <TH>Үйлдэл</TH>
+              <TH>Мессежийн дугаар</TH>
               <TH align="right" />
             </tr>
           </THead>
@@ -102,10 +102,10 @@ export function MessagesTab({ chargePointId }: { chargePointId: string }) {
             {isLoading && !data ? (
               <TableLoading colSpan={6} />
             ) : error ? (
-              <TableEmpty colSpan={6}>Could not load messages.</TableEmpty>
+              <TableEmpty colSpan={6}>Мессежийг ачаалж чадсангүй.</TableEmpty>
             ) : rows.length === 0 ? (
               <TableEmpty colSpan={6}>
-                No messages logged. Set OCPP_LOG_MESSAGES=true on the backend to record frames.
+                Лог бүртгэгдээгүй байна. Мессеж хадгалахын тулд backend дээр OCPP_LOG_MESSAGES=true болгоно уу.
               </TableEmpty>
             ) : (
               rows.map((msg) => {
@@ -146,7 +146,7 @@ export function MessagesTab({ chargePointId }: { chargePointId: string }) {
                         {msg.messageId}
                       </TD>
                       <TD align="right" className="text-xs text-[var(--color-brand)]">
-                        {isOpen ? 'Hide' : 'Payload'}
+                        {isOpen ? 'Хураах' : 'Агуулга'}
                       </TD>
                     </TR>
                     {isOpen ? (

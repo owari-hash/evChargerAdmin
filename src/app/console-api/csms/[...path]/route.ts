@@ -24,12 +24,12 @@ async function handler(req: NextRequest, ctx: Ctx): Promise<NextResponse> {
   const { path } = await ctx.params;
 
   if (!path?.length || path.some((s) => s === '..' || s === '.')) {
-    return NextResponse.json({ error: 'Invalid path' }, { status: 400 });
+    return NextResponse.json({ error: 'Буруу зам' }, { status: 400 });
   }
 
   const token = await getSessionToken();
   if (!token && !serverConfig.apiKey) {
-    return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    return NextResponse.json({ error: 'Нэвтрээгүй байна' }, { status: 401 });
   }
 
   // `/console-api/csms/charge-points` -> `<backend><apiBasePath>/charge-points`
@@ -63,7 +63,7 @@ async function handler(req: NextRequest, ctx: Ctx): Promise<NextResponse> {
   } catch (err) {
     return NextResponse.json(
       {
-        error: 'Cannot reach the CSMS backend',
+        error: 'CSMS сервертэй холбогдож чадсангүй',
         details: err instanceof Error ? err.message : String(err),
       },
       { status: 502 },

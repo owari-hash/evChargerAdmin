@@ -58,7 +58,7 @@ async function request<T>(method: string, url: string, body?: unknown): Promise<
       // eslint-disable-next-line @next/next/no-location-assign-relative-destination
       window.location.href = `/login?next=${next}&expired=1`;
     }
-    throw new ClientApiError(401, payload?.error ?? 'Session expired');
+    throw new ClientApiError(401, payload?.error ?? 'Нэвтрэлтийн хугацаа дууслаа');
   }
 
   if (!res.ok) {

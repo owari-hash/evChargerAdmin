@@ -9,6 +9,7 @@ import { formatDateTime, formatRelative } from '@/lib/format';
 import { USER_ROLES, type User, type UserRole } from '@/lib/types';
 import { Badge, Button, Card, ErrorNote, Field, Input, PageHeader, Select } from '@/components/ui/primitives';
 import { RoleBadge } from '@/components/ui/status';
+import { ROLE, mn } from '@/lib/mn';
 import { ConfirmModal, Modal } from '@/components/ui/modal';
 import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty, TableLoading } from '@/components/ui/table';
 
@@ -26,7 +27,7 @@ export function UsersView({ currentUserId }: { currentUserId: string }) {
     setBusy(true);
     try {
       await api.del(`auth/users/${encodeURIComponent(deleting.id)}`);
-      toast.success(`${deleting.email} deleted`);
+      toast.success(`${deleting.email} устгагдлаа`);
       setDeleting(null);
       void mutate();
     } catch (err) {
@@ -39,17 +40,17 @@ export function UsersView({ currentUserId }: { currentUserId: string }) {
   return (
     <>
       <PageHeader
-        title="Users"
-        description="Console accounts. Roles are enforced by the CSMS on every request."
+        title="Хэрэглэгчид"
+        description="Удирдлагын самбарын бүртгэлүүд. Эрхийг CSMS хүсэлт бүр дээр шалгана."
         actions={
           <>
             <Button variant="ghost" size="sm" onClick={() => void mutate()}>
               <RefreshCw className="h-3.5 w-3.5" />
-              Refresh
+              Шинэчлэх
             </Button>
             <Button variant="primary" size="sm" onClick={() => setCreating(true)}>
               <Plus className="h-3.5 w-3.5" />
-              New user
+              Шинэ хэрэглэгч
             </Button>
           </>
         }
@@ -60,12 +61,12 @@ export function UsersView({ currentUserId }: { currentUserId: string }) {
           <Table>
             <THead>
               <tr>
-                <TH>Email</TH>
-                <TH>Name</TH>
-                <TH>Role</TH>
-                <TH>State</TH>
-                <TH>Last sign-in</TH>
-                <TH align="right">Created</TH>
+                <TH>И-мэйл</TH>
+                <TH>Нэр</TH>
+                <TH>Эрх</TH>
+                <TH>Төлөв</TH>
+                <TH>Сүүлд нэвтэрсэн</TH>
+                <TH align="right">Үүсгэсэн</TH>
                 <TH align="right" />
               </tr>
             </THead>
@@ -73,9 +74,9 @@ export function UsersView({ currentUserId }: { currentUserId: string }) {
               {isLoading && !data ? (
                 <TableLoading colSpan={7} />
               ) : error ? (
-                <TableEmpty colSpan={7}>Could not load users.</TableEmpty>
+                <TableEmpty colSpan={7}>Хэрэглэгчдийг ачаалж чадсангүй.</TableEmpty>
               ) : users.length === 0 ? (
-                <TableEmpty colSpan={7}>No users found.</TableEmpty>
+                <TableEmpty colSpan={7}>Хэрэглэгч олдсонгүй.</TableEmpty>
               ) : (
                 users.map((user) => {
                   const isSelf = user.id === currentUserId;
@@ -95,11 +96,11 @@ export function UsersView({ currentUserId }: { currentUserId: string }) {
                       </TD>
                       <TD>
                         <Badge tone={user.isActive ? 'ok' : 'idle'}>
-                          {user.isActive ? 'Active' : 'Disabled'}
+                          {user.isActive ? 'Идэвхтэй' : 'Идэвхгүй'}
                         </Badge>
                       </TD>
                       <TD className="whitespace-nowrap text-xs text-[var(--color-fg-muted)]">
-                        {user.lastLoginAt ? formatRelative(user.lastLoginAt) : 'Never'}
+                        {user.lastLoginAt ? formatRelative(user.lastLoginAt) : 'Хэзээ ч үгүй'}
                       </TD>
                       <TD align="right" className="text-xs text-[var(--color-fg-muted)]">
                         {formatDateTime(user.createdAt)}
@@ -110,7 +111,7 @@ export function UsersView({ currentUserId }: { currentUserId: string }) {
                             variant="ghost"
                             size="icon"
                             onClick={() => setEditing(user)}
-                            title="Edit"
+                            title="Засах"
                           >
                             <Pencil className="h-3.5 w-3.5" />
                           </Button>
@@ -118,7 +119,7 @@ export function UsersView({ currentUserId }: { currentUserId: string }) {
                             variant="ghost"
                             size="icon"
                             onClick={() => setDeleting(user)}
-                            title={isSelf ? 'You cannot delete your own account' : 'Delete'}
+                            title={isSelf ? 'Өөрийн бүртгэлээ устгах боломжгүй' : 'Устгах'}
                             disabled={isSelf}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
@@ -156,8 +157,8 @@ export function UsersView({ currentUserId }: { currentUserId: string }) {
         onClose={() => setDeleting(null)}
         onConfirm={() => void remove()}
         loading={busy}
-        title="Delete user?"
-        confirmLabel="Delete"
+        title="Хэрэглэгчийг устгах уу?"
+        confirmLabel="Устгах"
         message={
           <>
             <span className="font-medium">{deleting?.email}</span> loses access immediately. Any
@@ -206,7 +207,7 @@ function UserModal({
         };
         if (form.password) body.password = form.password;
         await api.patch(`auth/users/${encodeURIComponent(user.id)}`, body);
-        toast.success(`${user.email} updated`);
+        toast.success(`${user.email} шинэчлэгдлээ`);
       } else {
         await api.post('auth/users', {
           email: form.email.trim(),
@@ -214,7 +215,7 @@ function UserModal({
           name: form.name.trim() || undefined,
           role: form.role,
         });
-        toast.success(`${form.email.trim()} created`);
+        toast.success(`${form.email.trim()} үүслээ`);
       }
       onSaved();
       onClose();
@@ -233,16 +234,16 @@ function UserModal({
     <Modal
       open={open}
       onClose={onClose}
-      title={isEdit ? 'Edit user' : 'New user'}
-      description={isEdit ? user.email : 'They sign in with this email and password.'}
+      title={isEdit ? 'Хэрэглэгч засах' : 'Шинэ хэрэглэгч'}
+      description={isEdit ? user.email : 'Энэ и-мэйл, нууц үгээр системд нэвтэрнэ.'}
       size="sm"
       footer={
         <>
           <Button variant="ghost" onClick={onClose} disabled={saving}>
-            Cancel
+            Цуцлах
           </Button>
           <Button variant="primary" onClick={submit} loading={saving} disabled={!canSubmit}>
-            {isEdit ? 'Save changes' : 'Create user'}
+            {isEdit ? 'Хадгалах' : 'Хэрэглэгч үүсгэх'}
           </Button>
         </>
       }
@@ -251,7 +252,7 @@ function UserModal({
         {error ? <ErrorNote>{error}</ErrorNote> : null}
 
         {!isEdit ? (
-          <Field label="Email">
+          <Field label="И-мэйл">
             <Input
               type="email"
               value={form.email}
@@ -262,7 +263,7 @@ function UserModal({
           </Field>
         ) : null}
 
-        <Field label="Name">
+        <Field label="Нэр">
           <Input
             value={form.name}
             onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))}
@@ -270,8 +271,8 @@ function UserModal({
         </Field>
 
         <Field
-          label="Role"
-          hint={isSelf ? 'Careful: lowering your own role takes effect immediately.' : undefined}
+          label="Эрх"
+          hint={isSelf ? 'Болгоомжтой: өөрийн эрхээ бууруулбал шууд хүчин төгөлдөр болно.' : undefined}
         >
           <Select
             value={form.role}
@@ -279,15 +280,15 @@ function UserModal({
           >
             {USER_ROLES.map((r) => (
               <option key={r} value={r}>
-                {r}
+                {mn(ROLE, r)}
               </option>
             ))}
           </Select>
         </Field>
 
         <Field
-          label={isEdit ? 'New password' : 'Password'}
-          hint={isEdit ? 'Leave empty to keep the current password. Minimum 8 characters.' : 'Minimum 8 characters.'}
+          label={isEdit ? 'Шинэ нууц үг' : 'Нууц үг'}
+          hint={isEdit ? 'Одоогийн нууц үгийг хэвээр үлдээхийг хүсвэл хоосон орхино уу. Хамгийн багадаа 8 тэмдэгт.' : 'Хамгийн багадаа 8 тэмдэгт.'}
         >
           <Input
             type="password"
@@ -306,7 +307,7 @@ function UserModal({
               onChange={(e) => setForm((f) => ({ ...f, isActive: e.target.checked }))}
               disabled={isSelf}
             />
-            Account is active
+            Бүртгэл идэвхтэй
             {isSelf ? ' (you cannot disable your own account here)' : ''}
           </label>
         ) : null}

@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import { getSessionUser, hasRole } from '@/lib/session';
 import { UsersView } from './users-view';
 
-export const metadata: Metadata = { title: 'Users' };
+export const metadata: Metadata = { title: 'Хэрэглэгчид' };
 export const dynamic = 'force-dynamic';
 
 export default async function UsersPage() {

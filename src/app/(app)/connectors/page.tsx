@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import { ConnectorsView } from './connectors-view';
 
-export const metadata: Metadata = { title: 'Connectors' };
+export const metadata: Metadata = { title: 'Холбогч' };
 export const dynamic = 'force-dynamic';
 
 export default async function ConnectorsPage({

@@ -70,16 +70,16 @@ function TooltipBox({
   );
 }
 
-/** Short axis label: 2026-08-19 -> 19 Aug */
+/** Short axis label: 2026-08-19 -> 08/19 */
 function shortDate(value: string): string {
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return value;
-  return d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short' });
+  return d.toLocaleDateString('mn-MN', { day: '2-digit', month: '2-digit' });
 }
 
 export function EnergySeriesChart({ data }: { data: EnergySeriesPoint[] }) {
   if (!data.length) {
-    return <ChartEmpty message="No completed sessions in this period." />;
+    return <ChartEmpty message="Энэ хугацаанд дууссан цэнэглэлт алга." />;
   }
 
   return (
@@ -107,7 +107,7 @@ export function EnergySeriesChart({ data }: { data: EnergySeriesPoint[] }) {
         <Area
           type="monotone"
           dataKey="energyKwh"
-          name="Energy"
+          name="Эрчим хүч"
           stroke={BRAND}
           strokeWidth={2}
           fill="url(#energyFill)"
@@ -118,7 +118,7 @@ export function EnergySeriesChart({ data }: { data: EnergySeriesPoint[] }) {
 }
 
 export function SessionsAndRevenueChart({ data }: { data: EnergySeriesPoint[] }) {
-  if (!data.length) return <ChartEmpty message="No completed sessions in this period." />;
+  if (!data.length) return <ChartEmpty message="Энэ хугацаанд дууссан цэнэглэлт алга." />;
 
   return (
     <ResponsiveContainer width="100%" height={260}>
@@ -139,7 +139,7 @@ export function SessionsAndRevenueChart({ data }: { data: EnergySeriesPoint[] })
           yAxisId="left"
           type="monotone"
           dataKey="sessions"
-          name="Sessions"
+          name="Цэнэглэлт"
           stroke={INFO}
           strokeWidth={2}
           dot={false}
@@ -148,7 +148,7 @@ export function SessionsAndRevenueChart({ data }: { data: EnergySeriesPoint[] })
           yAxisId="right"
           type="monotone"
           dataKey="cost"
-          name="Revenue"
+          name="Орлого"
           stroke={BRAND}
           strokeWidth={2}
           dot={false}
@@ -163,7 +163,7 @@ export function TopChargePointsChart({
 }: {
   data: { chargePointId: string; energyKwh: number }[];
 }) {
-  if (!data.length) return <ChartEmpty message="No energy delivered in this period." />;
+  if (!data.length) return <ChartEmpty message="Энэ хугацаанд эрчим хүч түгээгээгүй байна." />;
 
   const top = data.slice(0, 8);
 
@@ -183,7 +183,7 @@ export function TopChargePointsChart({
           cursor={{ fill: 'var(--color-surface-2)' }}
           content={<TooltipBox formatters={{ energyKwh: (v) => formatKwh(v) }} />}
         />
-        <Bar dataKey="energyKwh" name="Energy" radius={[0, 4, 4, 0]} maxBarSize={18}>
+        <Bar dataKey="energyKwh" name="Эрчим хүч" radius={[0, 4, 4, 0]} maxBarSize={18}>
           {top.map((entry) => (
             <Cell key={entry.chargePointId} fill={BRAND} />
           ))}
@@ -199,7 +199,7 @@ export function SessionPowerChart({
 }: {
   data: { t: string; power?: number | null; soc?: number | null; energy?: number | null }[];
 }) {
-  if (!data.length) return <ChartEmpty message="No meter values recorded for this session." />;
+  if (!data.length) return <ChartEmpty message="Энэ цэнэглэлтэд тоолуурын утга бүртгэгдээгүй байна." />;
 
   const hasSoc = data.some((d) => d.soc !== null && d.soc !== undefined);
 
@@ -235,7 +235,7 @@ export function SessionPowerChart({
           yAxisId="power"
           type="monotone"
           dataKey="power"
-          name="Power (W)"
+          name="Чадал (Вт)"
           stroke={BRAND}
           strokeWidth={2}
           dot={false}
@@ -246,7 +246,7 @@ export function SessionPowerChart({
             yAxisId="soc"
             type="monotone"
             dataKey="soc"
-            name="State of charge"
+            name="Цэнэгийн түвшин"
             stroke={INFO}
             strokeWidth={2}
             dot={false}

@@ -20,7 +20,7 @@ export const runtime = 'nodejs';
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const token = await getSessionToken();
   if (!token && !serverConfig.apiKey) {
-    return NextResponse.json({ error: 'Not authenticated' }, { status: 401 });
+    return NextResponse.json({ error: 'Нэвтрээгүй байна' }, { status: 401 });
   }
 
   const target = new URL(
@@ -41,12 +41,12 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       signal: req.signal,
     });
   } catch {
-    return NextResponse.json({ error: 'Cannot reach the CSMS backend' }, { status: 502 });
+    return NextResponse.json({ error: 'CSMS сервертэй холбогдож чадсангүй' }, { status: 502 });
   }
 
   if (!upstream.ok || !upstream.body) {
     return NextResponse.json(
-      { error: 'Live stream unavailable' },
+      { error: 'Шууд урсгал ажиллахгүй байна' },
       { status: upstream.status === 200 ? 502 : upstream.status },
     );
   }

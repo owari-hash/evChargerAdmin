@@ -27,18 +27,18 @@ export function Pagination({
     <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--color-border)] px-4 py-3 text-xs text-[var(--color-fg-muted)]">
       <div className="flex items-center gap-3">
         <span className="tnum">
-          {formatNumber(first)}–{formatNumber(last)} of {formatNumber(total)} {label}
+          {formatNumber(total)} {label}-аас {formatNumber(first)}–{formatNumber(last)}
         </span>
         {onLimitChange ? (
           <Select
             className="h-7 w-auto py-0 text-xs"
             value={limit}
             onChange={(e) => onLimitChange(Number(e.target.value))}
-            aria-label="Rows per page"
+            aria-label="Хуудсанд харуулах мөр"
           >
             {[25, 50, 100, 200].map((n) => (
               <option key={n} value={n}>
-                {n} / page
+                {n} / хуудас
               </option>
             ))}
           </Select>
@@ -51,22 +51,22 @@ export function Pagination({
           variant="ghost"
           onClick={() => onPageChange(page - 1)}
           disabled={page <= 1}
-          aria-label="Previous page"
+          aria-label="Өмнөх хуудас"
         >
           <ChevronLeft className="h-3.5 w-3.5" />
-          Prev
+          Өмнөх
         </Button>
         <span className="tnum">
-          Page {formatNumber(page)} / {formatNumber(pages)}
+          {formatNumber(pages)}-аас {formatNumber(page)} дэх хуудас
         </span>
         <Button
           size="sm"
           variant="ghost"
           onClick={() => onPageChange(page + 1)}
           disabled={page >= pages}
-          aria-label="Next page"
+          aria-label="Дараах хуудас"
         >
-          Next
+          Дараах
           <ChevronRight className="h-3.5 w-3.5" />
         </Button>
       </div>

@@ -28,12 +28,12 @@ export function CommandLogTab({ chargePointId }: { chargePointId: string }) {
   return (
     <Card>
       <CardHeader
-        title="Command log"
-        description="Commands issued to this charge point, with the response and who sent it."
+        title="Командын түүх"
+        description="Энэ станц руу илгээсэн командууд, хариу болон илгээсэн хэрэглэгч."
         actions={
           <Button variant="ghost" size="sm" onClick={() => void mutate()}>
             <RefreshCw className="h-3.5 w-3.5" />
-            Refresh
+            Шинэчлэх
           </Button>
         }
       />
@@ -42,11 +42,11 @@ export function CommandLogTab({ chargePointId }: { chargePointId: string }) {
         <Table>
           <THead>
             <tr>
-              <TH>Time</TH>
-              <TH>Action</TH>
-              <TH>Status</TH>
-              <TH>Issued by</TH>
-              <TH>Error</TH>
+              <TH>Хугацаа</TH>
+              <TH>Үйлдэл</TH>
+              <TH>Төлөв</TH>
+              <TH>Илгээсэн</TH>
+              <TH>Алдаа</TH>
               <TH align="right" />
             </tr>
           </THead>
@@ -54,9 +54,9 @@ export function CommandLogTab({ chargePointId }: { chargePointId: string }) {
             {isLoading && !data ? (
               <TableLoading colSpan={6} />
             ) : error ? (
-              <TableEmpty colSpan={6}>Could not load the command log.</TableEmpty>
+              <TableEmpty colSpan={6}>Командын түүхийг ачаалж чадсангүй.</TableEmpty>
             ) : rows.length === 0 ? (
-              <TableEmpty colSpan={6}>No commands have been sent to this charge point.</TableEmpty>
+              <TableEmpty colSpan={6}>Энэ станц руу команд илгээгээгүй байна.</TableEmpty>
             ) : (
               rows.map((cmd) => {
                 const isOpen = expanded === cmd._id;
@@ -75,7 +75,7 @@ export function CommandLogTab({ chargePointId }: { chargePointId: string }) {
                         {cmd.error ?? ''}
                       </TD>
                       <TD align="right" className="text-xs text-[var(--color-brand)]">
-                        {isOpen ? 'Hide' : 'Details'}
+                        {isOpen ? 'Хураах' : 'Дэлгэрэнгүй'}
                       </TD>
                     </TR>
                     {isOpen ? (
@@ -84,13 +84,13 @@ export function CommandLogTab({ chargePointId }: { chargePointId: string }) {
                           <div className="grid gap-2 lg:grid-cols-2">
                             <div>
                               <p className="mb-1 text-[10px] uppercase tracking-wide text-[var(--color-fg-subtle)]">
-                                Request
+                                Хүсэлт
                               </p>
                               <CodeBlock>{formatJson(cmd.payload) || '(none)'}</CodeBlock>
                             </div>
                             <div>
                               <p className="mb-1 text-[10px] uppercase tracking-wide text-[var(--color-fg-subtle)]">
-                                Response
+                                Хариу
                               </p>
                               <CodeBlock>{formatJson(cmd.response) || '(none)'}</CodeBlock>
                             </div>
@@ -116,7 +116,7 @@ export function CommandLogTab({ chargePointId }: { chargePointId: string }) {
             setLimit(n);
             setPage(1);
           }}
-          label="commands"
+          label="команд"
         />
       ) : null}
     </Card>

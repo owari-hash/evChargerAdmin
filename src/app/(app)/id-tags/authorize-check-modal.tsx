@@ -47,11 +47,11 @@ export function AuthorizeCheckModal({
     <Modal
       open={idTag !== null}
       onClose={onClose}
-      title="Authorization check"
-      description={idTag ? `Dry run for ${idTag}` : undefined}
+      title="Зөвшөөрлийн шалгалт"
+      description={idTag ? `${idTag} картын туршилт` : undefined}
       footer={
         <Button variant="ghost" onClick={onClose}>
-          Close
+          Хаах
         </Button>
       }
     >
@@ -59,8 +59,8 @@ export function AuthorizeCheckModal({
         <div className="flex items-end gap-2">
           <Field
             className="flex-1"
-            label="Charge point (optional)"
-            hint="Set this to also test the tag's charge point allow list."
+            label="Цэнэглэх станц (заавал бус)"
+            hint="Картын зөвшөөрөгдсөн станцын жагсаалтыг хамт шалгах бол оруулна уу."
           >
             <Input
               value={chargePointId}
@@ -81,7 +81,7 @@ export function AuthorizeCheckModal({
               else setApplied(next);
             }}
           >
-            Re-check
+            Дахин шалгах
           </Button>
         </div>
 
@@ -89,34 +89,34 @@ export function AuthorizeCheckModal({
 
         {isLoading ? (
           <div className="flex items-center gap-2 py-6 text-sm text-[var(--color-fg-muted)]">
-            <Spinner /> Evaluating…
+            <Spinner /> Шалгаж байна…
           </div>
         ) : data ? (
           <div className="space-y-3">
             <div className="flex flex-wrap items-center gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2.5">
-              <span className="text-xs text-[var(--color-fg-muted)]">Result</span>
+              <span className="text-xs text-[var(--color-fg-muted)]">Үр дүн</span>
               <AuthStatusBadge status={data.status ?? 'Invalid'} />
               {data.parentIdTag ? (
                 <span className="text-xs text-[var(--color-fg-muted)]">
-                  Parent <span className="font-mono">{data.parentIdTag}</span>
+                  Эцэг карт <span className="font-mono">{data.parentIdTag}</span>
                 </span>
               ) : null}
               {data.expiryDate ? (
                 <span className="ml-auto text-xs text-[var(--color-fg-muted)]">
-                  Expires {formatDateTime(data.expiryDate)}
+                  Дуусах {formatDateTime(data.expiryDate)}
                 </span>
               ) : null}
             </div>
 
             <div>
               <p className="mb-1 text-[10px] uppercase tracking-wide text-[var(--color-fg-subtle)]">
-                Raw idTagInfo
+                Түүхий idTagInfo
               </p>
               <CodeBlock>{formatJson(data)}</CodeBlock>
             </div>
 
             <p className="text-xs text-[var(--color-fg-subtle)]">
-              This is exactly what the CSMS would return in an Authorize.conf.
+              CSMS нь Authorize.conf хариунд яг үүнийг буцаана.
             </p>
           </div>
         ) : null}

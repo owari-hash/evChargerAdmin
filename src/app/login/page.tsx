@@ -3,7 +3,7 @@ import type { Metadata } from 'next';
 import { brand } from '@/lib/config';
 import { LoginForm } from './login-form';
 
-export const metadata: Metadata = { title: 'Sign in' };
+export const metadata: Metadata = { title: 'Нэвтрэх' };
 
 export default function LoginPage() {
   return (
@@ -17,7 +17,7 @@ export default function LoginPage() {
           </span>
           <h1 className="text-lg font-semibold tracking-tight">{brand.name}</h1>
           <p className="mt-1 text-sm text-[var(--color-fg-muted)]">
-            Charging network operations console
+            Цэнэглэх сүлжээний удирдлагын самбар
           </p>
         </div>
 
@@ -28,7 +28,7 @@ export default function LoginPage() {
         </div>
 
         <p className="mt-6 text-center text-xs text-[var(--color-fg-subtle)]">
-          Authorised personnel only. All actions are logged.
+          Зөвшөөрөгдсөн ажилтнууд нэвтэрнэ. Бүх үйлдэл бүртгэгдэнэ.
         </p>
       </div>
     </main>

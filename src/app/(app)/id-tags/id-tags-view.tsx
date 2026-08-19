@@ -12,6 +12,7 @@ import { Badge, Button, Card, EmptyState, Input, PageHeader, Select } from '@/co
 import { AuthStatusBadge } from '@/components/ui/status';
 import { ConfirmModal } from '@/components/ui/modal';
 import { FilterBar, Pagination } from '@/components/ui/pagination';
+import { ID_TAG_STATUS, mn } from '@/lib/mn';
 import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty, TableLoading } from '@/components/ui/table';
 import { IdTagModal } from './id-tag-modal';
 import { BulkImportModal } from './bulk-import-modal';
@@ -58,7 +59,7 @@ export function IdTagsView({
     setBusy(true);
     try {
       await api.del(`id-tags/${encodeURIComponent(deleting.idTag)}`);
-      toast.success(`${deleting.idTag} deleted`);
+      toast.success(`${deleting.idTag} устгагдлаа`);
       setDeleting(null);
       void mutate();
     } catch (err) {
@@ -71,23 +72,23 @@ export function IdTagsView({
   return (
     <>
       <PageHeader
-        title="RFID tags"
-        description="Authorisation tokens drivers present at the charge point."
+        title="RFID карт"
+        description="Жолооч нар станц дээр уншуулдаг зөвшөөрлийн картууд."
         actions={
           <>
             <Button variant="ghost" size="sm" onClick={() => void mutate()}>
               <RefreshCw className="h-3.5 w-3.5" />
-              Refresh
+              Шинэчлэх
             </Button>
             {canEdit ? (
               <>
                 <Button variant="secondary" size="sm" onClick={() => setImporting(true)}>
                   <Upload className="h-3.5 w-3.5" />
-                  Bulk import
+                  Бөөнөөр оруулах
                 </Button>
                 <Button variant="primary" size="sm" onClick={() => setCreating(true)}>
                   <Plus className="h-3.5 w-3.5" />
-                  New tag
+                  Шинэ карт
                 </Button>
               </>
             ) : null}
@@ -101,7 +102,7 @@ export function IdTagsView({
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--color-fg-subtle)]" />
             <Input
               className="pl-8"
-              placeholder="Search by tag, label, owner name or email…"
+              placeholder="Карт, нэр, эзэмшигч, и-мэйлээр хайх…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -113,12 +114,12 @@ export function IdTagsView({
               setStatus(e.target.value);
               setPage(1);
             }}
-            aria-label="Status"
+            aria-label="Төлөв"
           >
-            <option value="">All statuses</option>
+            <option value="">Бүх төлөв</option>
             {AUTHORIZATION_STATUSES.map((s) => (
               <option key={s} value={s}>
-                {s}
+                {mn(ID_TAG_STATUS, s)}
               </option>
             ))}
           </Select>
@@ -128,14 +129,14 @@ export function IdTagsView({
           <Table>
             <THead>
               <tr>
-                <TH>Tag</TH>
-                <TH>Status</TH>
-                <TH>Label / owner</TH>
-                <TH>Parent</TH>
-                <TH>Expires</TH>
-                <TH align="right">Max sessions</TH>
-                <TH>Restricted to</TH>
-                <TH align="right">Updated</TH>
+                <TH>Карт</TH>
+                <TH>Төлөв</TH>
+                <TH>Нэр / эзэмшигч</TH>
+                <TH>Эцэг карт</TH>
+                <TH>Дуусах</TH>
+                <TH align="right">Дээд зэрэг</TH>
+                <TH>Хязгаарласан станц</TH>
+                <TH align="right">Шинэчлэгдсэн</TH>
                 <TH align="right" />
               </tr>
             </THead>
@@ -143,10 +144,10 @@ export function IdTagsView({
               {isLoading && !data ? (
                 <TableLoading colSpan={9} />
               ) : error ? (
-                <TableEmpty colSpan={9}>Could not load tags.</TableEmpty>
+                <TableEmpty colSpan={9}>Картуудыг ачаалж чадсангүй.</TableEmpty>
               ) : rows.length === 0 ? (
                 <TableEmpty colSpan={9}>
-                  {debounced || status ? 'No tags match these filters.' : 'No tags yet.'}
+                  {debounced || status ? 'Энэ шүүлтүүрт тохирох карт алга.' : 'Одоогоор карт алга.'}
                 </TableEmpty>
               ) : (
                 rows.map((tag) => {
@@ -173,7 +174,7 @@ export function IdTagsView({
                             {formatDate(tag.expiryDate)}
                           </span>
                         ) : (
-                          <span className="text-[var(--color-fg-subtle)]">Never</span>
+                          <span className="text-[var(--color-fg-subtle)]">Хугацаагүй</span>
                         )}
                       </TD>
                       <TD align="right" className="text-xs">
@@ -185,7 +186,7 @@ export function IdTagsView({
                             {formatNumber(tag.allowedChargePointIds.length)} charge points
                           </Badge>
                         ) : (
-                          <span className="text-[var(--color-fg-subtle)]">Any</span>
+                          <span className="text-[var(--color-fg-subtle)]">Бүгд</span>
                         )}
                       </TD>
                       <TD align="right" className="text-xs text-[var(--color-fg-muted)]">
@@ -197,7 +198,7 @@ export function IdTagsView({
                             variant="ghost"
                             size="icon"
                             onClick={() => setChecking(tag.idTag)}
-                            title="Dry-run authorization"
+                            title="Зөвшөөрлийг туршиж үзэх"
                           >
                             <ShieldQuestion className="h-3.5 w-3.5" />
                           </Button>
@@ -207,7 +208,7 @@ export function IdTagsView({
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => setEditing(tag)}
-                                title="Edit"
+                                title="Засах"
                               >
                                 <Pencil className="h-3.5 w-3.5" />
                               </Button>
@@ -215,7 +216,7 @@ export function IdTagsView({
                                 variant="ghost"
                                 size="icon"
                                 onClick={() => setDeleting(tag)}
-                                title="Delete"
+                                title="Устгах"
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
                               </Button>
@@ -241,20 +242,20 @@ export function IdTagsView({
               setLimit(n);
               setPage(1);
             }}
-            label="tags"
+            label="карт"
           />
         ) : null}
 
         {!isLoading && !error && rows.length === 0 && !debounced && !status && canEdit ? (
           <EmptyState
             icon={<CreditCard className="h-8 w-8" />}
-            title="No RFID tags yet"
-            description="Create tags here or import an existing database in bulk."
+            title="Одоогоор RFID карт алга"
+            description="Эндээс карт үүсгэх, эсвэл байгаа жагсаалтаа бөөнөөр оруулна уу."
             action={
               <div className="flex gap-2">
                 <Button variant="primary" size="sm" onClick={() => setCreating(true)}>
                   <Plus className="h-3.5 w-3.5" />
-                  New tag
+                  Шинэ карт
                 </Button>
                 <Button variant="secondary" size="sm" onClick={() => setImporting(true)}>
                   <Upload className="h-3.5 w-3.5" />
@@ -294,15 +295,15 @@ export function IdTagsView({
         onClose={() => setDeleting(null)}
         onConfirm={() => void remove()}
         loading={busy}
-        title="Delete this tag?"
-        confirmLabel="Delete"
+        title="Энэ картыг устгах уу?"
+        confirmLabel="Устгах"
         message={
           <>
             <span className="block">
-              <span className="font-mono font-medium">{deleting?.idTag}</span> will no longer
-              authorise charging, and it is removed from local authorisation lists.
+              <span className="font-mono font-medium">{deleting?.idTag}</span> карт цаашид
+              цэнэглэх зөвшөөрөл олгохгүй бөгөөд дотоод зөвшөөрлийн жагсаалтаас хасагдана.
             </span>
-            <span className="mt-2 block">Past sessions are kept.</span>
+            <span className="mt-2 block">Өмнөх цэнэглэлтүүд хэвээр үлдэнэ.</span>
           </>
         }
       />

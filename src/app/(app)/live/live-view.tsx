@@ -29,29 +29,29 @@ export function LiveView() {
   return (
     <>
       <PageHeader
-        title="Live feed"
-        description="Every event the CSMS emits, streamed over Server-Sent Events."
+        title="Шууд урсгал"
+        description="CSMS-ээс гарах бүх үйл явдал шууд дамжина."
       />
 
       <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
         <div className="space-y-4">
           <Card>
-            <CardHeader title="Filters" />
+            <CardHeader title="Шүүлтүүр" />
             <div className="space-y-3 p-4">
               <Input
-                placeholder="Charge point id (optional)"
+                placeholder="Станцын дугаар (заавал бус)"
                 value={chargePointId}
                 onChange={(e) => setChargePointId(e.target.value)}
               />
               <p className="text-xs text-[var(--color-fg-subtle)]">
-                Leave empty to watch the whole network.
+                Хоосон орхивол бүх сүлжээг харна.
               </p>
             </div>
           </Card>
 
           <Card>
             <CardHeader
-              title="Event types"
+              title="Үйл явдлын төрөл"
               actions={
                 <div className="flex gap-1">
                   <Button
@@ -59,10 +59,10 @@ export function LiveView() {
                     size="sm"
                     onClick={() => setSelected([...LIVE_EVENT_NAMES])}
                   >
-                    All
+                    Бүгд
                   </Button>
                   <Button variant="ghost" size="sm" onClick={() => setSelected([])}>
-                    None
+                    Аль нь ч биш
                   </Button>
                 </div>
               }
@@ -98,7 +98,7 @@ export function LiveView() {
             </div>
             {selected.includes('ocpp.message') ? (
               <p className="border-t border-[var(--color-border)] px-4 py-2 text-[11px] text-[var(--color-fg-subtle)]">
-                Raw OCPP frames are high volume — expect the feed to move quickly.
+                Түүхий OCPP мессеж их хэмжээтэй — урсгал маш хурдан гүйнэ.
               </p>
             ) : null}
           </Card>
@@ -106,12 +106,12 @@ export function LiveView() {
 
         <Card className="flex flex-col">
           <CardHeader
-            title="Event stream"
-            description={applied ? `Filtered to ${applied}` : 'All charge points'}
+            title="Үйл явдлын урсгал"
+            description={applied ? `${applied}-аар шүүсэн` : 'Бүх цэнэглэх станц'}
           />
           {selected.length === 0 ? (
             <div className="flex h-[600px] items-center justify-center text-sm text-[var(--color-fg-muted)]">
-              Select at least one event type.
+              Дор хаяж нэг төрөл сонгоно уу.
             </div>
           ) : (
             <LiveFeed

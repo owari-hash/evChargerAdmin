@@ -14,7 +14,7 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  return { title: `Session #${id}` };
+  return { title: `#${id} цэнэглэлт` };
 }
 
 export default async function TransactionPage({

@@ -5,10 +5,10 @@ import './globals.css';
 
 export const metadata: Metadata = {
   title: {
-    default: `${brand.name} — Charging network console`,
+    default: `${brand.name} — Цэнэглэх сүлжээний удирдлага`,
     template: `%s · ${brand.name}`,
   },
-  description: `Operations console for the ${brand.domain} OCPP 1.6J charging network.`,
+  description: `${brand.domain} цэнэглэх сүлжээний OCPP 1.6J удирдлагын самбар.`,
   robots: { index: false, follow: false },
   icons: {
     icon: [{ url: '/icon.svg', type: 'image/svg+xml' }],
@@ -39,7 +39,7 @@ const THEME_SCRIPT = `
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" suppressHydrationWarning>
+    <html lang="mn" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>

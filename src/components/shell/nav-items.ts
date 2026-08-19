@@ -31,35 +31,35 @@ export interface NavSection {
 
 export const NAV_SECTIONS: NavSection[] = [
   {
-    title: 'Operations',
+    title: 'Үйл ажиллагаа',
     items: [
-      { href: '/', label: 'Overview', icon: LayoutDashboard },
-      { href: '/charge-points', label: 'Charge points', icon: Zap, prefix: true },
-      { href: '/connectors', label: 'Connectors', icon: Plug },
-      { href: '/transactions', label: 'Sessions', icon: BatteryCharging, prefix: true },
-      { href: '/live', label: 'Live feed', icon: Activity },
+      { href: '/', label: 'Ерөнхий тойм', icon: LayoutDashboard },
+      { href: '/charge-points', label: 'Цэнэглэх станц', icon: Zap, prefix: true },
+      { href: '/connectors', label: 'Холбогч', icon: Plug },
+      { href: '/transactions', label: 'Цэнэглэлт', icon: BatteryCharging, prefix: true },
+      { href: '/live', label: 'Шууд урсгал', icon: Activity },
     ],
   },
   {
-    title: 'Access',
+    title: 'Хандалт',
     items: [
-      { href: '/id-tags', label: 'RFID tags', icon: CreditCard, prefix: true },
-      { href: '/reservations', label: 'Reservations', icon: CalendarClock },
+      { href: '/id-tags', label: 'RFID карт', icon: CreditCard, prefix: true },
+      { href: '/reservations', label: 'Захиалга', icon: CalendarClock },
     ],
   },
   {
-    title: 'Management',
+    title: 'Удирдлага',
     items: [
-      { href: '/charging-profiles', label: 'Smart charging', icon: SlidersHorizontal },
-      { href: '/jobs', label: 'Firmware & logs', icon: Cpu },
-      { href: '/security', label: 'Security', icon: ShieldCheck, prefix: true },
+      { href: '/charging-profiles', label: 'Ухаалаг цэнэглэлт', icon: SlidersHorizontal },
+      { href: '/jobs', label: 'Программ хангамж ба лог', icon: Cpu },
+      { href: '/security', label: 'Аюулгүй байдал', icon: ShieldCheck, prefix: true },
     ],
   },
   {
-    title: 'Administration',
+    title: 'Системийн удирдлага',
     items: [
-      { href: '/users', label: 'Users', icon: Users, minRole: 'ADMIN' },
-      { href: '/system', label: 'System', icon: Settings },
+      { href: '/users', label: 'Хэрэглэгчид', icon: Users, minRole: 'ADMIN' },
+      { href: '/system', label: 'Систем', icon: Settings },
     ],
   },
 ];

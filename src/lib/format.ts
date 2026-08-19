@@ -1,10 +1,11 @@
 /** Display helpers. Everything here is safe on both server and client. */
+import { EVENT } from './mn';
 
 const NBSP = ' ';
 
 export function formatNumber(value: number | undefined | null, digits = 0): string {
   if (value === undefined || value === null || Number.isNaN(value)) return '—';
-  return value.toLocaleString('en-US', {
+  return value.toLocaleString('mn-MN', {
     minimumFractionDigits: digits,
     maximumFractionDigits: digits,
   });
@@ -42,7 +43,7 @@ export function formatDateTime(value?: string | Date | null): string {
   if (!value) return '—';
   const d = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(d.getTime())) return '—';
-  return d.toLocaleString('en-GB', {
+  return d.toLocaleString('mn-MN', {
     year: 'numeric',
     month: 'short',
     day: '2-digit',
@@ -57,17 +58,17 @@ export function formatDate(value?: string | Date | null): string {
   if (!value) return '—';
   const d = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(d.getTime())) return '—';
-  return d.toLocaleDateString('en-GB', { year: 'numeric', month: 'short', day: '2-digit' });
+  return d.toLocaleDateString('mn-MN', { year: 'numeric', month: '2-digit', day: '2-digit' });
 }
 
 export function formatTime(value?: string | Date | null): string {
   if (!value) return '—';
   const d = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(d.getTime())) return '—';
-  return d.toLocaleTimeString('en-GB', { hour12: false });
+  return d.toLocaleTimeString('mn-MN', { hour12: false });
 }
 
-/** "3m ago", "2h ago", "just now". */
+/** "3 мин өмнө", "2 ц өмнө", "саяхан". */
 export function formatRelative(value?: string | Date | null): string {
   if (!value) return '—';
   const d = value instanceof Date ? value : new Date(value);
@@ -78,17 +79,17 @@ export function formatRelative(value?: string | Date | null): string {
   const s = Math.abs(seconds);
 
   let text: string;
-  if (s < 10) return 'just now';
-  if (s < 60) text = `${s}s`;
-  else if (s < 3600) text = `${Math.floor(s / 60)}m`;
-  else if (s < 86400) text = `${Math.floor(s / 3600)}h`;
-  else if (s < 2592000) text = `${Math.floor(s / 86400)}d`;
-  else text = `${Math.floor(s / 2592000)}mo`;
+  if (s < 10) return 'саяхан';
+  if (s < 60) text = `${s} сек`;
+  else if (s < 3600) text = `${Math.floor(s / 60)} мин`;
+  else if (s < 86400) text = `${Math.floor(s / 3600)} ц`;
+  else if (s < 2592000) text = `${Math.floor(s / 86400)} өдөр`;
+  else text = `${Math.floor(s / 2592000)} сар`;
 
-  return future ? `in ${text}` : `${text} ago`;
+  return future ? `${text} дараа` : `${text} өмнө`;
 }
 
-/** Elapsed time between two instants as `1h 04m`. */
+/** Elapsed time between two instants as `1ц 04м`. */
 export function formatDuration(from?: string | Date | null, to?: string | Date | null): string {
   if (!from) return '—';
   const start = from instanceof Date ? from : new Date(from);
@@ -101,9 +102,9 @@ export function formatDuration(from?: string | Date | null, to?: string | Date |
   const minutes = Math.floor(seconds / 60);
   seconds -= minutes * 60;
 
-  if (hours > 0) return `${hours}h ${String(minutes).padStart(2, '0')}m`;
-  if (minutes > 0) return `${minutes}m ${String(seconds).padStart(2, '0')}s`;
-  return `${seconds}s`;
+  if (hours > 0) return `${hours}ц ${String(minutes).padStart(2, '0')}м`;
+  if (minutes > 0) return `${minutes}м ${String(seconds).padStart(2, '0')}с`;
+  return `${seconds}с`;
 }
 
 export function formatUptime(totalSeconds?: number | null): string {
@@ -111,9 +112,9 @@ export function formatUptime(totalSeconds?: number | null): string {
   const days = Math.floor(totalSeconds / 86400);
   const hours = Math.floor((totalSeconds % 86400) / 3600);
   const minutes = Math.floor((totalSeconds % 3600) / 60);
-  if (days > 0) return `${days}d ${hours}h`;
-  if (hours > 0) return `${hours}h ${minutes}m`;
-  return `${minutes}m`;
+  if (days > 0) return `${days} өдөр ${hours} ц`;
+  if (hours > 0) return `${hours} ц ${minutes} мин`;
+  return `${minutes} мин`;
 }
 
 /** Pretty-print an OCPP payload for the log viewers. */
@@ -126,8 +127,9 @@ export function formatJson(value: unknown): string {
   }
 }
 
-/** Turn `transaction.metervalue` into `Transaction metervalue`. */
+/** Turn `transaction.metervalue` into its Mongolian label. */
 export function humanizeEvent(name: string): string {
+  if (EVENT[name]) return EVENT[name];
   const withoutDots = name.replace(/\./g, ' ');
   return withoutDots.charAt(0).toUpperCase() + withoutDots.slice(1);
 }

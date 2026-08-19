@@ -27,6 +27,7 @@ import {
 } from '@/components/ui/primitives';
 import { ConfirmModal } from '@/components/ui/modal';
 import { cn } from '@/lib/cn';
+import { COMMAND_GROUP, mn } from '@/lib/mn';
 
 interface Result {
   at: Date;
@@ -81,7 +82,7 @@ export function CommandConsole({
           ...prev,
         ].slice(0, 20),
       );
-      toast.success(`${selected.label} accepted`);
+      toast.success(`${selected.label} — станц хүлээн авлаа`);
       // Side effects are persisted server-side, so pull fresh state.
       router.refresh();
     } catch (err) {
@@ -122,9 +123,9 @@ export function CommandConsole({
   if (!canOperate) {
     return (
       <Card>
-        <CardHeader title="Command console" />
+        <CardHeader title="Командын самбар" />
         <div className="p-5 text-sm text-[var(--color-fg-muted)]">
-          Sending commands requires the OPERATOR role.
+          Команд илгээхэд ОПЕРАТОР эрх шаардлагатай.
         </div>
       </Card>
     );
@@ -134,7 +135,7 @@ export function CommandConsole({
     <div className="grid gap-4 lg:grid-cols-[260px_1fr]">
       {/* Command picker */}
       <Card className="h-fit overflow-hidden">
-        <CardHeader title="Commands" />
+        <CardHeader title="Командууд" />
         <div className="max-h-[560px] overflow-y-auto p-2">
           {COMMAND_GROUPS.map((group) => {
             const items = commandsByGroup(group);
@@ -142,7 +143,7 @@ export function CommandConsole({
             return (
               <div key={group} className="mb-3">
                 <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-fg-subtle)]">
-                  {group}
+                  {mn(COMMAND_GROUP, group)}
                 </p>
                 <ul className="space-y-0.5">
                   {items.map((spec) => (
@@ -187,7 +188,7 @@ export function CommandConsole({
             actions={
               <Button variant="primary" size="sm" onClick={submit} loading={sending} disabled={!isOnline}>
                 <Play className="h-3.5 w-3.5" />
-                Send
+                Илгээх
               </Button>
             }
           />
@@ -195,7 +196,7 @@ export function CommandConsole({
           <div className="space-y-4 p-5">
             {!isOnline ? (
               <div className="rounded-lg border border-[var(--color-warn)]/30 bg-[var(--color-warn-soft)] px-3 py-2 text-xs text-[var(--color-warn)]">
-                This charge point is offline. Commands can only reach a connected charge point.
+                Энэ станц офлайн байна. Команд зөвхөн холбогдсон станц руу очно.
               </div>
             ) : null}
 
@@ -203,7 +204,7 @@ export function CommandConsole({
 
             {selected.fields.length === 0 ? (
               <p className="text-sm text-[var(--color-fg-muted)]">
-                This command takes no parameters.
+                Энэ команд параметргүй.
               </p>
             ) : (
               <div className="grid gap-4 sm:grid-cols-2">
@@ -272,12 +273,12 @@ export function CommandConsole({
 
         <Card>
           <CardHeader
-            title="Results"
-            description="Newest first. These are the charge point's actual OCPP responses."
+            title="Хариу"
+            description="Шинэ нь эхэндээ. Эдгээр нь станцын жинхэнэ OCPP хариу юм."
             actions={
               results.length ? (
                 <Button variant="ghost" size="sm" onClick={() => setResults([])}>
-                  Clear
+                  Цэвэрлэх
                 </Button>
               ) : null
             }
@@ -286,7 +287,7 @@ export function CommandConsole({
             <div className="flex flex-col items-center px-5 py-10 text-center">
               <Terminal className="mb-2 h-6 w-6 text-[var(--color-fg-subtle)]" />
               <p className="text-xs text-[var(--color-fg-muted)]">
-                Responses from this session appear here.
+                Энэ ажиллагааны хариунууд энд харагдана.
               </p>
             </div>
           ) : (
@@ -294,7 +295,7 @@ export function CommandConsole({
               {results.map((result, i) => (
                 <li key={`${result.at.getTime()}-${i}`} className="space-y-2 p-4">
                   <div className="flex items-center gap-2 text-xs">
-                    <Badge tone={result.ok ? 'ok' : 'danger'}>{result.ok ? 'OK' : 'Error'}</Badge>
+                    <Badge tone={result.ok ? 'ok' : 'danger'}>{result.ok ? 'Амжилттай' : 'Алдаа'}</Badge>
                     <span className="font-mono font-medium">{result.action}</span>
                     <span className="ml-auto text-[var(--color-fg-subtle)]">
                       {formatTime(result.at)}
@@ -303,13 +304,13 @@ export function CommandConsole({
                   <div className="grid gap-2 lg:grid-cols-2">
                     <div>
                       <p className="mb-1 text-[10px] uppercase tracking-wide text-[var(--color-fg-subtle)]">
-                        Request
+                        Хүсэлт
                       </p>
                       <CodeBlock>{formatJson(result.payload)}</CodeBlock>
                     </div>
                     <div>
                       <p className="mb-1 text-[10px] uppercase tracking-wide text-[var(--color-fg-subtle)]">
-                        Response
+                        Хариу
                       </p>
                       <CodeBlock>{formatJson(result.response)}</CodeBlock>
                     </div>
@@ -326,13 +327,13 @@ export function CommandConsole({
         onClose={() => setConfirming(false)}
         onConfirm={() => void run()}
         loading={sending}
-        title={`Send ${selected.label}?`}
-        confirmLabel={`Send ${selected.label}`}
+        title={`${selected.label} илгээх үү?`}
+        confirmLabel={`${selected.label} илгээх`}
         message={
           <>
             <span className="block">
-              This can interrupt charging on{' '}
-              <span className="font-mono font-medium">{chargePointId}</span>.
+              Энэ үйлдэл <span className="font-mono font-medium">{chargePointId}</span> станц дээрх
+              цэнэглэлтийг тасалж болзошгүй.
             </span>
             <span className="mt-2 block text-xs">{selected.description}</span>
           </>

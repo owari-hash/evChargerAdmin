@@ -31,7 +31,7 @@ export default async function ChargePointPage({
     detail = await csms<ChargePointDetail>(`/charge-points/${encodeURIComponent(chargePointId)}`);
   } catch (err) {
     if (err instanceof ApiError && err.status === 404) notFound();
-    return <BackendDown what={`charge point ${chargePointId}`} />;
+    return <BackendDown what={`${chargePointId} станц`} />;
   }
 
   return (

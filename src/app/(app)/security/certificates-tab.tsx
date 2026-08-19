@@ -50,9 +50,9 @@ export function CertificatesTab() {
               setType(e.target.value);
               setPage(1);
             }}
-            aria-label="Certificate type"
+            aria-label="Гэрчилгээний төрөл"
           >
-            <option value="">All types</option>
+            <option value="">Бүх төрөл</option>
             {CERTIFICATE_TYPES.map((t) => (
               <option key={t} value={t}>
                 {t}
@@ -61,7 +61,7 @@ export function CertificatesTab() {
           </Select>
           <Input
             className="w-auto min-w-[180px]"
-            placeholder="Charge point id"
+            placeholder="Станцын дугаар"
             value={chargePointId}
             onChange={(e) => setChargePointId(e.target.value)}
           />
@@ -75,12 +75,12 @@ export function CertificatesTab() {
           <Table>
             <THead>
               <tr>
-                <TH>Subject</TH>
-                <TH>Type</TH>
-                <TH>Charge point</TH>
-                <TH>Issuer</TH>
-                <TH>Serial</TH>
-                <TH>Valid until</TH>
+                <TH>Эзэмшигч</TH>
+                <TH>Төрөл</TH>
+                <TH>Цэнэглэх станц</TH>
+                <TH>Олгогч</TH>
+                <TH>Сериал</TH>
+                <TH>Хүчинтэй хугацаа</TH>
                 <TH align="right" />
               </tr>
             </THead>
@@ -88,9 +88,9 @@ export function CertificatesTab() {
               {isLoading && !data ? (
                 <TableLoading colSpan={7} />
               ) : error ? (
-                <TableEmpty colSpan={7}>Could not load certificates.</TableEmpty>
+                <TableEmpty colSpan={7}>Гэрчилгээг ачаалж чадсангүй.</TableEmpty>
               ) : rows.length === 0 ? (
-                <TableEmpty colSpan={7}>No certificates recorded.</TableEmpty>
+                <TableEmpty colSpan={7}>Бүртгэгдсэн гэрчилгээ алга.</TableEmpty>
               ) : (
                 rows.map((cert) => {
                   const expired =
@@ -129,7 +129,7 @@ export function CertificatesTab() {
                       </TD>
                       <TD align="right">
                         <Button variant="ghost" size="sm" onClick={() => setViewing(cert)}>
-                          Details
+                          Дэлгэрэнгүй
                         </Button>
                       </TD>
                     </TR>
@@ -150,15 +150,15 @@ export function CertificatesTab() {
               setLimit(n);
               setPage(1);
             }}
-            label="certificates"
+            label="гэрчилгээ"
           />
         ) : null}
 
         {!isLoading && !error && rows.length === 0 && !type && !debouncedCp ? (
           <EmptyState
             icon={<ScrollText className="h-8 w-8" />}
-            title="No certificates recorded"
-            description="Certificates appear here once installed on a charge point or issued by the local CA."
+            title="Гэрчилгээ бүртгэгдээгүй"
+            description="Станц дээр суусан эсвэл дотоод CA-аас олгогдсон гэрчилгээ энд харагдана."
           />
         ) : null}
       </Card>
@@ -166,12 +166,12 @@ export function CertificatesTab() {
       <Modal
         open={viewing !== null}
         onClose={() => setViewing(null)}
-        title="Certificate"
+        title="Гэрчилгээ"
         description={viewing?.subject}
         size="lg"
         footer={
           <>
-            {viewing?.pem ? <CopyButton value={viewing.pem} variant="secondary" label="Copy PEM" /> : null}
+            {viewing?.pem ? <CopyButton value={viewing.pem} variant="secondary" label="PEM хуулах" /> : null}
             <Button variant="ghost" onClick={() => setViewing(null)}>
               Close
             </Button>
@@ -181,16 +181,16 @@ export function CertificatesTab() {
         {viewing ? (
           <div className="space-y-4">
             <dl className="grid grid-cols-1 gap-x-6 gap-y-1 sm:grid-cols-2">
-              <Detail label="Type" value={viewing.type} />
-              <Detail label="Charge point" value={viewing.chargePointId ?? '—'} />
-              <Detail label="Subject" value={viewing.subject ?? '—'} />
-              <Detail label="Issuer" value={viewing.issuer ?? '—'} />
-              <Detail label="Serial" value={viewing.serialNumber ?? '—'} mono />
-              <Detail label="Hash algorithm" value={viewing.hashAlgorithm ?? '—'} />
-              <Detail label="Valid from" value={formatDateTime(viewing.validFrom)} />
-              <Detail label="Valid to" value={formatDateTime(viewing.validTo)} />
-              <Detail label="Issuer name hash" value={viewing.issuerNameHash ?? '—'} mono />
-              <Detail label="Issuer key hash" value={viewing.issuerKeyHash ?? '—'} mono />
+              <Detail label="Төрөл" value={viewing.type} />
+              <Detail label="Цэнэглэх станц" value={viewing.chargePointId ?? '—'} />
+              <Detail label="Эзэмшигч" value={viewing.subject ?? '—'} />
+              <Detail label="Олгогч" value={viewing.issuer ?? '—'} />
+              <Detail label="Сериал дугаар" value={viewing.serialNumber ?? '—'} mono />
+              <Detail label="Хэш алгоритм" value={viewing.hashAlgorithm ?? '—'} />
+              <Detail label="Хүчинтэй эхлэх" value={formatDateTime(viewing.validFrom)} />
+              <Detail label="Хүчинтэй дуусах" value={formatDateTime(viewing.validTo)} />
+              <Detail label="Олгогчийн нэрийн хэш" value={viewing.issuerNameHash ?? '—'} mono />
+              <Detail label="Олгогчийн түлхүүрийн хэш" value={viewing.issuerKeyHash ?? '—'} mono />
             </dl>
             {viewing.pem ? <CodeBlock className="max-h-64">{viewing.pem}</CodeBlock> : null}
           </div>
@@ -235,23 +235,23 @@ function InspectModal({ open, onClose }: { open: boolean; onClose: () => void })
     <Modal
       open={open}
       onClose={onClose}
-      title="Inspect a certificate"
-      description="Returns the CertificateHashData used by DeleteCertificate."
+      title="Гэрчилгээ шалгах"
+      description="DeleteCertificate командад хэрэглэх CertificateHashData-г буцаана."
       size="lg"
       footer={
         <>
           <Button variant="ghost" onClick={onClose}>
-            Close
+            Хаах
           </Button>
           <Button variant="primary" onClick={submit} loading={loading} disabled={!pem.trim()}>
-            Inspect
+            Шалгах
           </Button>
         </>
       }
     >
       <div className="space-y-4">
         {error ? <ErrorNote>{error}</ErrorNote> : null}
-        <Field label="Certificate (PEM)">
+        <Field label="Гэрчилгээ (PEM)">
           <Textarea
             rows={8}
             value={pem}

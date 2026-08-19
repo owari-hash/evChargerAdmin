@@ -31,12 +31,12 @@ export function CopyButton({
           // Clipboard is unavailable on insecure origins; fail quietly.
         }
       }}
-      aria-label={label ? undefined : 'Copy to clipboard'}
-      title="Copy to clipboard"
+      aria-label={label ? undefined : 'Хуулах'}
+      title="Хуулах"
       {...props}
     >
       {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-      {label ? (copied ? 'Copied' : label) : null}
+      {label ? (copied ? 'Хуулсан' : label) : null}
     </Button>
   );
 }

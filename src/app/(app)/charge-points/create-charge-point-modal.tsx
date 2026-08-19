@@ -8,6 +8,7 @@ import { api, errorMessage } from '@/lib/client';
 import { Button, ErrorNote, Field, Input, Select } from '@/components/ui/primitives';
 import { Modal } from '@/components/ui/modal';
 import { CopyButton } from '@/components/ui/copy-button';
+import { REGISTRATION_STATUS as REGISTRATION_STATUS_MN, mn } from '@/lib/mn';
 import { REGISTRATION_STATUSES } from '@/lib/types';
 
 interface CreatedResponse {
@@ -86,7 +87,7 @@ export function CreateChargePointModal({
       setCreated(res);
       onCreated?.();
       router.refresh();
-      toast.success(`Charge point ${res.id} registered`);
+      toast.success(`${res.id} станц бүртгэгдлээ`);
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -100,11 +101,11 @@ export function CreateChargePointModal({
       <Modal
         open={open}
         onClose={close}
-        title="Charge point registered"
+        title="Станц бүртгэгдлээ"
         description={created.id}
         footer={
           <Button variant="primary" onClick={close}>
-            I have saved the key
+            Түлхүүрийг хадгаллаа
           </Button>
         }
       >
@@ -112,8 +113,8 @@ export function CreateChargePointModal({
           <div className="flex items-start gap-2.5 rounded-lg border border-[var(--color-warn)]/30 bg-[var(--color-warn-soft)] px-3 py-2.5 text-xs text-[var(--color-warn)]">
             <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
             <p>
-              This is the only time the AuthorizationKey is shown. It is stored hashed and cannot be
-              retrieved later — only rotated.
+              AuthorizationKey зөвхөн энэ удаа харагдана. Түлхүүр хэшлэгдэж хадгалагдах тул
+              дараа нь харах боломжгүй — зөвхөн шинэчлэх боломжтой.
             </p>
           </div>
 
@@ -126,14 +127,14 @@ export function CreateChargePointModal({
               <code className="flex-1 overflow-x-auto rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-2 font-mono text-xs">
                 {created.authorizationKey}
               </code>
-              <CopyButton value={created.authorizationKey} variant="secondary" label="Copy" />
+              <CopyButton value={created.authorizationKey} variant="secondary" label="Хуулах" />
             </div>
           </div>
 
           <p className="text-xs text-[var(--color-fg-muted)]">
-            Set this as the charge point&apos;s <code className="font-mono">AuthorizationKey</code>{' '}
-            configuration key. It connects with HTTP Basic auth using{' '}
-            <code className="font-mono">{created.id}</code> as the username.
+            Үүнийг станцын <code className="font-mono">AuthorizationKey</code> тохиргоонд
+            оруулна уу. Станц HTTP Basic нэвтрэлтээр{' '}
+            <code className="font-mono">{created.id}</code> хэрэглэгчийн нэрээр холбогдоно.
           </p>
         </div>
       </Modal>
@@ -145,15 +146,15 @@ export function CreateChargePointModal({
     <Modal
       open={open}
       onClose={close}
-      title="Register charge point"
-      description="Pre-registering lets you turn off anonymous connections."
+      title="Станц бүртгэх"
+      description="Урьдчилан бүртгэснээр нэргүй холболтыг хааж болно."
       footer={
         <>
           <Button variant="ghost" onClick={close} disabled={saving}>
-            Cancel
+            Цуцлах
           </Button>
           <Button variant="primary" onClick={submit} loading={saving} disabled={!form.id.trim()}>
-            Register
+            Бүртгэх
           </Button>
         </>
       }
@@ -162,8 +163,8 @@ export function CreateChargePointModal({
         {error ? <ErrorNote>{error}</ErrorNote> : null}
 
         <Field
-          label="Charge point ID"
-          hint="Must match the identity in the WebSocket URL. Letters, digits and . : @ _ - only."
+          label="Станцын дугаар"
+          hint="WebSocket хаяг дахь нэртэй яг таарах ёстой. Зөвхөн үсэг, тоо болон . : @ _ - тэмдэгт."
         >
           <Input
             value={form.id}
@@ -175,41 +176,41 @@ export function CreateChargePointModal({
         </Field>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Display name">
-            <Input value={form.name} onChange={set('name')} placeholder="Sukhbaatar Square #1" />
+          <Field label="Харагдах нэр">
+            <Input value={form.name} onChange={set('name')} placeholder="Сүхбаатарын талбай #1" />
           </Field>
-          <Field label="Address">
-            <Input value={form.address} onChange={set('address')} placeholder="Ulaanbaatar" />
+          <Field label="Хаяг">
+            <Input value={form.address} onChange={set('address')} placeholder="Улаанбаатар" />
           </Field>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Latitude">
+          <Field label="Өргөрөг">
             <Input value={form.latitude} onChange={set('latitude')} placeholder="47.9186" inputMode="decimal" />
           </Field>
-          <Field label="Longitude">
+          <Field label="Уртраг">
             <Input value={form.longitude} onChange={set('longitude')} placeholder="106.9176" inputMode="decimal" />
           </Field>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-3">
-          <Field label="Registration">
+          <Field label="Бүртгэлийн төлөв">
             <Select value={form.registrationStatus} onChange={set('registrationStatus')}>
               {REGISTRATION_STATUSES.map((s) => (
                 <option key={s} value={s}>
-                  {s}
+                  {mn(REGISTRATION_STATUS_MN, s)}
                 </option>
               ))}
             </Select>
           </Field>
-          <Field label="Security profile">
+          <Field label="Аюулгүй байдлын профайл">
             <Select value={form.securityProfile} onChange={set('securityProfile')}>
-              <option value="1">1 — Basic over ws</option>
-              <option value="2">2 — Basic over wss</option>
-              <option value="3">3 — Mutual TLS</option>
+              <option value="1">1 — ws дээр Basic</option>
+              <option value="2">2 — wss дээр Basic</option>
+              <option value="3">3 — Харилцан TLS</option>
             </Select>
           </Field>
-          <Field label="Heartbeat (s)">
+          <Field label="Амьд дохио (сек)">
             <Input
               value={form.heartbeatInterval}
               onChange={set('heartbeatInterval')}
@@ -218,7 +219,7 @@ export function CreateChargePointModal({
           </Field>
         </div>
 
-        <Field label="Tariff per kWh (₮)" hint="Used to price completed sessions. Leave empty for free charging.">
+        <Field label="1 кВт·ц тариф (₮)" hint="Дууссан цэнэглэлтийн төлбөрийг тооцоход ашиглана. Үнэгүй бол хоосон орхино уу.">
           <Input value={form.tariffPerKwh} onChange={set('tariffPerKwh')} placeholder="450" inputMode="decimal" />
         </Field>
       </div>

@@ -10,6 +10,7 @@ import type { Job, Paginated } from '@/lib/types';
 import { Badge, Button, Card, EmptyState, Input, PageHeader, type Tone } from '@/components/ui/primitives';
 import { Tabs, TabCount } from '@/components/ui/tabs';
 import { FilterBar, Pagination } from '@/components/ui/pagination';
+import { DIAGNOSTICS_STATUS, FIRMWARE_STATUS, mn } from '@/lib/mn';
 import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty, TableLoading } from '@/components/ui/table';
 
 /**
@@ -43,7 +44,12 @@ const STATUS_TONES: Record<string, Tone> = {
 
 function StatusBadge({ status }: { status?: string }) {
   if (!status) return <span className="text-xs text-[var(--color-fg-subtle)]">—</span>;
-  return <Badge tone={STATUS_TONES[status] ?? 'idle'}>{status}</Badge>;
+  // Firmware and diagnostics states share a badge; the dictionaries do not collide.
+  return (
+    <Badge tone={STATUS_TONES[status] ?? 'idle'}>
+      {FIRMWARE_STATUS[status] ?? mn(DIAGNOSTICS_STATUS, status)}
+    </Badge>
+  );
 }
 
 export function JobsView() {
@@ -83,12 +89,12 @@ export function JobsView() {
   return (
     <>
       <PageHeader
-        title="Firmware & logs"
-        description="Firmware updates, diagnostics uploads and security log requests."
+        title="Программ хангамж ба лог"
+        description="Программын шинэчлэлт, оношилгооны илгээлт, аюулгүй байдлын логийн хүсэлтүүд."
         actions={
           <Button variant="ghost" size="sm" onClick={() => void mutate()}>
             <RefreshCw className="h-3.5 w-3.5" />
-            Refresh
+            Шинэчлэх
           </Button>
         }
       />
@@ -98,12 +104,12 @@ export function JobsView() {
           items={[
             {
               key: 'firmware',
-              label: 'Firmware',
+              label: 'Программ хангамж',
               badge: <TabCount>{formatNumber(firmwareCount?.total ?? 0)}</TabCount>,
             },
             {
               key: 'diagnostics',
-              label: 'Diagnostics & logs',
+              label: 'Оношилгоо ба лог',
               badge: <TabCount>{formatNumber(diagCount?.total ?? 0)}</TabCount>,
             },
           ]}
@@ -116,7 +122,7 @@ export function JobsView() {
         <FilterBar>
           <Input
             className="w-auto min-w-[200px]"
-            placeholder="Charge point id"
+            placeholder="Станцын дугаар"
             value={chargePointId}
             onChange={(e) => setChargePointId(e.target.value)}
           />
@@ -126,24 +132,26 @@ export function JobsView() {
           <Table>
             <THead>
               <tr>
-                <TH>Charge point</TH>
-                <TH>Kind</TH>
-                <TH>Status</TH>
-                <TH>Location</TH>
-                <TH>File</TH>
-                <TH align="right">Request id</TH>
-                <TH>Scheduled</TH>
-                <TH>Error</TH>
-                <TH align="right">Created</TH>
+                <TH>Цэнэглэх станц</TH>
+                <TH>Төрөл</TH>
+                <TH>Төлөв</TH>
+                <TH>Байршил</TH>
+                <TH>Файл</TH>
+                <TH align="right">Хүсэлтийн дугаар</TH>
+                <TH>Товлосон</TH>
+                <TH>Алдаа</TH>
+                <TH align="right">Үүсгэсэн</TH>
               </tr>
             </THead>
             <TBody>
               {isLoading && !data ? (
                 <TableLoading colSpan={9} />
               ) : error ? (
-                <TableEmpty colSpan={9}>Could not load jobs.</TableEmpty>
+                <TableEmpty colSpan={9}>Ажлуудыг ачаалж чадсангүй.</TableEmpty>
               ) : rows.length === 0 ? (
-                <TableEmpty colSpan={9}>No {tab} jobs recorded.</TableEmpty>
+                <TableEmpty colSpan={9}>
+                  {tab === 'firmware' ? 'Программын шинэчлэлт бүртгэгдээгүй.' : 'Оношилгооны ажил бүртгэгдээгүй.'}
+                </TableEmpty>
               ) : (
                 rows.map((job) => (
                   <TR key={job._id}>
@@ -194,15 +202,15 @@ export function JobsView() {
               setLimit(n);
               setPage(1);
             }}
-            label="jobs"
+            label="ажил"
           />
         ) : null}
 
         {!isLoading && !error && rows.length === 0 && !debouncedCp ? (
           <EmptyState
             icon={<Cpu className="h-8 w-8" />}
-            title={`No ${tab} jobs`}
-            description="Start one from a charge point's command console."
+            title={tab === 'firmware' ? 'Программын шинэчлэлт алга' : 'Оношилгооны ажил алга'}
+            description="Станцын командын самбараас эхлүүлнэ үү."
           />
         ) : null}
       </Card>

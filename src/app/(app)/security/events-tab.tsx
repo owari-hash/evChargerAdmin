@@ -59,7 +59,7 @@ export function SecurityEventsTab({ canOperate }: { canOperate: boolean }) {
     setAcking(id);
     try {
       await api.post(`security/events/${encodeURIComponent(id)}/acknowledge`);
-      toast.success('Event acknowledged');
+      toast.success('Үйл явдлыг хүлээн зөвшөөрлөө');
       void mutate();
     } catch (err) {
       toast.error(errorMessage(err));
@@ -100,13 +100,13 @@ export function SecurityEventsTab({ canOperate }: { canOperate: boolean }) {
         <FilterBar>
           <Input
             className="w-auto min-w-[180px]"
-            placeholder="Charge point id"
+            placeholder="Станцын дугаар"
             value={chargePointId}
             onChange={(e) => setChargePointId(e.target.value)}
           />
           <Input
             className="w-auto min-w-[180px]"
-            placeholder="Event type"
+            placeholder="Үйл явдлын төрөл"
             value={type}
             onChange={(e) => {
               setType(e.target.value);
@@ -120,11 +120,11 @@ export function SecurityEventsTab({ canOperate }: { canOperate: boolean }) {
               setCritical(e.target.value);
               setPage(1);
             }}
-            aria-label="Criticality"
+            aria-label="Ноцтой байдал"
           >
-            <option value="">Any criticality</option>
-            <option value="true">Critical only</option>
-            <option value="false">Informational only</option>
+            <option value="">Бүх түвшин</option>
+            <option value="true">Зөвхөн ноцтой</option>
+            <option value="false">Зөвхөн мэдээллийн</option>
           </Select>
           <Select
             className="w-auto"
@@ -133,11 +133,11 @@ export function SecurityEventsTab({ canOperate }: { canOperate: boolean }) {
               setAcknowledged(e.target.value);
               setPage(1);
             }}
-            aria-label="Acknowledgement"
+            aria-label="Хүлээн зөвшөөрөл"
           >
-            <option value="">Any state</option>
-            <option value="false">Unacknowledged</option>
-            <option value="true">Acknowledged</option>
+            <option value="">Бүх төлөв</option>
+            <option value="false">Хүлээн зөвшөөрөөгүй</option>
+            <option value="true">Хүлээн зөвшөөрсөн</option>
           </Select>
           {type || critical || acknowledged || chargePointId ? (
             <Button
@@ -151,7 +151,7 @@ export function SecurityEventsTab({ canOperate }: { canOperate: boolean }) {
                 setPage(1);
               }}
             >
-              Clear
+              Цэвэрлэх
             </Button>
           ) : null}
         </FilterBar>
@@ -160,12 +160,12 @@ export function SecurityEventsTab({ canOperate }: { canOperate: boolean }) {
           <Table>
             <THead>
               <tr>
-                <TH>Time</TH>
-                <TH>Type</TH>
-                <TH>Criticality</TH>
-                <TH>Charge point</TH>
-                <TH>Technical info</TH>
-                <TH>Acknowledged</TH>
+                <TH>Хугацаа</TH>
+                <TH>Төрөл</TH>
+                <TH>Ноцтой байдал</TH>
+                <TH>Цэнэглэх станц</TH>
+                <TH>Техникийн мэдээлэл</TH>
+                <TH>Хүлээн зөвшөөрсөн</TH>
                 <TH align="right" />
               </tr>
             </THead>
@@ -173,9 +173,9 @@ export function SecurityEventsTab({ canOperate }: { canOperate: boolean }) {
               {isLoading && !data ? (
                 <TableLoading colSpan={7} />
               ) : error ? (
-                <TableEmpty colSpan={7}>Could not load security events.</TableEmpty>
+                <TableEmpty colSpan={7}>Аюулгүй байдлын үйл явдлыг ачаалж чадсангүй.</TableEmpty>
               ) : rows.length === 0 ? (
-                <TableEmpty colSpan={7}>No security events match these filters.</TableEmpty>
+                <TableEmpty colSpan={7}>Энэ шүүлтүүрт тохирох үйл явдал алга.</TableEmpty>
               ) : (
                 rows.map((event) => (
                   <TR key={event._id}>
@@ -215,7 +215,7 @@ export function SecurityEventsTab({ canOperate }: { canOperate: boolean }) {
                           onClick={() => void acknowledge(event._id)}
                         >
                           <Check className="h-3.5 w-3.5" />
-                          Acknowledge
+                          Хүлээн зөвшөөрөх
                         </Button>
                       ) : null}
                     </TD>
@@ -236,15 +236,15 @@ export function SecurityEventsTab({ canOperate }: { canOperate: boolean }) {
               setLimit(n);
               setPage(1);
             }}
-            label="events"
+            label="үйл явдал"
           />
         ) : null}
 
         {!isLoading && !error && rows.length === 0 && !type && !critical && !acknowledged && !debouncedCp ? (
           <EmptyState
             icon={<ShieldCheck className="h-8 w-8" />}
-            title="No security events"
-            description="Charge points report these with SecurityEventNotification. An empty log is a good sign."
+            title="Аюулгүй байдлын үйл явдал алга"
+            description="Станцууд эдгээрийг SecurityEventNotification-оор мэдээлнэ. Хоосон байх нь сайн шинж."
           />
         ) : null}
       </Card>

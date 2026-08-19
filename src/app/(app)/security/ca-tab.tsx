@@ -52,28 +52,28 @@ export function CaTab({ canAdmin }: { canAdmin: boolean }) {
       <div className="grid gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader
-            title="Local certificate authority"
-            description="Signs charge point certificates for security profile 3."
+            title="Дотоод гэрчилгээжүүлэх төв (CA)"
+            description="3-р аюулгүй байдлын профайлд станцын гэрчилгээг баталгаажуулна."
             actions={
               canAdmin ? (
                 <Button variant={data?.present ? 'secondary' : 'primary'} size="sm" onClick={() => setGenerating(true)}>
-                  {data?.present ? 'Regenerate CA' : 'Generate CA'}
+                  {data?.present ? 'CA дахин үүсгэх' : 'CA үүсгэх'}
                 </Button>
               ) : null
             }
           />
 
           {isLoading ? (
-            <div className="p-5 text-sm text-[var(--color-fg-muted)]">Loading…</div>
+            <div className="p-5 text-sm text-[var(--color-fg-muted)]">Ачаалж байна…</div>
           ) : error ? (
             <div className="p-5">
-              <ErrorNote>Could not read the CA from the backend.</ErrorNote>
+              <ErrorNote>Сервэрээс CA-г уншиж чадсангүй.</ErrorNote>
             </div>
           ) : !data?.present ? (
             <EmptyState
               icon={<Landmark className="h-8 w-8" />}
-              title="No CA configured"
-              description={`Nothing found at ${data?.certPath ?? 'the configured path'}. Generate one here, or run "npm run seed -- --ca" on the backend.`}
+              title="CA тохируулаагүй байна"
+              description={`${data?.certPath ?? 'Заасан зам'} дээр юу ч олдсонгүй. Эндээс үүсгэх, эсвэл сервер дээр "npm run seed -- --ca" ажиллуулна уу.`}
               action={
                 canAdmin ? (
                   <Button variant="primary" size="sm" onClick={() => setGenerating(true)}>
@@ -92,18 +92,18 @@ export function CaTab({ canAdmin }: { canAdmin: boolean }) {
               ) : null}
 
               <dl className="divide-y divide-[var(--color-border)] px-5 py-2">
-                <DataRow label="Status">
-                  <Badge tone={expired ? 'danger' : 'ok'}>{expired ? 'Expired' : 'Active'}</Badge>
+                <DataRow label="Төлөв">
+                  <Badge tone={expired ? 'danger' : 'ok'}>{expired ? 'Хугацаа дууссан' : 'Идэвхтэй'}</Badge>
                 </DataRow>
-                <DataRow label="Subject">{data.subject ?? '—'}</DataRow>
-                <DataRow label="Issuer">{data.issuer ?? '—'}</DataRow>
-                <DataRow label="Serial" mono>
+                <DataRow label="Эзэмшигч">{data.subject ?? '—'}</DataRow>
+                <DataRow label="Олгогч">{data.issuer ?? '—'}</DataRow>
+                <DataRow label="Сериал дугаар" mono>
                   {data.serialNumber ?? '—'}
                 </DataRow>
-                <DataRow label="Hash algorithm">{data.hashAlgorithm ?? '—'}</DataRow>
-                <DataRow label="Valid from">{formatDateTime(data.validFrom)}</DataRow>
-                <DataRow label="Valid to">{formatDateTime(data.validTo)}</DataRow>
-                <DataRow label="Path on server" mono>
+                <DataRow label="Хэш алгоритм">{data.hashAlgorithm ?? '—'}</DataRow>
+                <DataRow label="Хүчинтэй эхлэх">{formatDateTime(data.validFrom)}</DataRow>
+                <DataRow label="Хүчинтэй дуусах">{formatDateTime(data.validTo)}</DataRow>
+                <DataRow label="Сервер дэх зам" mono>
                   {data.certPath}
                 </DataRow>
               </dl>
@@ -113,16 +113,16 @@ export function CaTab({ canAdmin }: { canAdmin: boolean }) {
 
         <Card>
           <CardHeader
-            title="CA certificate"
-            description="Install this on your charge points."
-            actions={data?.pem ? <CopyButton value={data.pem} label="Copy" /> : null}
+            title="CA гэрчилгээ"
+            description="Үүнийг станцууд дээрээ суулгана уу."
+            actions={data?.pem ? <CopyButton value={data.pem} label="Хуулах" /> : null}
           />
           <div className="p-4">
             {data?.pem ? (
               <CodeBlock className="max-h-[420px]">{data.pem}</CodeBlock>
             ) : (
               <p className="py-8 text-center text-xs text-[var(--color-fg-muted)]">
-                No certificate available.
+                Гэрчилгээ байхгүй байна.
               </p>
             )}
           </div>
@@ -166,7 +166,7 @@ function GenerateCaModal({
         years: Number(years) || 10,
         force,
       });
-      toast.success('CA generated');
+      toast.success('CA үүслээ');
       onGenerated();
       onClose();
     } catch (err) {
@@ -180,13 +180,13 @@ function GenerateCaModal({
     <Modal
       open={open}
       onClose={onClose}
-      title={hasExisting ? 'Regenerate the CA' : 'Generate a CA'}
-      description="Creates a self-signed root that signs charge point certificates."
+      title={hasExisting ? 'CA дахин үүсгэх' : 'CA үүсгэх'}
+      description="Станцын гэрчилгээг баталгаажуулах өөрөө гарын үсэг зурсан үндсэн гэрчилгээ үүсгэнэ."
       size="sm"
       footer={
         <>
           <Button variant="ghost" onClick={onClose} disabled={saving}>
-            Cancel
+            Цуцлах
           </Button>
           <Button
             variant={hasExisting ? 'danger' : 'primary'}
@@ -194,7 +194,7 @@ function GenerateCaModal({
             loading={saving}
             disabled={hasExisting && !force}
           >
-            Generate
+            Үүсгэх
           </Button>
         </>
       }
@@ -213,11 +213,11 @@ function GenerateCaModal({
           </div>
         ) : null}
 
-        <Field label="Common name">
+        <Field label="Нэр (Common name)">
           <Input value={commonName} onChange={(e) => setCommonName(e.target.value)} />
         </Field>
 
-        <Field label="Validity (years)" hint="Between 1 and 30.">
+        <Field label="Хүчинтэй хугацаа (жил)" hint="1-ээс 30 хооронд.">
           <Input value={years} onChange={(e) => setYears(e.target.value)} inputMode="numeric" />
         </Field>
 
@@ -229,7 +229,7 @@ function GenerateCaModal({
               onChange={(e) => setForce(e.target.checked)}
             />
             <span>
-              I understand this overwrites the existing CA and breaks certificates already issued.
+              Энэ нь одоо байгаа CA-г дарж бичих бөгөөд өмнө олгосон гэрчилгээнүүд ажиллахгүй болохыг ойлголоо.
             </span>
           </label>
         ) : null}

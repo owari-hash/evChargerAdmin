@@ -56,78 +56,78 @@ export const COMMANDS: CommandSpec[] = [
   {
     slug: 'remote-start',
     action: 'RemoteStartTransaction',
-    label: 'Remote start',
+    label: 'Алсаас эхлүүлэх',
     group: 'Core',
-    description: 'Start a charging session on behalf of an RFID tag. The tag must already exist.',
+    description: 'RFID картын нэрийн өмнөөс цэнэглэлт эхлүүлнэ. Карт урьдчилан бүртгэлтэй байх ёстой.',
     fields: [
-      { name: 'idTag', label: 'ID tag', type: 'text', required: true, placeholder: 'TAG-0001' },
-      { name: 'connectorId', label: 'Connector', type: 'number', hint: 'Omit to let the charge point choose.' },
-      { name: 'chargingProfile', label: 'Charging profile', type: 'json', hint: 'Optional TxProfile to apply to this session.' },
+      { name: 'idTag', label: 'RFID карт', type: 'text', required: true, placeholder: 'TAG-0001' },
+      { name: 'connectorId', label: 'Холбогч', type: 'number', hint: 'Хоосон орхивол станц өөрөө сонгоно.' },
+      { name: 'chargingProfile', label: 'Цэнэглэх профайл', type: 'json', hint: 'Энэ цэнэглэлтэд хэрэглэх TxProfile (заавал бус).' },
     ],
   },
   {
     slug: 'remote-stop',
     action: 'RemoteStopTransaction',
-    label: 'Remote stop',
+    label: 'Алсаас зогсоох',
     group: 'Core',
-    description: 'Stop an in-progress session by its transaction id.',
+    description: 'Үргэлжилж буй цэнэглэлтийг гүйлгээний дугаараар зогсооно.',
     destructive: true,
-    fields: [{ name: 'transactionId', label: 'Transaction id', type: 'number', required: true }],
+    fields: [{ name: 'transactionId', label: 'Гүйлгээний дугаар', type: 'number', required: true }],
   },
   {
     slug: 'reset',
     action: 'Reset',
-    label: 'Reset',
+    label: 'Дахин ачаалах',
     group: 'Core',
-    description: 'Reboot the charge point. A hard reset drops sessions immediately.',
+    description: 'Станцыг дахин ачаална. Хүчтэй дахин ачаалалт цэнэглэлтийг шууд тасална.',
     destructive: true,
     fields: [
-      { name: 'type', label: 'Type', type: 'enum', options: ['Soft', 'Hard'], default: 'Soft', required: true },
+      { name: 'type', label: 'Төрөл', type: 'enum', options: ['Soft', 'Hard'], default: 'Soft', required: true },
     ],
   },
   {
     slug: 'unlock-connector',
     action: 'UnlockConnector',
-    label: 'Unlock connector',
+    label: 'Холбогч тайлах',
     group: 'Core',
-    description: 'Release the cable lock on a connector.',
-    fields: [{ name: 'connectorId', label: 'Connector', type: 'number', required: true, default: '1' }],
+    description: 'Холбогч дээрх кабелийн түгжээг тайлна.',
+    fields: [{ name: 'connectorId', label: 'Холбогч', type: 'number', required: true, default: '1' }],
   },
   {
     slug: 'change-availability',
     action: 'ChangeAvailability',
-    label: 'Change availability',
+    label: 'Ашиглалт өөрчлөх',
     group: 'Core',
-    description: 'Take a connector — or the whole charge point (connector 0) — in or out of service.',
+    description: 'Холбогч, эсвэл станцыг бүхэлд нь (0 дугаар холбогч) ажиллагаанд оруулах / гаргах.',
     destructive: true,
     fields: [
-      { name: 'connectorId', label: 'Connector', type: 'number', required: true, default: '0', hint: '0 targets the entire charge point.' },
-      { name: 'type', label: 'Availability', type: 'enum', options: ['Operative', 'Inoperative'], required: true, default: 'Inoperative' },
+      { name: 'connectorId', label: 'Холбогч', type: 'number', required: true, default: '0', hint: '0 нь станцыг бүхэлд нь хамаарна.' },
+      { name: 'type', label: 'Ашиглалт', type: 'enum', options: ['Operative', 'Inoperative'], required: true, default: 'Inoperative' },
     ],
   },
   {
     slug: 'change-configuration',
     action: 'ChangeConfiguration',
-    label: 'Change configuration',
+    label: 'Тохиргоо өөрчлөх',
     group: 'Core',
-    description: 'Write a single OCPP configuration key.',
+    description: 'OCPP тохиргооны нэг түлхүүрийг бичнэ.',
     fields: [
-      { name: 'key', label: 'Key', type: 'text', required: true, placeholder: 'HeartbeatInterval' },
-      { name: 'value', label: 'Value', type: 'text', required: true, placeholder: '300' },
+      { name: 'key', label: 'Түлхүүр', type: 'text', required: true, placeholder: 'HeartbeatInterval' },
+      { name: 'value', label: 'Утга', type: 'text', required: true, placeholder: '300' },
     ],
   },
   {
     slug: 'get-configuration',
     action: 'GetConfiguration',
-    label: 'Get configuration',
+    label: 'Тохиргоо унших',
     group: 'Core',
-    description: 'Read configuration keys and cache them against this charge point.',
+    description: 'Тохиргооны түлхүүрүүдийг уншиж, энэ станцын хамт хадгална.',
     fields: [
       {
         name: 'key',
-        label: 'Keys',
+        label: 'Түлхүүрүүд',
         type: 'stringList',
-        hint: 'Comma-separated. Leave empty to read every key.',
+        hint: 'Таслалаар тусгаарлана. Хоосон орхивол бүх түлхүүрийг уншина.',
         placeholder: 'HeartbeatInterval, MeterValueSampleInterval',
       },
     ],
@@ -135,21 +135,21 @@ export const COMMANDS: CommandSpec[] = [
   {
     slug: 'clear-cache',
     action: 'ClearCache',
-    label: 'Clear cache',
+    label: 'Кэш цэвэрлэх',
     group: 'Core',
-    description: 'Empty the local authorization cache.',
+    description: 'Дотоод зөвшөөрлийн кэшийг цэвэрлэнэ.',
     fields: [],
   },
   {
     slug: 'data-transfer',
     action: 'DataTransfer',
-    label: 'Data transfer',
+    label: 'Өгөгдөл дамжуулах',
     group: 'Core',
-    description: 'Send a vendor-specific message.',
+    description: 'Үйлдвэрлэгчийн тусгай мессеж илгээнэ.',
     fields: [
-      { name: 'vendorId', label: 'Vendor id', type: 'text', required: true },
-      { name: 'messageId', label: 'Message id', type: 'text' },
-      { name: 'data', label: 'Data', type: 'textarea' },
+      { name: 'vendorId', label: 'Үйлдвэрлэгчийн дугаар', type: 'text', required: true },
+      { name: 'messageId', label: 'Мессежийн дугаар', type: 'text' },
+      { name: 'data', label: 'Өгөгдөл', type: 'textarea' },
     ],
   },
 
@@ -157,13 +157,13 @@ export const COMMANDS: CommandSpec[] = [
   {
     slug: 'trigger-message',
     action: 'TriggerMessage',
-    label: 'Trigger message',
+    label: 'Мессеж дуудах',
     group: 'Trigger',
-    description: 'Ask the charge point to send a message right now.',
+    description: 'Станцаас тодорхой мессежийг яг одоо илгээхийг хүснэ.',
     fields: [
       {
         name: 'requestedMessage',
-        label: 'Message',
+        label: 'Мессеж',
         type: 'enum',
         required: true,
         default: 'StatusNotification',
@@ -176,19 +176,19 @@ export const COMMANDS: CommandSpec[] = [
           'StatusNotification',
         ],
       },
-      { name: 'connectorId', label: 'Connector', type: 'number', hint: 'Required for connector-scoped messages.' },
+      { name: 'connectorId', label: 'Холбогч', type: 'number', hint: 'Холбогчид хамаарах мессежид заавал шаардлагатай.' },
     ],
   },
   {
     slug: 'extended-trigger-message',
     action: 'ExtendedTriggerMessage',
-    label: 'Extended trigger',
+    label: 'Өргөтгөсөн дуудалт',
     group: 'Trigger',
-    description: 'Security-profile trigger, including a request for a new certificate signing request.',
+    description: 'Аюулгүй байдлын профайлын дуудалт, шинэ гэрчилгээний хүсэлт (CSR) авах боломжтой.',
     fields: [
       {
         name: 'requestedMessage',
-        label: 'Message',
+        label: 'Мессеж',
         type: 'enum',
         required: true,
         default: 'StatusNotification',
@@ -202,7 +202,7 @@ export const COMMANDS: CommandSpec[] = [
           'StatusNotification',
         ],
       },
-      { name: 'connectorId', label: 'Connector', type: 'number' },
+      { name: 'connectorId', label: 'Холбогч', type: 'number' },
     ],
   },
 
@@ -210,37 +210,37 @@ export const COMMANDS: CommandSpec[] = [
   {
     slug: 'reserve-now',
     action: 'ReserveNow',
-    label: 'Reserve now',
+    label: 'Захиалга үүсгэх',
     group: 'Reservation',
-    description: 'Hold a connector for a tag until the expiry time. The reservation id is allocated automatically.',
+    description: 'Тухайн картад холбогчийг дуусах хугацаа хүртэл захиална. Захиалгын дугаар автоматаар оногдоно.',
     fields: [
-      { name: 'connectorId', label: 'Connector', type: 'number', required: true, default: '1' },
-      { name: 'idTag', label: 'ID tag', type: 'text', required: true },
-      { name: 'expiryDate', label: 'Expires at', type: 'datetime', required: true, hint: 'Must be in the future.' },
-      { name: 'parentIdTag', label: 'Parent ID tag', type: 'text' },
+      { name: 'connectorId', label: 'Холбогч', type: 'number', required: true, default: '1' },
+      { name: 'idTag', label: 'RFID карт', type: 'text', required: true },
+      { name: 'expiryDate', label: 'Дуусах хугацаа', type: 'datetime', required: true, hint: 'Ирээдүйн хугацаа байх ёстой.' },
+      { name: 'parentIdTag', label: 'Эцэг RFID карт', type: 'text' },
     ],
   },
   {
     slug: 'cancel-reservation',
     action: 'CancelReservation',
-    label: 'Cancel reservation',
+    label: 'Захиалга цуцлах',
     group: 'Reservation',
-    description: 'Release a reservation by id.',
-    fields: [{ name: 'reservationId', label: 'Reservation id', type: 'number', required: true }],
+    description: 'Захиалгыг дугаараар нь цуцална.',
+    fields: [{ name: 'reservationId', label: 'Захиалгын дугаар', type: 'number', required: true }],
   },
 
   // ---- Smart charging -----------------------------------------------------
   {
     slug: 'set-charging-profile',
     action: 'SetChargingProfile',
-    label: 'Set charging profile',
+    label: 'Цэнэглэх профайл тохируулах',
     group: 'Smart charging',
-    description: 'Install a charging profile. The profile id is allocated automatically when omitted.',
+    description: 'Цэнэглэх профайл суулгана. Дугаарыг оруулаагүй бол автоматаар оногдоно.',
     fields: [
-      { name: 'connectorId', label: 'Connector', type: 'number', required: true, default: '0' },
+      { name: 'connectorId', label: 'Холбогч', type: 'number', required: true, default: '0' },
       {
         name: 'csChargingProfiles',
-        label: 'Charging profile',
+        label: 'Цэнэглэх профайл',
         type: 'json',
         required: true,
         default: JSON.stringify(
@@ -256,39 +256,39 @@ export const COMMANDS: CommandSpec[] = [
           null,
           2,
         ),
-        hint: 'Requires stackLevel, chargingProfilePurpose, chargingProfileKind and chargingSchedule.',
+        hint: 'stackLevel, chargingProfilePurpose, chargingProfileKind, chargingSchedule талбарууд шаардлагатай.',
       },
     ],
   },
   {
     slug: 'clear-charging-profile',
     action: 'ClearChargingProfile',
-    label: 'Clear charging profile',
+    label: 'Цэнэглэх профайл устгах',
     group: 'Smart charging',
-    description: 'Remove profiles matching the given filter. Every field is optional — omit all to clear everything.',
+    description: 'Шүүлтүүрт тохирох профайлуудыг устгана. Бүх талбар заавал бус — бүгдийг хоосон орхивол бүх профайл устана.',
     destructive: true,
     fields: [
-      { name: 'id', label: 'Profile id', type: 'number' },
-      { name: 'connectorId', label: 'Connector', type: 'number' },
+      { name: 'id', label: 'Профайлын дугаар', type: 'number' },
+      { name: 'connectorId', label: 'Холбогч', type: 'number' },
       {
         name: 'chargingProfilePurpose',
-        label: 'Purpose',
+        label: 'Зориулалт',
         type: 'enum',
         options: ['ChargePointMaxProfile', 'TxDefaultProfile', 'TxProfile'],
       },
-      { name: 'stackLevel', label: 'Stack level', type: 'number' },
+      { name: 'stackLevel', label: 'Давхаргын түвшин', type: 'number' },
     ],
   },
   {
     slug: 'get-composite-schedule',
     action: 'GetCompositeSchedule',
-    label: 'Get composite schedule',
+    label: 'Нэгдсэн хуваарь унших',
     group: 'Smart charging',
-    description: 'Ask what limit the charge point will actually apply over a window.',
+    description: 'Тухайн хугацаанд станц ямар хязгаар мөрдөхийг асууна.',
     fields: [
-      { name: 'connectorId', label: 'Connector', type: 'number', required: true, default: '0' },
-      { name: 'duration', label: 'Duration (s)', type: 'number', required: true, default: '3600' },
-      { name: 'chargingRateUnit', label: 'Rate unit', type: 'enum', options: ['A', 'W'] },
+      { name: 'connectorId', label: 'Холбогч', type: 'number', required: true, default: '0' },
+      { name: 'duration', label: 'Үргэлжлэх хугацаа (сек)', type: 'number', required: true, default: '3600' },
+      { name: 'chargingRateUnit', label: 'Хэмжих нэгж', type: 'enum', options: ['A', 'W'] },
     ],
   },
 
@@ -296,24 +296,24 @@ export const COMMANDS: CommandSpec[] = [
   {
     slug: 'get-local-list-version',
     action: 'GetLocalListVersion',
-    label: 'Get local list version',
+    label: 'Дотоод жагсаалтын хувилбар',
     group: 'Local list',
-    description: 'Read the version of the local authorization list.',
+    description: 'Дотоод зөвшөөрлийн жагсаалтын хувилбарыг уншина.',
     fields: [],
   },
   {
     slug: 'send-local-list',
     action: 'SendLocalList',
-    label: 'Send local list',
+    label: 'Дотоод жагсаалт илгээх',
     group: 'Local list',
-    description: 'Push RFID tags to the charge point so it can authorise offline.',
+    description: 'Станц офлайн үед зөвшөөрөл олгох боломжтой болгохын тулд RFID картуудыг илгээнэ.',
     fields: [
-      { name: 'updateType', label: 'Update type', type: 'enum', options: ['Full', 'Differential'], default: 'Full', required: true },
+      { name: 'updateType', label: 'Шинэчлэлтийн төрөл', type: 'enum', options: ['Full', 'Differential'], default: 'Full', required: true },
       {
         name: 'idTags',
-        label: 'ID tags',
+        label: 'RFID картууд',
         type: 'stringList',
-        hint: 'Comma-separated. Leave empty to push every tag in the database.',
+        hint: 'Таслалаар тусгаарлана. Хоосон орхивол өгөгдлийн сан дахь бүх картыг илгээнэ.',
       },
     ],
   },
@@ -322,61 +322,61 @@ export const COMMANDS: CommandSpec[] = [
   {
     slug: 'update-firmware',
     action: 'UpdateFirmware',
-    label: 'Update firmware',
+    label: 'Программ шинэчлэх',
     group: 'Firmware & logs',
-    description: 'Tell the charge point to download and install firmware.',
+    description: 'Станцад программ хангамжийг татаж суулгах даалгавар өгнө.',
     destructive: true,
     fields: [
-      { name: 'location', label: 'Firmware URL', type: 'text', required: true, placeholder: 'https://…/firmware.bin' },
-      { name: 'retrieveDate', label: 'Retrieve at', type: 'datetime', required: true },
-      { name: 'retries', label: 'Retries', type: 'number' },
-      { name: 'retryInterval', label: 'Retry interval (s)', type: 'number' },
+      { name: 'location', label: 'Программын URL', type: 'text', required: true, placeholder: 'https://…/firmware.bin' },
+      { name: 'retrieveDate', label: 'Татах хугацаа', type: 'datetime', required: true },
+      { name: 'retries', label: 'Дахин оролдлого', type: 'number' },
+      { name: 'retryInterval', label: 'Дахин оролдох завсар (сек)', type: 'number' },
     ],
   },
   {
     slug: 'get-diagnostics',
     action: 'GetDiagnostics',
-    label: 'Get diagnostics',
+    label: 'Оношилгоо авах',
     group: 'Firmware & logs',
-    description: 'Ask the charge point to upload a diagnostics file.',
+    description: 'Станцаас оношилгооны файл илгээхийг хүснэ.',
     fields: [
-      { name: 'location', label: 'Upload URL', type: 'text', required: true, placeholder: 'ftp://user:pass@host/path' },
-      { name: 'startTime', label: 'From', type: 'datetime' },
-      { name: 'stopTime', label: 'To', type: 'datetime' },
-      { name: 'retries', label: 'Retries', type: 'number' },
-      { name: 'retryInterval', label: 'Retry interval (s)', type: 'number' },
+      { name: 'location', label: 'Илгээх URL', type: 'text', required: true, placeholder: 'ftp://user:pass@host/path' },
+      { name: 'startTime', label: 'Эхлэх', type: 'datetime' },
+      { name: 'stopTime', label: 'Дуусах', type: 'datetime' },
+      { name: 'retries', label: 'Дахин оролдлого', type: 'number' },
+      { name: 'retryInterval', label: 'Дахин оролдох завсар (сек)', type: 'number' },
     ],
   },
   {
     slug: 'get-log',
     action: 'GetLog',
-    label: 'Get log',
+    label: 'Лог авах',
     group: 'Firmware & logs',
-    description: 'Request the diagnostics or security log. The request id is allocated automatically.',
+    description: 'Оношилгоо эсвэл аюулгүй байдлын логийг хүснэ. Хүсэлтийн дугаар автоматаар оногдоно.',
     fields: [
-      { name: 'logType', label: 'Log type', type: 'enum', options: ['DiagnosticsLog', 'SecurityLog'], required: true, default: 'SecurityLog' },
-      { name: 'remoteLocation', label: 'Upload URL', type: 'text', required: true, placeholder: 'ftp://user:pass@host/path' },
-      { name: 'oldestTimestamp', label: 'From', type: 'datetime' },
-      { name: 'latestTimestamp', label: 'To', type: 'datetime' },
-      { name: 'retries', label: 'Retries', type: 'number' },
-      { name: 'retryInterval', label: 'Retry interval (s)', type: 'number' },
+      { name: 'logType', label: 'Логийн төрөл', type: 'enum', options: ['DiagnosticsLog', 'SecurityLog'], required: true, default: 'SecurityLog' },
+      { name: 'remoteLocation', label: 'Илгээх URL', type: 'text', required: true, placeholder: 'ftp://user:pass@host/path' },
+      { name: 'oldestTimestamp', label: 'Эхлэх', type: 'datetime' },
+      { name: 'latestTimestamp', label: 'Дуусах', type: 'datetime' },
+      { name: 'retries', label: 'Дахин оролдлого', type: 'number' },
+      { name: 'retryInterval', label: 'Дахин оролдох завсар (сек)', type: 'number' },
     ],
   },
   {
     slug: 'signed-update-firmware',
     action: 'SignedUpdateFirmware',
-    label: 'Signed firmware update',
+    label: 'Баталгаажсан программ шинэчлэлт',
     group: 'Firmware & logs',
-    description: 'Signed firmware update from the security white paper. Requires the signing certificate and signature.',
+    description: 'Аюулгүй байдлын стандартын дагуух баталгаажсан программ шинэчлэлт. Гарын үсгийн гэрчилгээ, гарын үсэг шаардлагатай.',
     destructive: true,
     fields: [
-      { name: 'location', label: 'Firmware URL', type: 'text', required: true, placeholder: 'https://…/firmware.bin' },
-      { name: 'retrieveDateTime', label: 'Retrieve at', type: 'datetime', required: true },
-      { name: 'installDateTime', label: 'Install at', type: 'datetime' },
-      { name: 'signingCertificate', label: 'Signing certificate (PEM)', type: 'textarea', required: true },
-      { name: 'signature', label: 'Signature', type: 'textarea', required: true },
-      { name: 'retries', label: 'Retries', type: 'number' },
-      { name: 'retryInterval', label: 'Retry interval (s)', type: 'number' },
+      { name: 'location', label: 'Программын URL', type: 'text', required: true, placeholder: 'https://…/firmware.bin' },
+      { name: 'retrieveDateTime', label: 'Татах хугацаа', type: 'datetime', required: true },
+      { name: 'installDateTime', label: 'Суулгах хугацаа', type: 'datetime' },
+      { name: 'signingCertificate', label: 'Гарын үсгийн гэрчилгээ (PEM)', type: 'textarea', required: true },
+      { name: 'signature', label: 'Гарын үсэг', type: 'textarea', required: true },
+      { name: 'retries', label: 'Дахин оролдлого', type: 'number' },
+      { name: 'retryInterval', label: 'Дахин оролдох завсар (сек)', type: 'number' },
     ],
   },
 
@@ -384,31 +384,31 @@ export const COMMANDS: CommandSpec[] = [
   {
     slug: 'install-certificate',
     action: 'InstallCertificate',
-    label: 'Install certificate',
+    label: 'Гэрчилгээ суулгах',
     group: 'Certificates',
-    description: 'Install a root certificate on the charge point.',
+    description: 'Станц дээр үндсэн гэрчилгээ суулгана.',
     fields: [
       {
         name: 'certificateType',
-        label: 'Type',
+        label: 'Төрөл',
         type: 'enum',
         required: true,
         default: 'CentralSystemRootCertificate',
         options: ['CentralSystemRootCertificate', 'ManufacturerRootCertificate'],
       },
-      { name: 'certificate', label: 'Certificate (PEM)', type: 'textarea', required: true, placeholder: '-----BEGIN CERTIFICATE-----' },
+      { name: 'certificate', label: 'Гэрчилгээ (PEM)', type: 'textarea', required: true, placeholder: '-----BEGIN CERTIFICATE-----' },
     ],
   },
   {
     slug: 'get-installed-certificate-ids',
     action: 'GetInstalledCertificateIds',
-    label: 'List installed certificates',
+    label: 'Суусан гэрчилгээ жагсаах',
     group: 'Certificates',
-    description: 'Read the hashes of certificates the charge point currently trusts.',
+    description: 'Станцын одоо итгэж буй гэрчилгээнүүдийн хэшийг уншина.',
     fields: [
       {
         name: 'certificateType',
-        label: 'Type',
+        label: 'Төрөл',
         type: 'enum',
         required: true,
         default: 'CentralSystemRootCertificate',
@@ -419,33 +419,33 @@ export const COMMANDS: CommandSpec[] = [
   {
     slug: 'delete-certificate',
     action: 'DeleteCertificate',
-    label: 'Delete certificate',
+    label: 'Гэрчилгээ устгах',
     group: 'Certificates',
-    description: 'Remove a certificate identified by its hash data.',
+    description: 'Хэш мэдээллээр тодорхойлсон гэрчилгээг устгана.',
     destructive: true,
     fields: [
       {
         name: 'hashAlgorithm',
         path: 'certificateHashData.hashAlgorithm',
-        label: 'Hash algorithm',
+        label: 'Хэш алгоритм',
         type: 'enum',
         options: ['SHA256', 'SHA384', 'SHA512'],
         required: true,
         default: 'SHA256',
       },
-      { name: 'issuerNameHash', path: 'certificateHashData.issuerNameHash', label: 'Issuer name hash', type: 'text', required: true },
-      { name: 'issuerKeyHash', path: 'certificateHashData.issuerKeyHash', label: 'Issuer key hash', type: 'text', required: true },
-      { name: 'serialNumber', path: 'certificateHashData.serialNumber', label: 'Serial number', type: 'text', required: true },
+      { name: 'issuerNameHash', path: 'certificateHashData.issuerNameHash', label: 'Олгогчийн нэрийн хэш', type: 'text', required: true },
+      { name: 'issuerKeyHash', path: 'certificateHashData.issuerKeyHash', label: 'Олгогчийн түлхүүрийн хэш', type: 'text', required: true },
+      { name: 'serialNumber', path: 'certificateHashData.serialNumber', label: 'Сериал дугаар', type: 'text', required: true },
     ],
   },
   {
     slug: 'certificate-signed',
     action: 'CertificateSigned',
-    label: 'Push signed certificate',
+    label: 'Баталгаажсан гэрчилгээ илгээх',
     group: 'Certificates',
-    description: 'Deliver a signed certificate chain to the charge point.',
+    description: 'Баталгаажсан гэрчилгээний цуваа станц руу хүргэнэ.',
     fields: [
-      { name: 'certificateChain', label: 'Certificate chain (PEM)', type: 'textarea', required: true },
+      { name: 'certificateChain', label: 'Гэрчилгээний цуваа (PEM)', type: 'textarea', required: true },
     ],
   },
 
@@ -453,13 +453,13 @@ export const COMMANDS: CommandSpec[] = [
   {
     slug: 'raw',
     action: 'any',
-    label: 'Raw OCPP call',
+    label: 'Түүхий OCPP дуудалт',
     group: 'Advanced',
-    description: 'Send any registered OCPP action verbatim. Use when a command is not covered above.',
+    description: 'Бүртгэлтэй аливаа OCPP үйлдлийг шууд илгээнэ. Дээрх командуудад байхгүй үед ашиглана.',
     destructive: true,
     fields: [
-      { name: 'action', label: 'OCPP action', type: 'text', required: true, placeholder: 'GetCompositeSchedule' },
-      { name: 'payload', label: 'Payload', type: 'json', required: true, default: '{}' },
+      { name: 'action', label: 'OCPP үйлдэл', type: 'text', required: true, placeholder: 'GetCompositeSchedule' },
+      { name: 'payload', label: 'Агуулга', type: 'json', required: true, default: '{}' },
     ],
   },
 ];
@@ -490,7 +490,7 @@ export function buildPayload(
     const raw = (values[field.name] ?? '').trim();
 
     if (!raw) {
-      if (field.required) return { ok: false, error: `${field.label} is required` };
+      if (field.required) return { ok: false, error: `${field.label} талбарыг бөглөнө үү` };
       continue;
     }
 
@@ -498,13 +498,13 @@ export function buildPayload(
     switch (field.type) {
       case 'number': {
         const n = Number(raw);
-        if (!Number.isFinite(n)) return { ok: false, error: `${field.label} must be a number` };
+        if (!Number.isFinite(n)) return { ok: false, error: `${field.label} тоо байх ёстой` };
         value = n;
         break;
       }
       case 'datetime': {
         const d = new Date(raw);
-        if (Number.isNaN(d.getTime())) return { ok: false, error: `${field.label} is not a valid date` };
+        if (Number.isNaN(d.getTime())) return { ok: false, error: `${field.label} огноо буруу байна` };
         value = d.toISOString();
         break;
       }
@@ -521,7 +521,7 @@ export function buildPayload(
         try {
           value = JSON.parse(raw);
         } catch {
-          return { ok: false, error: `${field.label} is not valid JSON` };
+          return { ok: false, error: `${field.label} JSON биш байна` };
         }
         break;
       }

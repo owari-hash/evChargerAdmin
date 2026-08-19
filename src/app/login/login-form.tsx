@@ -13,7 +13,7 @@ export function LoginForm() {
   const [email, setEmail] = React.useState('');
   const [password, setPassword] = React.useState('');
   const [error, setError] = React.useState<string | null>(
-    expired ? 'Your session expired. Please sign in again.' : null,
+    expired ? 'Таны нэвтрэлтийн хугацаа дууслаа. Дахин нэвтэрнэ үү.' : null,
   );
   const [loading, setLoading] = React.useState(false);
 
@@ -31,7 +31,7 @@ export function LoginForm() {
       const payload = (await res.json().catch(() => null)) as { error?: string } | null;
 
       if (!res.ok) {
-        setError(payload?.error ?? 'Sign-in failed');
+        setError(payload?.error ?? 'Нэвтрэх амжилтгүй боллоо');
         setLoading(false);
         return;
       }
@@ -41,7 +41,7 @@ export function LoginForm() {
       router.replace(target);
       router.refresh();
     } catch {
-      setError('Cannot reach the server. Check your connection.');
+      setError('Сервертэй холбогдож чадсангүй. Холболтоо шалгана уу.');
       setLoading(false);
     }
   }
@@ -50,7 +50,7 @@ export function LoginForm() {
     <form onSubmit={onSubmit} className="space-y-4">
       {error ? <ErrorNote>{error}</ErrorNote> : null}
 
-      <Field label="Email" htmlFor="email">
+      <Field label="И-мэйл" htmlFor="email">
         <Input
           id="email"
           name="email"
@@ -64,7 +64,7 @@ export function LoginForm() {
         />
       </Field>
 
-      <Field label="Password" htmlFor="password">
+      <Field label="Нууц үг" htmlFor="password">
         <Input
           id="password"
           name="password"
@@ -78,7 +78,7 @@ export function LoginForm() {
       </Field>
 
       <Button type="submit" variant="primary" className="w-full justify-center" loading={loading}>
-        Sign in
+        Нэвтрэх
       </Button>
     </form>
   );

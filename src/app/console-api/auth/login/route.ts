@@ -15,7 +15,7 @@ const bodySchema = z.object({
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const parsed = bodySchema.safeParse(await req.json().catch(() => null));
   if (!parsed.success) {
-    return NextResponse.json({ error: 'Enter a valid email and password' }, { status: 400 });
+    return NextResponse.json({ error: 'И-мэйл, нууц үгээ зөв оруулна уу' }, { status: 400 });
   }
 
   let upstream: Response;
@@ -28,7 +28,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
     });
   } catch {
     return NextResponse.json(
-      { error: 'Cannot reach the CSMS backend. Check CSMS_API_URL.' },
+      { error: 'CSMS сервертэй холбогдож чадсангүй. CSMS_API_URL-ээ шалгана уу.' },
       { status: 502 },
     );
   }
@@ -41,14 +41,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   if (!upstream.ok || !payload?.token) {
     return NextResponse.json(
-      { error: payload?.error ?? 'Invalid email or password' },
+      { error: payload?.error ?? 'И-мэйл эсвэл нууц үг буруу' },
       { status: upstream.status === 200 ? 502 : upstream.status },
     );
   }
 
   const user = payload.user ?? readPrincipal(payload.token);
   if (!user) {
-    return NextResponse.json({ error: 'The backend returned an unreadable token' }, { status: 502 });
+    return NextResponse.json({ error: 'Серверээс уншигдахгүй токен ирлээ' }, { status: 502 });
   }
 
   await setSessionCookie(payload.token);

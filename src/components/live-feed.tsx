@@ -7,6 +7,7 @@ import { Pause, Play, Trash2 } from 'lucide-react';
 import { Badge, Button, Dot, type Tone } from '@/components/ui/primitives';
 import { useLiveEvents } from '@/lib/use-live-events';
 import { formatRelative, humanizeEvent } from '@/lib/format';
+import { CONNECTOR_STATUS, EVENT, STOP_REASON, mn } from '@/lib/mn';
 import type { CsmsEvent } from '@/lib/types';
 
 const EVENT_TONES: Record<string, Tone> = {
@@ -31,25 +32,25 @@ function describe(event: CsmsEvent): string {
   const e = event as Record<string, unknown>;
   switch (event.event) {
     case 'connector.status':
-      return `Connector ${e.connectorId ?? '?'} → ${e.status ?? '?'}${
+      return `${e.connectorId ?? '?'} холбогч → ${mn(CONNECTOR_STATUS, e.status as string)}${
         e.errorCode && e.errorCode !== 'NoError' ? ` (${e.errorCode})` : ''
       }`;
     case 'transaction.started':
-      return `Session #${e.transactionId ?? '?'} started on connector ${e.connectorId ?? '?'} (tag ${e.idTag ?? '?'})`;
+      return `#${e.transactionId ?? '?'} цэнэглэлт ${e.connectorId ?? '?'} холбогч дээр эхэллээ (карт ${e.idTag ?? '?'})`;
     case 'transaction.stopped':
-      return `Session #${e.transactionId ?? '?'} stopped${e.reason ? ` — ${e.reason}` : ''}`;
+      return `#${e.transactionId ?? '?'} цэнэглэлт дуусав${e.reason ? ` — ${mn(STOP_REASON, e.reason as string)}` : ''}`;
     case 'transaction.metervalue': {
       const power = typeof e.powerW === 'number' ? `${(e.powerW / 1000).toFixed(1)} kW` : null;
       const soc = typeof e.socPercent === 'number' ? `${e.socPercent}%` : null;
       const parts = [power, soc].filter(Boolean).join(' · ');
-      return `Session #${e.transactionId ?? '?'}${parts ? ` — ${parts}` : ' meter value'}`;
+      return `#${e.transactionId ?? '?'} цэнэглэлт${parts ? ` — ${parts}` : ' — тоолуурын утга'}`;
     }
     case 'security.event':
-      return `${e.type ?? 'Security event'}${e.isCritical ? ' (critical)' : ''}`;
+      return `${e.type ?? 'Аюулгүй байдлын үйл явдал'}${e.isCritical ? ' (ноцтой)' : ''}`;
     case 'command.result':
-      return `${e.action ?? 'Command'} → ${e.status ?? 'sent'}`;
+      return `${e.action ?? 'Команд'} → ${e.status ?? 'илгээсэн'}`;
     case 'chargepoint.boot':
-      return `Boot: ${e.chargePointVendor ?? ''} ${e.chargePointModel ?? ''}`.trim() || 'Boot';
+      return `Асав: ${e.chargePointVendor ?? ''} ${e.chargePointModel ?? ''}`.trim() || 'Станц асав';
     case 'ocpp.message':
       return `${e.direction ?? ''} ${e.action ?? ''}`.trim();
     default:
@@ -113,13 +114,19 @@ export function LiveFeed({
             tone={paused ? 'idle' : status === 'live' ? 'ok' : status === 'connecting' ? 'warn' : 'danger'}
             pulse={!paused && status === 'live'}
           />
-          {paused ? 'Paused' : status === 'live' ? 'Streaming' : status === 'connecting' ? 'Connecting…' : 'Disconnected'}
+          {paused
+            ? 'Түр зогссон'
+            : status === 'live'
+              ? 'Шууд дамжуулж байна'
+              : status === 'connecting'
+                ? 'Холбогдож байна…'
+                : 'Холболт тасарсан'}
         </span>
         <div className="flex items-center gap-1">
-          <Button variant="ghost" size="icon" onClick={() => setPaused((p) => !p)} aria-label={paused ? 'Resume' : 'Pause'}>
+          <Button variant="ghost" size="icon" onClick={() => setPaused((p) => !p)} aria-label={paused ? 'Үргэлжлүүлэх' : 'Түр зогсоох'}>
             {paused ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
           </Button>
-          <Button variant="ghost" size="icon" onClick={clear} aria-label="Clear feed">
+          <Button variant="ghost" size="icon" onClick={clear} aria-label="Урсгал цэвэрлэх">
             <Trash2 className="h-3.5 w-3.5" />
           </Button>
         </div>
@@ -128,7 +135,7 @@ export function LiveFeed({
       <ul className={`flex-1 divide-y divide-[var(--color-border)] overflow-y-auto ${height}`}>
         {events.length === 0 ? (
           <li className="px-4 py-10 text-center text-xs text-[var(--color-fg-muted)]">
-            {paused ? 'Stream paused.' : 'Waiting for activity…'}
+            {paused ? 'Урсгал түр зогссон.' : 'Үйл ажиллагаа хүлээж байна…'}
           </li>
         ) : (
           events.map((event) => (
@@ -137,7 +144,7 @@ export function LiveFeed({
               className="animate-in-fade flex items-start gap-3 px-4 py-2.5 text-xs"
             >
               <Badge tone={EVENT_TONES[event.event] ?? 'idle'} className="shrink-0">
-                {event.event.split('.').pop()}
+                {mn(EVENT, event.event)}
               </Badge>
 
               <div className="min-w-0 flex-1">

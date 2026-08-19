@@ -50,7 +50,7 @@ export function ConfigurationTab({
     setRefreshing(true);
     try {
       await api.post(`charge-points/${encodeURIComponent(chargePointId)}/get-configuration`, {});
-      toast.success('Configuration read from the charge point');
+      toast.success('Станцаас тохиргоог уншлаа');
       router.refresh();
     } catch (err) {
       toast.error(errorMessage(err));
@@ -63,8 +63,8 @@ export function ConfigurationTab({
     <>
       <Card>
         <CardHeader
-          title="Configuration keys"
-          description="Cached from the charge point. Read again to refresh."
+          title="Тохиргооны түлхүүр"
+          description="Станцаас хадгалсан хуулбар. Шинэчлэхийн тулд дахин уншина уу."
           actions={
             canOperate ? (
               <Button
@@ -73,10 +73,10 @@ export function ConfigurationTab({
                 onClick={() => void refetchAll()}
                 loading={refreshing}
                 disabled={!isOnline}
-                title={isOnline ? undefined : 'The charge point is offline'}
+                title={isOnline ? undefined : 'Станц офлайн байна'}
               >
                 <Download className="h-3.5 w-3.5" />
-                Read all keys
+                Бүх түлхүүрийг унших
               </Button>
             ) : null
           }
@@ -88,7 +88,7 @@ export function ConfigurationTab({
               <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--color-fg-subtle)]" />
               <Input
                 className="pl-8"
-                placeholder="Filter keys…"
+                placeholder="Түлхүүр шүүх…"
                 value={filter}
                 onChange={(e) => setFilter(e.target.value)}
               />
@@ -102,17 +102,17 @@ export function ConfigurationTab({
         {keys.length === 0 ? (
           <EmptyState
             icon={<Settings2 className="h-8 w-8" />}
-            title="No configuration cached"
+            title="Тохиргоо хадгалагдаагүй байна"
             description={
               canOperate
-                ? 'Read the keys from the charge point to populate this list.'
-                : 'An operator can read the keys from the charge point.'
+                ? 'Жагсаалтыг дүүргэхийн тулд станцаас түлхүүрүүдийг уншина уу.'
+                : 'Оператор эрхтэй хэрэглэгч станцаас түлхүүрүүдийг унших боломжтой.'
             }
             action={
               canOperate ? (
                 <Button variant="primary" size="sm" onClick={() => void refetchAll()} disabled={!isOnline}>
                   <Download className="h-3.5 w-3.5" />
-                  Read all keys
+                  Бүх түлхүүрийг унших
                 </Button>
               ) : null
             }
@@ -122,16 +122,16 @@ export function ConfigurationTab({
             <Table>
               <THead>
                 <tr>
-                  <TH>Key</TH>
-                  <TH>Value</TH>
-                  <TH>Access</TH>
-                  <TH align="right">Updated</TH>
+                  <TH>Түлхүүр</TH>
+                  <TH>Утга</TH>
+                  <TH>Хандалт</TH>
+                  <TH align="right">Шинэчлэгдсэн</TH>
                   <TH align="right" />
                 </tr>
               </THead>
               <TBody>
                 {visible.length === 0 ? (
-                  <TableEmpty colSpan={5}>No keys match that filter.</TableEmpty>
+                  <TableEmpty colSpan={5}>Энэ шүүлтүүрт тохирох түлхүүр алга.</TableEmpty>
                 ) : (
                   visible.map((k) => (
                     <TR key={k.key}>
@@ -163,7 +163,7 @@ export function ConfigurationTab({
                             disabled={!isOnline}
                           >
                             <Pencil className="h-3.5 w-3.5" />
-                            Edit
+                            Засах
                           </Button>
                         ) : null}
                       </TD>
@@ -214,14 +214,14 @@ function EditKeyModal({
         { key: entry.key, value },
       );
       if (res.status === 'Rejected' || res.status === 'NotSupported') {
-        setError(`The charge point answered ${res.status}.`);
+        setError(`Станц ${res.status} гэж хариулав.`);
         setSaving(false);
         return;
       }
       toast.success(
         res.status === 'RebootRequired'
-          ? `${entry.key} accepted — the charge point needs a reboot`
-          : `${entry.key} updated`,
+          ? `${entry.key} хүлээн авлаа — станцыг дахин ачаалах шаардлагатай`
+          : `${entry.key} шинэчлэгдлээ`,
       );
       onSaved();
       onClose();
@@ -236,23 +236,23 @@ function EditKeyModal({
     <Modal
       open={entry !== null}
       onClose={onClose}
-      title="Change configuration"
+      title="Тохиргоо өөрчлөх"
       description={entry?.key}
       size="sm"
       footer={
         <>
           <Button variant="ghost" onClick={onClose} disabled={saving}>
-            Cancel
+            Цуцлах
           </Button>
           <Button variant="primary" onClick={save} loading={saving}>
-            Send to charge point
+            Станц руу илгээх
           </Button>
         </>
       }
     >
       <div className="space-y-4">
         {error ? <ErrorNote>{error}</ErrorNote> : null}
-        <Field label="Value" hint="Sent as ChangeConfiguration. Max 500 characters.">
+        <Field label="Утга" hint="ChangeConfiguration командаар илгээнэ. Дээд тал нь 500 тэмдэгт.">
           <Input value={value} onChange={(e) => setValue(e.target.value)} className="font-mono" autoFocus />
         </Field>
       </div>

@@ -55,12 +55,12 @@ export function ChargingProfilesView() {
   return (
     <>
       <PageHeader
-        title="Smart charging profiles"
-        description="Charging limits the CSMS has installed on charge points."
+        title="Ухаалаг цэнэглэлтийн профайл"
+        description="CSMS-ээс станцууд дээр суулгасан цэнэглэлтийн хязгаарлалтууд."
         actions={
           <Button variant="ghost" size="sm" onClick={() => void mutate()}>
             <RefreshCw className="h-3.5 w-3.5" />
-            Refresh
+            Шинэчлэх
           </Button>
         }
       />
@@ -69,7 +69,7 @@ export function ChargingProfilesView() {
         <FilterBar>
           <Input
             className="w-auto min-w-[200px]"
-            placeholder="Charge point id"
+            placeholder="Станцын дугаар"
             value={chargePointId}
             onChange={(e) => setChargePointId(e.target.value)}
           />
@@ -84,15 +84,15 @@ export function ChargingProfilesView() {
           <Table>
             <THead>
               <tr>
-                <TH>Profile</TH>
-                <TH>Charge point</TH>
-                <TH>Connector</TH>
-                <TH>Purpose</TH>
-                <TH>Kind</TH>
-                <TH align="right">Stack</TH>
-                <TH>Schedule</TH>
-                <TH>Valid</TH>
-                <TH align="right">Created</TH>
+                <TH>Профайл</TH>
+                <TH>Цэнэглэх станц</TH>
+                <TH>Холбогч</TH>
+                <TH>Зориулалт</TH>
+                <TH>Төрөл</TH>
+                <TH align="right">Давхарга</TH>
+                <TH>Хуваарь</TH>
+                <TH>Хүчинтэй</TH>
+                <TH align="right">Үүсгэсэн</TH>
                 <TH align="right" />
               </tr>
             </THead>
@@ -100,9 +100,9 @@ export function ChargingProfilesView() {
               {isLoading && !data ? (
                 <TableLoading colSpan={10} />
               ) : error ? (
-                <TableEmpty colSpan={10}>Could not load charging profiles.</TableEmpty>
+                <TableEmpty colSpan={10}>Цэнэглэх профайлыг ачаалж чадсангүй.</TableEmpty>
               ) : rows.length === 0 ? (
-                <TableEmpty colSpan={10}>No charging profiles installed.</TableEmpty>
+                <TableEmpty colSpan={10}>Суулгасан цэнэглэх профайл алга.</TableEmpty>
               ) : (
                 rows.map((p) => {
                   const isOpen = expanded === p._id;
@@ -138,13 +138,13 @@ export function ChargingProfilesView() {
                         <TD className="whitespace-nowrap text-xs text-[var(--color-fg-muted)]">
                           {p.validFrom || p.validTo
                             ? `${p.validFrom ? formatDateTime(p.validFrom) : '—'} → ${p.validTo ? formatDateTime(p.validTo) : '—'}`
-                            : 'Always'}
+                            : 'Байнга'}
                         </TD>
                         <TD align="right" className="text-xs text-[var(--color-fg-muted)]">
                           {formatRelative(p.createdAt)}
                         </TD>
                         <TD align="right" className="text-xs text-[var(--color-brand)]">
-                          {isOpen ? 'Hide' : 'Schedule'}
+                          {isOpen ? 'Хураах' : 'Хуваарь'}
                         </TD>
                       </TR>
                       {isOpen ? (
@@ -172,15 +172,15 @@ export function ChargingProfilesView() {
               setLimit(n);
               setPage(1);
             }}
-            label="profiles"
+            label="профайл"
           />
         ) : null}
 
         {!isLoading && !error && rows.length === 0 && !debouncedCp ? (
           <EmptyState
             icon={<SlidersHorizontal className="h-8 w-8" />}
-            title="No charging profiles"
-            description="Install one from a charge point's command console with Set charging profile."
+            title="Цэнэглэх профайл алга"
+            description="Станцын командын самбараас «Цэнэглэх профайл тохируулах» командаар суулгана уу."
           />
         ) : null}
       </Card>

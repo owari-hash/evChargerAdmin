@@ -39,12 +39,12 @@ export function SecurityView({
   return (
     <>
       <PageHeader
-        title="Security"
-        description="Security events, certificate signing requests and the local CA, per the OCPP 1.6-J security white paper."
+        title="Аюулгүй байдал"
+        description="OCPP 1.6-J аюулгүй байдлын стандартын дагуух үйл явдал, гэрчилгээний хүсэлт, дотоод CA."
         actions={
           <Button variant="ghost" size="sm" onClick={() => window.location.reload()}>
             <RefreshCw className="h-3.5 w-3.5" />
-            Refresh
+            Шинэчлэх
           </Button>
         }
       />
@@ -54,20 +54,20 @@ export function SecurityView({
           items={[
             {
               key: 'events',
-              label: 'Events',
+              label: 'Үйл явдал',
               badge: critical?.total ? (
                 <TabCount>{formatNumber(critical.total)} critical</TabCount>
               ) : undefined,
             },
             {
               key: 'csrs',
-              label: 'Signing requests',
+              label: 'Гэрчилгээний хүсэлт',
               badge: pendingCsrs?.total ? (
                 <TabCount>{formatNumber(pendingCsrs.total)} pending</TabCount>
               ) : undefined,
             },
-            { key: 'certificates', label: 'Certificates' },
-            { key: 'ca', label: 'Local CA' },
+            { key: 'certificates', label: 'Гэрчилгээ' },
+            { key: 'ca', label: 'Дотоод CA' },
           ]}
           value={tab}
           onChange={(k) => setTab(k as TabKey)}

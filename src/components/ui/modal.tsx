@@ -68,7 +68,7 @@ export function Modal({
                 <p className="mt-0.5 text-xs text-[var(--color-fg-muted)]">{description}</p>
               ) : null}
             </div>
-            <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close">
+            <Button variant="ghost" size="icon" onClick={onClose} aria-label="Хаах">
               <X className="h-4 w-4" />
             </Button>
           </div>
@@ -93,7 +93,7 @@ export function ConfirmModal({
   onConfirm,
   title,
   message,
-  confirmLabel = 'Confirm',
+  confirmLabel = 'Батлах',
   tone = 'danger',
   loading = false,
 }: {
@@ -115,7 +115,7 @@ export function ConfirmModal({
       footer={
         <>
           <Button variant="ghost" onClick={onClose} disabled={loading}>
-            Cancel
+            Цуцлах
           </Button>
           <Button variant={tone} onClick={onConfirm} loading={loading}>
             {confirmLabel}

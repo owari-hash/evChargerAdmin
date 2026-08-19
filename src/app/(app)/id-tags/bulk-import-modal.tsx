@@ -71,7 +71,7 @@ export function BulkImportModal({
         tags: parsed.tags,
       });
       toast.success(
-        `Imported ${formatNumber(res.inserted)} new, updated ${formatNumber(res.updated)}`,
+        `${formatNumber(res.inserted)} шинэ карт нэмж, ${formatNumber(res.updated)}-г шинэчиллээ`,
       );
       onImported();
       setText('');
@@ -87,13 +87,13 @@ export function BulkImportModal({
     <Modal
       open={open}
       onClose={onClose}
-      title="Bulk import RFID tags"
-      description={`Up to ${formatNumber(MAX_TAGS)} tags per import. Existing tags are updated in place.`}
+      title="RFID карт бөөнөөр оруулах"
+      description={`Нэг удаад ${formatNumber(MAX_TAGS)} хүртэл карт. Бүртгэлтэй картууд шинэчлэгдэнэ.`}
       size="lg"
       footer={
         <>
           <Button variant="ghost" onClick={onClose} disabled={saving}>
-            Cancel
+            Цуцлах
           </Button>
           <Button
             variant="primary"
@@ -101,8 +101,7 @@ export function BulkImportModal({
             loading={saving}
             disabled={parsed.tags.length === 0 || tooMany}
           >
-            Import {formatNumber(parsed.tags.length)} tag
-            {parsed.tags.length === 1 ? '' : 's'}
+            {formatNumber(parsed.tags.length)} карт оруулах
           </Button>
         </>
       }
@@ -111,12 +110,12 @@ export function BulkImportModal({
         {error ? <ErrorNote>{error}</ErrorNote> : null}
         {tooMany ? (
           <ErrorNote>
-            {formatNumber(parsed.tags.length)} tags exceeds the limit of {formatNumber(MAX_TAGS)}.
-            Split the import.
+            {formatNumber(parsed.tags.length)} карт нь {formatNumber(MAX_TAGS)} хязгаараас хэтэрлээ.
+            Хэсэгчлэн оруулна уу.
           </ErrorNote>
         ) : null}
 
-        <Field label="Status applied to every imported tag">
+        <Field label="Оруулах бүх картад өгөх төлөв">
           <Select
             className="w-auto"
             value={status}
@@ -131,14 +130,14 @@ export function BulkImportModal({
         </Field>
 
         <Field
-          label="Tags"
-          hint="One per line: tag id, optional label, optional owner name. Lines starting with # are ignored."
+          label="Картууд"
+          hint="Мөр бүрд нэг карт: дугаар, нэр (заавал бус), эзэмшигч (заавал бус). # тэмдэгтээр эхэлсэн мөрийг алгасна."
         >
           <Textarea
             rows={12}
             value={text}
             onChange={(e) => setText(e.target.value)}
-            placeholder={'04A1B2C3D4E5F6, Fleet card 1, B. Otgonbileg\n04FFEEDDCCBBAA, Visitor pass'}
+            placeholder={'04A1B2C3D4E5F6, Байгууллагын карт 1, Б. Отгонбилэг\n04FFEEDDCCBBAA, Зочны карт'}
           />
         </Field>
 

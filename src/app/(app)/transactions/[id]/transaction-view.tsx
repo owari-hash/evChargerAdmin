@@ -28,6 +28,7 @@ import {
 import { ConfirmModal, Modal } from '@/components/ui/modal';
 import { TransactionStatusBadge } from '@/components/ui/status';
 import { StatCard } from '@/components/stat-card';
+import { STOP_REASON, mn } from '@/lib/mn';
 import { SessionPowerChart } from '@/components/charts/energy-chart';
 import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty } from '@/components/ui/table';
 
@@ -87,9 +88,9 @@ export function TransactionView({
     try {
       const res = await api.post<{ status?: string }>(`transactions/${id}/stop`);
       if (res.status === 'Accepted') {
-        toast.success('Stop accepted. The charge point will end the session.');
+        toast.success('Зогсоох хүсэлтийг хүлээн авлаа. Станц цэнэглэлтийг дуусгана.');
       } else {
-        toast.warning(`The charge point answered ${res.status ?? 'unknown'}.`);
+        toast.warning(`Станц ${res.status ?? 'тодорхойгүй'} гэж хариулав.`);
       }
       setConfirmStop(false);
       router.refresh();
@@ -106,7 +107,7 @@ export function TransactionView({
       await api.post(`transactions/${id}/force-close`, {
         ...(meterStop ? { meterStop: Number(meterStop) } : {}),
       });
-      toast.success('Session closed in the database.');
+      toast.success('Цэнэглэлтийг өгөгдлийн санд хаалаа.');
       setForceClose(false);
       router.refresh();
     } catch (err) {
@@ -123,16 +124,16 @@ export function TransactionView({
         className="mb-3 inline-flex items-center gap-1.5 text-xs text-[var(--color-fg-muted)] hover:text-[var(--color-brand)]"
       >
         <ArrowLeft className="h-3.5 w-3.5" />
-        All sessions
+        Бүх цэнэглэлт
       </Link>
 
       <PageHeader
         title={
           <span className="flex flex-wrap items-center gap-2.5">
-            <span className="font-mono">Session #{id}</span>
+            <span className="font-mono">#{id} цэнэглэлт</span>
             <TransactionStatusBadge status={tx.status} />
-            {tx.startedRemotely ? <Badge tone="info">Remote start</Badge> : null}
-            {tx.stoppedRemotely ? <Badge tone="info">Remote stop</Badge> : null}
+            {tx.startedRemotely ? <Badge tone="info">Алсаас эхэлсэн</Badge> : null}
+            {tx.stoppedRemotely ? <Badge tone="info">Алсаас зогссон</Badge> : null}
           </span>
         }
         description={
@@ -143,7 +144,7 @@ export function TransactionView({
             >
               {tx.chargePointId}
             </Link>
-            {` · connector ${tx.connectorId} · tag `}
+            {` · ${tx.connectorId} холбогч · карт `}
             <Link
               href={`/id-tags?search=${encodeURIComponent(tx.idTag)}`}
               className="font-mono hover:text-[var(--color-brand)] hover:underline"
@@ -156,17 +157,17 @@ export function TransactionView({
           <>
             <Button variant="ghost" size="sm" onClick={() => router.refresh()}>
               <RefreshCw className="h-3.5 w-3.5" />
-              Refresh
+              Шинэчлэх
             </Button>
             {canOperate && isActive ? (
               <>
                 <Button variant="primary" size="sm" onClick={() => setConfirmStop(true)}>
                   <Square className="h-3.5 w-3.5" />
-                  Stop session
+                  Цэнэглэлт зогсоох
                 </Button>
                 <Button variant="secondary" size="sm" onClick={() => setForceClose(true)}>
                   <XCircle className="h-3.5 w-3.5" />
-                  Force close
+                  Албадан хаах
                 </Button>
               </>
             ) : null}
@@ -175,32 +176,32 @@ export function TransactionView({
       />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
-        <StatCard label="Energy" value={formatWh(energyWh)} />
-        <StatCard label="Duration" value={formatDuration(tx.startTimestamp, tx.stopTimestamp)} />
+        <StatCard label="Эрчим хүч" value={formatWh(energyWh)} />
+        <StatCard label="Үргэлжилсэн" value={formatDuration(tx.startTimestamp, tx.stopTimestamp)} />
         <StatCard
-          label="Power now"
+          label="Одоогийн чадал"
           value={isActive ? formatPower(tx.lastPowerW) : '—'}
-          sub={isActive ? 'Latest sample' : 'Session ended'}
+          sub={isActive ? 'Сүүлийн хэмжилт' : 'Цэнэглэлт дууссан'}
         />
         <StatCard
-          label="State of charge"
+          label="Цэнэгийн түвшин"
           value={tx.lastSocPercent != null ? `${tx.lastSocPercent}%` : '—'}
         />
         <StatCard
-          label="Cost"
+          label="Төлбөр"
           value={tx.cost != null ? formatMoney(tx.cost) : '—'}
-          sub={tx.tariffPerKwh != null ? `${formatMoney(tx.tariffPerKwh)} / kWh` : 'No tariff set'}
+          sub={tx.tariffPerKwh != null ? `${formatMoney(tx.tariffPerKwh)} / кВт·ц` : 'Тариф тохируулаагүй'}
         />
       </div>
 
       <div className="mt-4 grid gap-4 xl:grid-cols-3">
         <Card className="xl:col-span-2">
           <CardHeader
-            title="Power and state of charge"
+            title="Чадал ба цэнэгийн түвшин"
             description={
               meterValueTotal > meterValues.length
-                ? `Showing the first ${formatNumber(meterValues.length)} of ${formatNumber(meterValueTotal)} samples`
-                : `${formatNumber(meterValues.length)} meter values`
+                ? `Нийт ${formatNumber(meterValueTotal)} хэмжилтээс эхний ${formatNumber(meterValues.length)}-г харуулж байна`
+                : `${formatNumber(meterValues.length)} тоолуурын утга`
             }
           />
           <div className="p-4 pr-5">
@@ -209,55 +210,55 @@ export function TransactionView({
         </Card>
 
         <Card>
-          <CardHeader title="Session details" />
+          <CardHeader title="Цэнэглэлтийн дэлгэрэнгүй" />
           <dl className="divide-y divide-[var(--color-border)] px-5 py-2">
-            <DataRow label="Status">
+            <DataRow label="Төлөв">
               <TransactionStatusBadge status={tx.status} />
             </DataRow>
-            <DataRow label="Started">{formatDateTime(tx.startTimestamp)}</DataRow>
-            <DataRow label="Stopped">{formatDateTime(tx.stopTimestamp)}</DataRow>
-            <DataRow label="Stop reason">{tx.stopReason ?? '—'}</DataRow>
-            <DataRow label="Meter start" mono>
+            <DataRow label="Эхэлсэн">{formatDateTime(tx.startTimestamp)}</DataRow>
+            <DataRow label="Дууссан">{formatDateTime(tx.stopTimestamp)}</DataRow>
+            <DataRow label="Зогссон шалтгаан">{mn(STOP_REASON, tx.stopReason)}</DataRow>
+            <DataRow label="Эхний тоолуур" mono>
               {formatWh(tx.meterStart)}
             </DataRow>
-            <DataRow label="Meter stop" mono>
+            <DataRow label="Эцсийн тоолуур" mono>
               {tx.meterStop != null ? formatWh(tx.meterStop) : formatWh(tx.lastMeterWh)}
             </DataRow>
-            <DataRow label="ID tag" mono>
+            <DataRow label="RFID карт" mono>
               {tx.idTag}
             </DataRow>
-            <DataRow label="Stop ID tag" mono>
+            <DataRow label="Зогсоосон карт" mono>
               {tx.stopIdTag ?? '—'}
             </DataRow>
-            <DataRow label="Reservation">
+            <DataRow label="Захиалга">
               {tx.reservationId != null ? `#${tx.reservationId}` : '—'}
             </DataRow>
-            <DataRow label="Last sample">{formatDateTime(tx.lastMeterValueAt)}</DataRow>
+            <DataRow label="Сүүлийн хэмжилт">{formatDateTime(tx.lastMeterValueAt)}</DataRow>
           </dl>
         </Card>
       </div>
 
       <Card className="mt-4">
         <CardHeader
-          title="Meter values"
-          description="Raw sampled values as reported by the charge point."
+          title="Тоолуурын утгууд"
+          description="Станцаас ирсэн түүхий хэмжилтийн утгууд."
         />
         <TableWrap>
           <Table>
             <THead>
               <tr>
-                <TH>Timestamp</TH>
-                <TH>Measurand</TH>
-                <TH align="right">Value</TH>
-                <TH>Unit</TH>
-                <TH>Phase</TH>
-                <TH>Context</TH>
-                <TH>Location</TH>
+                <TH>Хугацаа</TH>
+                <TH>Хэмжигдэхүүн</TH>
+                <TH align="right">Утга</TH>
+                <TH>Нэгж</TH>
+                <TH>Фаз</TH>
+                <TH>Нөхцөл</TH>
+                <TH>Байрлал</TH>
               </tr>
             </THead>
             <TBody>
               {meterValues.length === 0 ? (
-                <TableEmpty colSpan={7}>No meter values recorded for this session.</TableEmpty>
+                <TableEmpty colSpan={7}>Энэ цэнэглэлтэд тоолуурын утга бүртгэгдээгүй.</TableEmpty>
               ) : (
                 meterValues
                   .slice()
@@ -294,36 +295,36 @@ export function TransactionView({
         onConfirm={() => void stopRemotely()}
         loading={busy}
         tone="primary"
-        title="Stop this session?"
-        confirmLabel="Send RemoteStopTransaction"
-        message="The charge point is asked to end the session and unlock the cable. It reports the final meter reading itself."
+        title="Энэ цэнэглэлтийг зогсоох уу?"
+        confirmLabel="RemoteStopTransaction илгээх"
+        message="Станцаас цэнэглэлтийг дуусгаж, кабелийг тайлахыг хүснэ. Эцсийн тоолуурын заалтыг станц өөрөө мэдээлнэ."
       />
 
       <Modal
         open={forceClose}
         onClose={() => setForceClose(false)}
-        title="Force close in the database"
-        description="Use only when the charge point will never send StopTransaction."
+        title="Өгөгдлийн санд албадан хаах"
+        description="Станц StopTransaction илгээхгүй нь тодорхой үед л ашиглана уу."
         size="sm"
         footer={
           <>
             <Button variant="ghost" onClick={() => setForceClose(false)} disabled={busy}>
-              Cancel
+              Цуцлах
             </Button>
             <Button variant="danger" onClick={() => void closeInDatabase()} loading={busy}>
-              Force close
+              Албадан хаах
             </Button>
           </>
         }
       >
         <div className="space-y-4">
           <p className="text-sm text-[var(--color-fg-muted)]">
-            This closes the session in the CSMS without talking to the charge point. If the charge
-            point later reports the session, the readings may disagree.
+            Энэ нь станцтай холбогдолгүйгээр цэнэглэлтийг CSMS дээр хаана. Хожим станц уг
+            цэнэглэлтийг мэдээлбэл заалтууд зөрж болзошгүй.
           </p>
           <Field
-            label="Final meter reading (Wh)"
-            hint={`Leave empty to use the last known value (${formatWh(tx.lastMeterWh ?? tx.meterStart)}).`}
+            label="Эцсийн тоолуурын заалт (Вт·ц)"
+            hint={`Хоосон орхивол сүүлд мэдэгдсэн утгыг (${formatWh(tx.lastMeterWh ?? tx.meterStart)}) ашиглана.`}
           >
             <Input
               value={meterStop}

@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { getSessionUser, hasRole } from '@/lib/session';
 import { TransactionsView } from './transactions-view';
 
-export const metadata: Metadata = { title: 'Sessions' };
+export const metadata: Metadata = { title: 'Цэнэглэлт' };
 export const dynamic = 'force-dynamic';
 
 export default async function TransactionsPage({

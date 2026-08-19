@@ -11,7 +11,7 @@ import type { SessionUser } from '@/lib/types';
 export function Topbar({ user, onMenu }: { user: SessionUser; onMenu: () => void }) {
   return (
     <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center justify-between gap-3 border-b border-[var(--color-border)] bg-[var(--color-surface)]/90 px-4 backdrop-blur">
-      <Button variant="ghost" size="icon" className="lg:hidden" onClick={onMenu} aria-label="Open menu">
+      <Button variant="ghost" size="icon" className="lg:hidden" onClick={onMenu} aria-label="Цэс нээх">
         <Menu className="h-4 w-4" />
       </Button>
 
@@ -24,10 +24,10 @@ export function Topbar({ user, onMenu }: { user: SessionUser; onMenu: () => void
           variant="ghost"
           size="sm"
           onClick={() => void logout()}
-          title={`Sign out ${user.email}`}
+          title={`${user.email} — Гарах`}
         >
           <LogOut className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">Sign out</span>
+          <span className="hidden sm:inline">Гарах</span>
         </Button>
       </div>
     </header>
@@ -39,12 +39,13 @@ function LiveIndicator() {
   const { status, lastEventAt } = useLiveEvents({ buffer: 1 });
 
   const tone = status === 'live' ? 'ok' : status === 'connecting' ? 'warn' : 'danger';
-  const text = status === 'live' ? 'Live' : status === 'connecting' ? 'Connecting' : 'Stream down';
+  const text =
+    status === 'live' ? 'Шууд' : status === 'connecting' ? 'Холбогдож байна' : 'Холболт тасарсан';
 
   return (
     <span
       className="hidden items-center gap-1.5 rounded-lg border border-[var(--color-border)] px-2.5 py-1 text-xs text-[var(--color-fg-muted)] sm:inline-flex"
-      title={lastEventAt ? `Last event ${formatRelative(lastEventAt)}` : 'No events yet'}
+      title={lastEventAt ? `Сүүлийн үйл явдал ${formatRelative(lastEventAt)}` : 'Одоогоор үйл явдал алга'}
     >
       <Dot tone={tone} pulse={status === 'live'} />
       {text}
@@ -88,7 +89,7 @@ function ThemeToggle() {
   };
 
   return (
-    <Button variant="ghost" size="icon" onClick={toggle} aria-label="Toggle colour theme">
+    <Button variant="ghost" size="icon" onClick={toggle} aria-label="Өнгөний горим солих">
       {dark ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
     </Button>
   );

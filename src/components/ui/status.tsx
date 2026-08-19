@@ -1,5 +1,6 @@
 import * as React from 'react';
 import { Badge, Dot, type Tone } from './primitives';
+import * as L from '@/lib/mn';
 import type {
   AuthorizationStatus,
   CommandStatus,
@@ -33,7 +34,7 @@ export function ConnectorStatusBadge({ status }: { status?: ConnectorStatus | st
   return (
     <Badge tone={tone}>
       <Dot tone={tone} pulse={status === 'Charging'} />
-      {status}
+      {L.mn(L.CONNECTOR_STATUS, status)}
     </Badge>
   );
 }
@@ -42,7 +43,7 @@ export function OnlineBadge({ online }: { online: boolean }) {
   return (
     <Badge tone={online ? 'ok' : 'idle'}>
       <Dot tone={online ? 'ok' : 'idle'} pulse={online} />
-      {online ? 'Online' : 'Offline'}
+      {online ? 'Онлайн' : 'Офлайн'}
     </Badge>
   );
 }
@@ -58,7 +59,7 @@ export function TransactionStatusBadge({ status }: { status: TransactionStatus |
   return (
     <Badge tone={tone}>
       <Dot tone={tone} pulse={status === 'Active'} />
-      {status}
+      {L.mn(L.TRANSACTION_STATUS, status)}
     </Badge>
   );
 }
@@ -72,7 +73,7 @@ const AUTH_TONES: Record<AuthorizationStatus, Tone> = {
 };
 
 export function AuthStatusBadge({ status }: { status: AuthorizationStatus | string }) {
-  return <Badge tone={AUTH_TONES[status as AuthorizationStatus] ?? 'idle'}>{status}</Badge>;
+  return <Badge tone={AUTH_TONES[status as AuthorizationStatus] ?? 'idle'}>{L.mn(L.AUTH_STATUS, status)}</Badge>;
 }
 
 const REGISTRATION_TONES: Record<RegistrationStatus, Tone> = {
@@ -82,7 +83,11 @@ const REGISTRATION_TONES: Record<RegistrationStatus, Tone> = {
 };
 
 export function RegistrationBadge({ status }: { status: RegistrationStatus | string }) {
-  return <Badge tone={REGISTRATION_TONES[status as RegistrationStatus] ?? 'idle'}>{status}</Badge>;
+  return (
+    <Badge tone={REGISTRATION_TONES[status as RegistrationStatus] ?? 'idle'}>
+      {L.mn(L.REGISTRATION_STATUS, status)}
+    </Badge>
+  );
 }
 
 const RESERVATION_TONES: Record<ReservationState, Tone> = {
@@ -94,7 +99,7 @@ const RESERVATION_TONES: Record<ReservationState, Tone> = {
 };
 
 export function ReservationBadge({ state }: { state: ReservationState | string }) {
-  return <Badge tone={RESERVATION_TONES[state as ReservationState] ?? 'idle'}>{state}</Badge>;
+  return <Badge tone={RESERVATION_TONES[state as ReservationState] ?? 'idle'}>{L.mn(L.RESERVATION_STATE, state)}</Badge>;
 }
 
 const COMMAND_TONES: Record<CommandStatus, Tone> = {
@@ -106,7 +111,7 @@ const COMMAND_TONES: Record<CommandStatus, Tone> = {
 };
 
 export function CommandStatusBadge({ status }: { status: CommandStatus | string }) {
-  return <Badge tone={COMMAND_TONES[status as CommandStatus] ?? 'idle'}>{status}</Badge>;
+  return <Badge tone={COMMAND_TONES[status as CommandStatus] ?? 'idle'}>{L.mn(L.COMMAND_STATUS, status)}</Badge>;
 }
 
 const CSR_TONES: Record<CsrStatus, Tone> = {
@@ -118,22 +123,22 @@ const CSR_TONES: Record<CsrStatus, Tone> = {
 };
 
 export function CsrStatusBadge({ status }: { status: CsrStatus | string }) {
-  return <Badge tone={CSR_TONES[status as CsrStatus] ?? 'idle'}>{status}</Badge>;
+  return <Badge tone={CSR_TONES[status as CsrStatus] ?? 'idle'}>{L.mn(L.CSR_STATUS, status)}</Badge>;
 }
 
 export function RoleBadge({ role }: { role: string }) {
   const tone: Tone = role === 'ADMIN' ? 'brand' : role === 'OPERATOR' ? 'info' : 'idle';
-  return <Badge tone={tone}>{role}</Badge>;
+  return <Badge tone={tone}>{L.mn(L.ROLE, role)}</Badge>;
 }
 
 /** OCPP error codes: anything other than NoError deserves attention. */
 export function ErrorCodeBadge({ code }: { code?: string }) {
   if (!code || code === 'NoError') {
-    return <span className="text-xs text-[var(--color-fg-subtle)]">NoError</span>;
+    return <span className="text-xs text-[var(--color-fg-subtle)]">Алдаагүй</span>;
   }
   return <Badge tone="danger">{code}</Badge>;
 }
 
 export function SecurityCriticality({ critical }: { critical: boolean }) {
-  return <Badge tone={critical ? 'danger' : 'idle'}>{critical ? 'Critical' : 'Informational'}</Badge>;
+  return <Badge tone={critical ? 'danger' : 'idle'}>{critical ? 'Ноцтой' : 'Мэдээллийн'}</Badge>;
 }

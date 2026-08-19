@@ -48,53 +48,53 @@ export default async function OverviewPage() {
   return (
     <>
       <PageHeader
-        title="Overview"
-        description="Live state of the charging network over the last 24 hours."
+        title="Ерөнхий тойм"
+        description="Цэнэглэх сүлжээний сүүлийн 24 цагийн байдал."
       />
 
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
         <StatCard
-          label="Charge points"
+          label="Цэнэглэх станц"
           value={`${formatNumber(stats.chargePoints.online)} / ${formatNumber(stats.chargePoints.total)}`}
-          sub={`${formatNumber(stats.chargePoints.offline)} offline`}
+          sub={`${formatNumber(stats.chargePoints.offline)} офлайн`}
           icon={Zap}
           tone={stats.chargePoints.online > 0 ? 'ok' : 'idle'}
           href="/charge-points"
         />
         <StatCard
-          label="Charging now"
+          label="Одоо цэнэглэж буй"
           value={formatNumber(charging)}
-          sub={`${formatNumber(totalConnectors)} connectors total`}
+          sub={`Нийт ${formatNumber(totalConnectors)} холбогч`}
           icon={Plug}
           tone={charging > 0 ? 'brand' : 'idle'}
           href="/connectors"
         />
         <StatCard
-          label="Active sessions"
+          label="Идэвхтэй цэнэглэлт"
           value={formatNumber(stats.transactions.active)}
-          sub={`${formatNumber(stats.transactions.last24h)} started in 24h`}
+          sub={`24 цагт ${formatNumber(stats.transactions.last24h)} эхэлсэн`}
           icon={BatteryCharging}
           tone={stats.transactions.active > 0 ? 'brand' : 'idle'}
           href="/transactions?status=Active"
         />
         <StatCard
-          label="Energy · 24h"
+          label="Эрчим хүч · 24ц"
           value={formatKwh(stats.energyLast24hKwh, 1)}
-          sub={`${formatNumber(stats.transactions.completedLast24h)} sessions completed`}
+          sub={`${formatNumber(stats.transactions.completedLast24h)} цэнэглэлт дууссан`}
           icon={Zap}
           tone="info"
         />
         <StatCard
-          label="Revenue · 24h"
+          label="Орлого · 24ц"
           value={formatMoney(stats.revenueLast24h)}
-          sub="From tariffed sessions"
+          sub="Тарифтай цэнэглэлтээс"
           icon={Coins}
           tone="ok"
         />
         <StatCard
-          label="Security alerts"
+          label="Аюулгүй байдлын сэрэмжлүүлэг"
           value={formatNumber(stats.unacknowledgedCriticalSecurityEvents)}
-          sub="Critical, unacknowledged"
+          sub="Ноцтой, хүлээн зөвшөөрөөгүй"
           icon={ShieldAlert}
           tone={stats.unacknowledgedCriticalSecurityEvents > 0 ? 'danger' : 'idle'}
           href="/security"
@@ -104,11 +104,9 @@ export default async function OverviewPage() {
       {faulted > 0 ? (
         <div className="mt-4 flex items-center gap-2.5 rounded-xl border border-[var(--color-danger)]/30 bg-[var(--color-danger-soft)] px-4 py-3 text-sm text-[var(--color-danger)]">
           <AlertTriangle className="h-4 w-4 shrink-0" />
-          <span>
-            {formatNumber(faulted)} connector{faulted === 1 ? ' is' : 's are'} reporting a fault.
-          </span>
+          <span>{formatNumber(faulted)} холбогч эвдрэл мэдээлж байна.</span>
           <Link href="/connectors?status=Faulted" className="ml-auto font-medium underline">
-            Inspect
+            Шалгах
           </Link>
         </div>
       ) : null}
@@ -116,8 +114,8 @@ export default async function OverviewPage() {
       <div className="mt-4 grid gap-4 xl:grid-cols-3">
         <Card className="xl:col-span-2">
           <CardHeader
-            title="Energy delivered"
-            description="Completed sessions, last 30 days"
+            title="Түгээсэн эрчим хүч"
+            description="Дууссан цэнэглэлт, сүүлийн 30 хоног"
           />
           <div className="p-4 pr-5">
             <EnergySeriesChart data={series ?? []} />
@@ -125,7 +123,7 @@ export default async function OverviewPage() {
         </Card>
 
         <Card className="flex flex-col">
-          <CardHeader title="Live activity" description="Streaming from the CSMS" />
+          <CardHeader title="Шууд үйл ажиллагаа" description="CSMS-ээс шууд дамжуулж байна" />
           <LiveFeed height="h-[280px]" />
         </Card>
       </div>
@@ -133,14 +131,14 @@ export default async function OverviewPage() {
       <div className="mt-4 grid gap-4 xl:grid-cols-3">
         <Card className="xl:col-span-2">
           <CardHeader
-            title="Active sessions"
-            description={`${formatNumber(active?.length ?? 0)} in progress`}
+            title="Идэвхтэй цэнэглэлт"
+            description={`${formatNumber(active?.length ?? 0)} үргэлжилж байна`}
             actions={
               <Link
                 href="/transactions"
                 className="text-xs font-medium text-[var(--color-brand)] hover:underline"
               >
-                All sessions
+                Бүх цэнэглэлт
               </Link>
             }
           />
@@ -148,18 +146,18 @@ export default async function OverviewPage() {
             <Table>
               <THead>
                 <tr>
-                  <TH>Session</TH>
-                  <TH>Charge point</TH>
-                  <TH>Tag</TH>
-                  <TH align="right">Energy</TH>
-                  <TH align="right">Power</TH>
-                  <TH align="right">SoC</TH>
-                  <TH align="right">Started</TH>
+                  <TH>Цэнэглэлт</TH>
+                  <TH>Цэнэглэх станц</TH>
+                  <TH>Карт</TH>
+                  <TH align="right">Эрчим хүч</TH>
+                  <TH align="right">Чадал</TH>
+                  <TH align="right">Цэнэг</TH>
+                  <TH align="right">Эхэлсэн</TH>
                 </tr>
               </THead>
               <TBody>
                 {!active?.length ? (
-                  <TableEmpty colSpan={7}>No sessions in progress.</TableEmpty>
+                  <TableEmpty colSpan={7}>Одоогоор идэвхтэй цэнэглэлт алга.</TableEmpty>
                 ) : (
                   active.slice(0, 8).map((tx) => (
                     <TR key={tx.transactionId}>
@@ -205,11 +203,11 @@ export default async function OverviewPage() {
 
         <div className="space-y-4">
           <Card>
-            <CardHeader title="Connector states" description="Across the whole network" />
+            <CardHeader title="Холбогчийн төлөв" description="Сүлжээний хэмжээнд" />
             <div className="space-y-2 p-4">
               {connectorEntries.length === 0 ? (
                 <p className="py-6 text-center text-xs text-[var(--color-fg-muted)]">
-                  No connectors reported yet.
+                  Одоогоор холбогч бүртгэгдээгүй байна.
                 </p>
               ) : (
                 connectorEntries.map(([status, count]) => (
@@ -231,11 +229,11 @@ export default async function OverviewPage() {
           </Card>
 
           <Card>
-            <CardHeader title="Critical security events" description="Unacknowledged" />
+            <CardHeader title="Ноцтой аюулгүй байдлын үйл явдал" description="Хүлээн зөвшөөрөөгүй" />
             {!security?.data.length ? (
               <EmptyState
-                title="Nothing to review"
-                description="No unacknowledged critical events."
+                title="Шалгах зүйл алга"
+                description="Хүлээн зөвшөөрөөгүй ноцтой үйл явдал байхгүй."
                 className="py-8"
               />
             ) : (
@@ -250,7 +248,7 @@ export default async function OverviewPage() {
                         {event.type}
                       </Link>
                       <Badge tone={event.isCritical ? 'danger' : 'idle'}>
-                        {event.isCritical ? 'critical' : 'info'}
+                        {event.isCritical ? 'ноцтой' : 'мэдээлэл'}
                       </Badge>
                     </div>
                     <p className="mt-0.5 truncate font-mono text-[11px] text-[var(--color-fg-muted)]">
@@ -265,7 +263,7 @@ export default async function OverviewPage() {
       </div>
 
       <Card className="mt-4">
-        <CardHeader title="Busiest charge points" description="Energy delivered, last 30 days" />
+        <CardHeader title="Хамгийн ачаалалтай станцууд" description="Түгээсэн эрчим хүч, сүүлийн 30 хоног" />
         <div className="p-4">
           <TopChargePointsChart data={top ?? []} />
         </div>

@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { api, errorMessage } from '@/lib/client';
 import { AUTHORIZATION_STATUSES, type IdTag } from '@/lib/types';
 import { Button, ErrorNote, Field, Input, Select, Textarea } from '@/components/ui/primitives';
+import { ID_TAG_STATUS, mn } from '@/lib/mn';
 import { Modal } from '@/components/ui/modal';
 
 /** Create or edit a single RFID tag. Mount with a `key` so state resets per tag. */
@@ -66,10 +67,10 @@ export function IdTagModal({
 
       if (isEdit) {
         await api.patch(`id-tags/${encodeURIComponent(tag.idTag)}`, body);
-        toast.success(`${tag.idTag} updated`);
+        toast.success(`${tag.idTag} шинэчлэгдлээ`);
       } else {
         await api.post('id-tags', { ...body, idTag: form.idTag.trim() });
-        toast.success(`${form.idTag.trim()} created`);
+        toast.success(`${form.idTag.trim()} үүслээ`);
       }
       onSaved();
       onClose();
@@ -84,12 +85,12 @@ export function IdTagModal({
     <Modal
       open={open}
       onClose={onClose}
-      title={isEdit ? 'Edit RFID tag' : 'New RFID tag'}
-      description={isEdit ? tag.idTag : 'Tags authorise a driver to start charging.'}
+      title={isEdit ? 'RFID карт засах' : 'Шинэ RFID карт'}
+      description={isEdit ? tag.idTag : 'Карт нь жолоочид цэнэглэх зөвшөөрөл олгоно.'}
       footer={
         <>
           <Button variant="ghost" onClick={onClose} disabled={saving}>
-            Cancel
+            Цуцлах
           </Button>
           <Button
             variant="primary"
@@ -97,7 +98,7 @@ export function IdTagModal({
             loading={saving}
             disabled={!isEdit && !form.idTag.trim()}
           >
-            {isEdit ? 'Save changes' : 'Create tag'}
+            {isEdit ? 'Хадгалах' : 'Карт үүсгэх'}
           </Button>
         </>
       }
@@ -106,7 +107,7 @@ export function IdTagModal({
         {error ? <ErrorNote>{error}</ErrorNote> : null}
 
         {!isEdit ? (
-          <Field label="Tag id" hint="The value the reader sends. Up to 20 characters.">
+          <Field label="Картын дугаар" hint="Уншигчийн илгээх утга. Хамгийн ихдээ 20 тэмдэгт.">
             <Input
               value={form.idTag}
               onChange={set('idTag')}
@@ -118,41 +119,41 @@ export function IdTagModal({
         ) : null}
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Status">
+          <Field label="Төлөв">
             <Select value={form.status} onChange={set('status')}>
               {AUTHORIZATION_STATUSES.map((s) => (
                 <option key={s} value={s}>
-                  {s}
+                  {mn(ID_TAG_STATUS, s)}
                 </option>
               ))}
             </Select>
           </Field>
-          <Field label="Expiry date" hint="Leave empty for no expiry.">
+          <Field label="Дуусах огноо" hint="Хугацаагүй бол хоосон орхино уу.">
             <Input type="date" value={form.expiryDate} onChange={set('expiryDate')} />
           </Field>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Label">
-            <Input value={form.label} onChange={set('label')} placeholder="Fleet card 12" />
+          <Field label="Нэр">
+            <Input value={form.label} onChange={set('label')} placeholder="Байгууллагын карт 12" />
           </Field>
-          <Field label="Parent tag" hint="Groups tags so one can stop another's session.">
+          <Field label="Эцэг карт" hint="Картуудыг бүлэглэж, нэг нь нөгөөгийн цэнэглэлтийг зогсоох боломжтой болгоно.">
             <Input value={form.parentIdTag} onChange={set('parentIdTag')} className="font-mono" />
           </Field>
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Owner name">
+          <Field label="Эзэмшигчийн нэр">
             <Input value={form.ownerName} onChange={set('ownerName')} />
           </Field>
-          <Field label="Owner email">
+          <Field label="Эзэмшигчийн и-мэйл">
             <Input type="email" value={form.ownerEmail} onChange={set('ownerEmail')} />
           </Field>
         </div>
 
         <Field
-          label="Max concurrent sessions"
-          hint="0 means unlimited. 1 is the usual choice."
+          label="Зэрэг цэнэглэх дээд тоо"
+          hint="0 бол хязгааргүй. Ихэвчлэн 1 байдаг."
         >
           <Input
             value={form.maxActiveTransactions}
@@ -162,8 +163,8 @@ export function IdTagModal({
         </Field>
 
         <Field
-          label="Restrict to charge points"
-          hint="Comma-separated ids. Leave empty to allow every charge point."
+          label="Зөвшөөрөх станцууд"
+          hint="Таслалаар тусгаарлана. Хоосон орхивол бүх станцад ажиллана."
         >
           <Input
             value={form.allowedChargePointIds}
@@ -173,7 +174,7 @@ export function IdTagModal({
           />
         </Field>
 
-        <Field label="Note">
+        <Field label="Тэмдэглэл">
           <Textarea rows={2} value={form.note} onChange={set('note')} className="font-sans text-sm" />
         </Field>
       </div>

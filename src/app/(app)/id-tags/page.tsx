@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { getSessionUser, hasRole } from '@/lib/session';
 import { IdTagsView } from './id-tags-view';
 
-export const metadata: Metadata = { title: 'RFID tags' };
+export const metadata: Metadata = { title: 'RFID карт' };
 export const dynamic = 'force-dynamic';
 
 export default async function IdTagsPage({

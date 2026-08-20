@@ -41,6 +41,7 @@ Sign in with the admin account created by the backend's `npm run seed`
 | **Reservations** | ReserveNow holds, with cancel |
 | **Smart charging** | Installed charging profiles and their schedules |
 | **Firmware & logs** | Firmware, diagnostics and security-log jobs |
+| **QPay merchants** | Register a QuickQR merchant as a company or an individual (city/district pulled from QPay), list them, copy the merchant id, delete (ADMIN) |
 | **Security** | Security events with acknowledgement, certificate signing requests (sign/reject), certificates, and the local CA |
 | **Users** | Account management (ADMIN only) |
 | **System** | Backend health, OCPP capabilities, and how to connect a charge point |

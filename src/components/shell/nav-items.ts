@@ -9,6 +9,7 @@ import {
   Settings,
   ShieldCheck,
   SlidersHorizontal,
+  Store,
   Users,
   Zap,
 } from 'lucide-react';
@@ -52,6 +53,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: '/charging-profiles', label: 'Ухаалаг цэнэглэлт', icon: SlidersHorizontal },
       { href: '/jobs', label: 'Программ хангамж ба лог', icon: Cpu },
+      { href: '/merchants', label: 'QPay мерчант', icon: Store, minRole: 'OPERATOR' },
       { href: '/security', label: 'Аюулгүй байдал', icon: ShieldCheck, prefix: true },
     ],
   },

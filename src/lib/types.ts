@@ -443,3 +443,76 @@ export const LIVE_EVENT_NAMES = [
   'command.result',
   'ocpp.message',
 ] as const;
+
+// ---------------------------------------------------------------------------
+// QPay QuickQR merchants (backend: /api/qpay/*)
+// ---------------------------------------------------------------------------
+
+/** Aimag/hot and sum/duureg entries, as returned by QuickQR. */
+export interface QpayLocation {
+  code?: string;
+  name?: string;
+}
+
+/**
+ * A QuickQR merchant. QPay returns a loose object whose exact fields differ
+ * between the person and company variants, so everything is optional and the
+ * console falls back to whatever is present.
+ */
+export interface QpayMerchant {
+  merchant_id?: string;
+  register_number?: string;
+  company_name?: string;
+  business_name?: string;
+  name?: string;
+  name_eng?: string;
+  first_name?: string;
+  last_name?: string;
+  mcc_code?: string;
+  city?: string;
+  district?: string;
+  address?: string;
+  phone?: string;
+  email?: string;
+  created_at?: string;
+  [key: string]: unknown;
+}
+
+export type QpayMerchantKind = 'person' | 'company';
+
+/** POST /api/qpay/merchants/person */
+export interface QpayPersonMerchantInput {
+  register_number: string;
+  first_name: string;
+  last_name: string;
+  business_name: string;
+  mcc_code: string;
+  city: string;
+  district: string;
+  address: string;
+  phone: string;
+  email: string;
+}
+
+/** POST /api/qpay/merchants/company */
+export interface QpayCompanyMerchantInput {
+  register_number: string;
+  company_name: string;
+  name: string;
+  mcc_code: string;
+  city: string;
+  district: string;
+  address: string;
+  phone: string;
+  email: string;
+}
+
+/** GET /api/payments/config — used to tell "not configured" from "broken". */
+export interface PaymentsConfig {
+  enabled: boolean;
+  mode: 'sandbox' | 'production';
+  quickQrEnabled: boolean;
+  invoiceTtlMinutes: number;
+  credentialsConfigured: boolean;
+  tokens: { scope: string; cached: boolean; accessExpiresAt?: string }[];
+}

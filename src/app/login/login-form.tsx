@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button, ErrorNote, Field, Input } from '@/components/ui/primitives';
+import { withBasePath } from '@/lib/base-path';
 
 export function LoginForm() {
   const router = useRouter();
@@ -23,7 +24,7 @@ export function LoginForm() {
     setError(null);
 
     try {
-      const res = await fetch('/console-api/auth/login', {
+      const res = await fetch(withBasePath('/console-api/auth/login'), {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -37,6 +38,7 @@ export function LoginForm() {
       }
 
       // Only follow `next` when it is a path on this origin, never an absolute URL.
+      // It is basePath-relative; router.replace() adds the prefix back.
       const target = next && next.startsWith('/') && !next.startsWith('//') ? next : '/';
       router.replace(target);
       router.refresh();

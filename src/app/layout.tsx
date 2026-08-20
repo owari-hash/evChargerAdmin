@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import { Toaster } from 'sonner';
+import { withBasePath } from '@/lib/base-path';
 import { brand } from '@/lib/config';
 import './globals.css';
 
@@ -11,7 +12,10 @@ export const metadata: Metadata = {
   description: `${brand.domain} цэнэглэх сүлжээний OCPP 1.6J удирдлагын самбар.`,
   robots: { index: false, follow: false },
   icons: {
-    icon: [{ url: '/icon.svg', type: 'image/svg+xml' }],
+    // `metadata.icons` is emitted verbatim — unlike <Link> and asset URLs, Next
+    // does not apply basePath to it, so a bare '/icon.svg' would resolve against
+    // the domain root and land on whatever else is served there.
+    icon: [{ url: withBasePath('/icon.svg'), type: 'image/svg+xml' }],
   },
 };
 

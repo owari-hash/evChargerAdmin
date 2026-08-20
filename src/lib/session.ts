@@ -22,7 +22,7 @@ export async function setSessionCookie(token: string): Promise<void> {
     httpOnly: true,
     secure: serverConfig.cookieSecure,
     sameSite: 'lax',
-    path: '/',
+    path: serverConfig.cookiePath,
     maxAge: tokenTtlSeconds(token),
   });
 }
@@ -33,7 +33,7 @@ export async function clearSessionCookie(): Promise<void> {
     httpOnly: true,
     secure: serverConfig.cookieSecure,
     sameSite: 'lax',
-    path: '/',
+    path: serverConfig.cookiePath,
     maxAge: 0,
   });
 }

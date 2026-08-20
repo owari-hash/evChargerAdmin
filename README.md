@@ -4,9 +4,9 @@ Admin front end for the [OCPP 1.6-J Central System](../evChargerBack). Next.js 1
 (App Router) + React 19 + Tailwind 4.
 
 ```
-browser ──https://eplug.mn/──► ┌──────────────┐ ──http://127.0.0.1:3000/api/──► ┌──────────┐
-                               │ this console │                                 │   CSMS   │
-        ◄──SSE /console-api/── └──────────────┘ ◄────SSE /api/events/stream──── └──────────┘
+browser ──https://eplug.mn/admin──► ┌──────────────┐ ──http://127.0.0.1:3000/api/──► ┌──────────┐
+                                    │ this console │                                 │   CSMS   │
+   ◄──SSE /admin/console-api/────── └──────────────┘ ◄───SSE /api/events/stream───── └──────────┘
 ```
 
 The browser never talks to the CSMS directly. Every call is proxied by this
@@ -92,16 +92,33 @@ presentation only, not the security boundary.
 
 ## Deploying on eplug.mn
 
-The console runs on `127.0.0.1:3001` and nginx serves it at the domain root,
-alongside the API on `/api/` and charge points on `/ocpp/`. The site config lives
+The console runs on `127.0.0.1:3001` and nginx serves it at **`/admin`**. The
+domain root belongs to the driver web app (`../evChargerKiosk`, port 3100), the
+API to the CSMS on `/api/`, and charge points to `/ocpp/`. The site config lives
 in the backend repo: [`deploy/nginx-eplug.mn.conf`](../evChargerBack/deploy/nginx-eplug.mn.conf).
 
 ```bash
 npm ci
-cp .env.example .env.production   # set COOKIE_SECURE=true
+cp .env.example .env.production   # set COOKIE_SECURE=true and NEXT_PUBLIC_BASE_PATH=/admin
 npm run build
 npm run start                     # listens on 3001
 ```
+
+### The `/admin` base path
+
+`NEXT_PUBLIC_BASE_PATH` drives both `basePath` in `next.config.ts` and
+`BASE_PATH` in `src/lib/base-path.ts`, so the two cannot drift. **It is read at
+build time**, not at startup: changing it requires `npm run build` again.
+
+Next rewrites `<Link>` hrefs, `router.push()` and `/_next/*` asset URLs for you.
+It does **not** touch a hand-written absolute URL given to `fetch()`,
+`EventSource`, `window.location` or `metadata.icons` — those never reach the
+router. Every one of those in this app goes through `withBasePath()`; adding a
+new one without it will silently escape the console and hit the driver app at the
+domain root.
+
+Set it to empty to serve the console at the domain root again; nothing else in
+the code needs changing.
 
 `/etc/systemd/system/eplug-admin.service`:
 
@@ -127,11 +144,17 @@ WantedBy=multi-user.target
 sudo systemctl daemon-reload && sudo systemctl enable --now eplug-admin
 ```
 
-Two things nginx must get right, both already in the bundled config:
+Three things nginx must get right, all already in the bundled config:
 
-- `/console-api/stream` needs `proxy_buffering off`, or live events arrive in clumps.
+- `/admin/console-api/stream` needs `proxy_buffering off`, or live events arrive in clumps.
+- The `/admin` prefix must **not** be stripped (`proxy_pass http://csms_admin;`
+  with no trailing path). Stripping it makes every URL the app generates point
+  one level too high.
 - `COOKIE_SECURE=true` requires the console to be reached over HTTPS, otherwise
   the browser drops the session cookie and login appears to silently fail.
+
+The session cookie is scoped to `path=/admin`, so the console's backend JWT is
+never attached to a request meant for the driver app on the same origin.
 
 ---
 
@@ -140,10 +163,11 @@ Two things nginx must get right, both already in the bundled config:
 ```
 src/
   proxy.ts                     route gating (Next 16 middleware)
+  lib/base-path.ts             /admin prefix for URLs the router never sees
   app/
     login/                     sign-in page
     (app)/                     authenticated shell + every page
-    console-api/
+    console-api/               served at /admin/console-api/* in production
       auth/login|logout        session cookie lifecycle
       csms/[...path]           REST proxy to the CSMS
       stream                   SSE proxy

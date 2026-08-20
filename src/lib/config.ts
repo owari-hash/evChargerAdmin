@@ -11,6 +11,12 @@ export const serverConfig = {
   apiKey: process.env.CSMS_API_KEY || undefined,
   cookieName: process.env.SESSION_COOKIE_NAME || 'eplug_session',
   cookieSecure: process.env.COOKIE_SECURE !== 'false',
+  /**
+   * Scope the session cookie to the console's own subtree. At eplug.mn/admin the
+   * driver app owns the root, and a cookie on `/` would attach this console's
+   * backend JWT to every request the driver app makes.
+   */
+  cookiePath: normalisePath(process.env.NEXT_PUBLIC_BASE_PATH, '') || '/',
 } as const;
 
 function normalisePath(value: string | undefined, fallback: string): string {

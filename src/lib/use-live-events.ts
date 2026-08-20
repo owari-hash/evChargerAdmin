@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
+import { withBasePath } from './base-path';
 import { LIVE_EVENT_NAMES, type CsmsEvent } from './types';
 
 export type LiveStatus = 'connecting' | 'live' | 'offline';
@@ -58,7 +59,7 @@ export function useLiveEvents({
     if (chargePointId) params.set('chargePointId', chargePointId);
     if (wantedKey) params.set('events', wantedKey);
 
-    const source = new EventSource(`/console-api/stream?${params.toString()}`);
+    const source = new EventSource(withBasePath(`/console-api/stream?${params.toString()}`));
     let closed = false;
 
     const handle = (raw: MessageEvent<string>, name: string) => {

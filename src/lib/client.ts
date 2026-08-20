@@ -5,6 +5,8 @@
  * JWT stays in an httpOnly cookie.
  */
 
+import { BASE_PATH, stripBasePath, withBasePath } from './base-path';
+
 export class ClientApiError extends Error {
   constructor(
     readonly status: number,
@@ -16,7 +18,7 @@ export class ClientApiError extends Error {
   }
 }
 
-/** Build a proxy URL: `charge-points` -> `/console-api/csms/charge-points?...` */
+/** Build a proxy URL: `charge-points` -> `/admin/console-api/csms/charge-points?...` */
 export function apiUrl(path: string, query?: Record<string, unknown>): string {
   const clean = path.replace(/^\/+/, '');
   const params = new URLSearchParams();
@@ -25,7 +27,7 @@ export function apiUrl(path: string, query?: Record<string, unknown>): string {
     params.set(key, String(value));
   }
   const qs = params.toString();
-  return `/console-api/csms/${clean}${qs ? `?${qs}` : ''}`;
+  return withBasePath(`/console-api/csms/${clean}${qs ? `?${qs}` : ''}`);
 }
 
 async function parse(res: Response): Promise<unknown> {
@@ -53,10 +55,13 @@ async function request<T>(method: string, url: string, body?: unknown): Promise<
     // The session expired underneath us. A hard navigation is deliberate here
     // rather than router.push: it discards the SWR cache and every other piece
     // of in-memory state belonging to the dead session.
-    if (typeof window !== 'undefined' && !window.location.pathname.startsWith('/login')) {
-      const next = encodeURIComponent(window.location.pathname + window.location.search);
+    if (typeof window !== 'undefined' && !window.location.pathname.startsWith(`${BASE_PATH}/login`)) {
+      // `next` is stored without the basePath, because the login screen replays
+      // it through router.replace(), which puts the prefix back on itself.
+      const here = stripBasePath(window.location.pathname) + window.location.search;
+      const next = encodeURIComponent(here);
       // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-      window.location.href = `/login?next=${next}&expired=1`;
+      window.location.href = withBasePath(`/login?next=${next}&expired=1`);
     }
     throw new ClientApiError(401, payload?.error ?? 'Нэвтрэлтийн хугацаа дууслаа');
   }
@@ -83,10 +88,10 @@ export const api = {
 };
 
 export async function logout(): Promise<void> {
-  await fetch('/console-api/auth/logout', { method: 'POST' });
+  await fetch(withBasePath('/console-api/auth/logout'), { method: 'POST' });
   // Full reload on sign-out, so nothing from the previous user survives in memory.
   // eslint-disable-next-line @next/next/no-location-assign-relative-destination
-  window.location.href = '/login';
+  window.location.href = withBasePath('/login');
 }
 
 /** Human-readable message for anything thrown by this module. */

@@ -54,7 +54,10 @@ export function Modal({
         if (e.target === ref.current) onClose();
       }}
       className={cn(
-        'w-[calc(100vw-2rem)] rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-0 text-[var(--color-fg)] shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm',
+        // `m-auto` is what centres the dialog: the browser's own stylesheet
+        // centres a modal <dialog> with `margin: auto`, and Tailwind's preflight
+        // resets every element to `margin: 0`, which was pinning it top-left.
+        'm-auto w-[calc(100vw-2rem)] rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-0 text-[var(--color-fg)] shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm',
         'open:animate-in-fade',
         widths[size],
       )}

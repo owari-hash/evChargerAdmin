@@ -7,6 +7,7 @@ import {
   ArrowLeft,
   KeyRound,
   MapPin,
+  Pencil,
   PlugZap,
   RefreshCw,
   Trash2,
@@ -43,6 +44,7 @@ import { MessagesTab } from './messages-tab';
 import { CommandLogTab } from './command-log-tab';
 import { ConfigurationTab } from './configuration-tab';
 import { LiveFeed } from '@/components/live-feed';
+import { EditChargePointModal } from '../edit-charge-point-modal';
 
 type TabKey = 'overview' | 'connectors' | 'configuration' | 'commands' | 'command-log' | 'messages';
 
@@ -59,6 +61,7 @@ export function ChargePointView({
   const [tab, setTab] = React.useState<TabKey>('overview');
   const [busy, setBusy] = React.useState(false);
   const [confirmDelete, setConfirmDelete] = React.useState(false);
+  const [editing, setEditing] = React.useState(false);
   const [confirmRotate, setConfirmRotate] = React.useState(false);
   const [rotatedKey, setRotatedKey] = React.useState<string | null>(null);
 
@@ -155,6 +158,12 @@ export function ChargePointView({
               <RefreshCw className="h-3.5 w-3.5" />
               Шинэчлэх
             </Button>
+            {canOperate ? (
+              <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
+                <Pencil className="h-3.5 w-3.5" />
+                Засах
+              </Button>
+            ) : null}
             {canOperate && detail.isOnline ? (
               <Button variant="secondary" size="sm" onClick={() => void disconnect()} loading={busy}>
                 <Unplug className="h-3.5 w-3.5" />
@@ -202,6 +211,19 @@ export function ChargePointView({
       {tab === 'messages' ? <MessagesTab chargePointId={detail.id} /> : null}
 
       {/* ---- Dialogs ---- */}
+
+      {/* Mounted only while open, so the form always seeds from the freshest
+          server data rather than from whatever it held last time. */}
+      {editing ? (
+        <EditChargePointModal
+          chargePoint={detail}
+          onClose={() => setEditing(false)}
+          onSaved={() => {
+            setEditing(false);
+            router.refresh();
+          }}
+        />
+      ) : null}
 
       <ConfirmModal
         open={confirmDelete}

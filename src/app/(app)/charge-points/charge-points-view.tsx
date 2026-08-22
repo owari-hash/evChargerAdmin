@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import useSWR from 'swr';
-import { Plus, RefreshCw, Search, Zap } from 'lucide-react';
+import { Pencil, Plus, RefreshCw, Search, Zap } from 'lucide-react';
 import { apiUrl, fetcher } from '@/lib/client';
 import { formatNumber, formatRelative } from '@/lib/format';
 import type { ChargePoint, Paginated } from '@/lib/types';
@@ -19,6 +19,7 @@ import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty, TableLoading } 
 import { ConnectorStatusBadge, OnlineBadge, RegistrationBadge } from '@/components/ui/status';
 import { FilterBar, Pagination } from '@/components/ui/pagination';
 import { CreateChargePointModal } from './create-charge-point-modal';
+import { EditChargePointModal } from './edit-charge-point-modal';
 
 export function ChargePointsView({ canEdit }: { canEdit: boolean }) {
   const [search, setSearch] = React.useState('');
@@ -27,6 +28,7 @@ export function ChargePointsView({ canEdit }: { canEdit: boolean }) {
   const [page, setPage] = React.useState(1);
   const [limit, setLimit] = React.useState(50);
   const [creating, setCreating] = React.useState(false);
+  const [editing, setEditing] = React.useState<ChargePoint | null>(null);
 
   // Debounce so typing does not fire a request per keystroke.
   React.useEffect(() => {
@@ -44,6 +46,7 @@ export function ChargePointsView({ canEdit }: { canEdit: boolean }) {
   });
 
   const rows = data?.data ?? [];
+  const columns = canEdit ? 8 : 7;
 
   return (
     <>
@@ -103,15 +106,20 @@ export function ChargePointsView({ canEdit }: { canEdit: boolean }) {
                 <TH>Программ</TH>
                 <TH>Бүртгэл</TH>
                 <TH align="right">Сүүлд холбогдсон</TH>
+                {canEdit ? (
+                  <TH align="right">
+                    <span className="sr-only">Үйлдэл</span>
+                  </TH>
+                ) : null}
               </tr>
             </THead>
             <TBody>
               {isLoading && !data ? (
-                <TableLoading colSpan={7} />
+                <TableLoading colSpan={columns} />
               ) : error ? (
-                <TableEmpty colSpan={7}>Станцын мэдээлэл ачаалж чадсангүй.</TableEmpty>
+                <TableEmpty colSpan={columns}>Станцын мэдээлэл ачаалж чадсангүй.</TableEmpty>
               ) : rows.length === 0 ? (
-                <TableEmpty colSpan={7}>
+                <TableEmpty colSpan={columns}>
                   {debounced || online ? 'Энэ шүүлтүүрт тохирох станц алга.' : 'Одоогоор станц бүртгэгдээгүй байна.'}
                 </TableEmpty>
               ) : (
@@ -161,6 +169,19 @@ export function ChargePointsView({ canEdit }: { canEdit: boolean }) {
                     <TD align="right" className="text-xs text-[var(--color-fg-muted)]">
                       {formatRelative(cp.lastSeenAt)}
                     </TD>
+                    {canEdit ? (
+                      <TD align="right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setEditing(cp)}
+                          aria-label={`${cp.id} станцыг засах`}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          Засах
+                        </Button>
+                      </TD>
+                    ) : null}
                   </TR>
                 ))
               )}
@@ -208,6 +229,19 @@ export function ChargePointsView({ canEdit }: { canEdit: boolean }) {
         onClose={() => setCreating(false)}
         onCreated={() => void mutate()}
       />
+
+      {/* Mounted only while open, so each edit starts from fresh row data and a
+          15-second background refresh cannot overwrite what is being typed. */}
+      {editing ? (
+        <EditChargePointModal
+          chargePoint={editing}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            void mutate();
+          }}
+        />
+      ) : null}
     </>
   );
 }

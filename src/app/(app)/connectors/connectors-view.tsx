@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import useSWR from 'swr';
-import { RefreshCw } from 'lucide-react';
+import { Pencil, RefreshCw } from 'lucide-react';
 import { apiUrl, fetcher } from '@/lib/client';
 import { formatNumber, formatPower, formatRelative, formatWh } from '@/lib/format';
 import { CONNECTOR_STATUSES, type Connector, type Paginated } from '@/lib/types';
@@ -12,6 +12,7 @@ import { ConnectorStatusBadge, ErrorCodeBadge, connectorTone } from '@/component
 import { CONNECTOR_STATUS, mn } from '@/lib/mn';
 import { FilterBar, Pagination } from '@/components/ui/pagination';
 import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty, TableLoading } from '@/components/ui/table';
+import { EditConnectorModal } from './edit-connector-modal';
 
 /**
  * Network-wide connector view. Connector 0 is hidden by default because it
@@ -20,9 +21,11 @@ import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty, TableLoading } 
 export function ConnectorsView({
   initialStatus,
   initialChargePointId,
+  canOperate,
 }: {
   initialStatus: string;
   initialChargePointId: string;
+  canOperate: boolean;
 }) {
   const [status, setStatus] = React.useState(initialStatus);
   const [chargePointId, setChargePointId] = React.useState(initialChargePointId);
@@ -30,6 +33,7 @@ export function ConnectorsView({
   const [includeZero, setIncludeZero] = React.useState(false);
   const [page, setPage] = React.useState(1);
   const [limit, setLimit] = React.useState(100);
+  const [editing, setEditing] = React.useState<Connector | null>(null);
 
   React.useEffect(() => {
     const t = setTimeout(() => {
@@ -47,6 +51,7 @@ export function ConnectorsView({
 
   const all = data?.data ?? [];
   const rows = includeZero ? all : all.filter((c) => c.connectorId > 0);
+  const columns = canOperate ? 11 : 10;
 
   const counts = React.useMemo(() => {
     const map = new Map<string, number>();
@@ -141,15 +146,20 @@ export function ConnectorsView({
                 <TH align="right">Чадал</TH>
                 <TH align="right">Цэнэг</TH>
                 <TH align="right">Шинэчлэгдсэн</TH>
+                {canOperate ? (
+                  <TH align="right">
+                    <span className="sr-only">Үйлдэл</span>
+                  </TH>
+                ) : null}
               </tr>
             </THead>
             <TBody>
               {isLoading && !data ? (
-                <TableLoading colSpan={10} />
+                <TableLoading colSpan={columns} />
               ) : error ? (
-                <TableEmpty colSpan={10}>Холбогчийн мэдээлэл ачаалж чадсангүй.</TableEmpty>
+                <TableEmpty colSpan={columns}>Холбогчийн мэдээлэл ачаалж чадсангүй.</TableEmpty>
               ) : rows.length === 0 ? (
-                <TableEmpty colSpan={10}>Энэ шүүлтүүрт тохирох холбогч алга.</TableEmpty>
+                <TableEmpty colSpan={columns}>Энэ шүүлтүүрт тохирох холбогч алга.</TableEmpty>
               ) : (
                 rows.map((c) => (
                   <TR key={`${c.chargePointId}-${c.connectorId}`}>
@@ -195,6 +205,19 @@ export function ConnectorsView({
                     <TD align="right" className="text-xs text-[var(--color-fg-muted)]">
                       {formatRelative(c.statusTimestamp ?? c.updatedAt)}
                     </TD>
+                    {canOperate ? (
+                      <TD align="right">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setEditing(c)}
+                          aria-label={`${c.chargePointId} станцын ${c.connectorId} дугаар холбогчийг удирдах`}
+                        >
+                          <Pencil className="h-3.5 w-3.5" />
+                          Засах
+                        </Button>
+                      </TD>
+                    ) : null}
                   </TR>
                 ))
               )}
@@ -216,6 +239,19 @@ export function ConnectorsView({
           />
         ) : null}
       </Card>
+
+      {/* Mounted only while open, so each edit starts from fresh row data and the
+          10-second background refresh cannot change what is on screen mid-edit. */}
+      {editing ? (
+        <EditConnectorModal
+          connector={editing}
+          onClose={() => setEditing(null)}
+          onSaved={() => {
+            setEditing(null);
+            void mutate();
+          }}
+        />
+      ) : null}
     </>
   );
 }

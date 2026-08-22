@@ -113,7 +113,7 @@ export function ChargePointView({
     setBusy(true);
     try {
       await api.del(`charge-points/${encodeURIComponent(detail.id)}`);
-      toast.success(`${detail.id} устгагдлаа`);
+      toast.success(`${detail.cpId} устгагдлаа`);
       router.replace('/charge-points');
     } catch (err) {
       toast.error(errorMessage(err));
@@ -134,7 +134,7 @@ export function ChargePointView({
       <PageHeader
         title={
           <span className="flex flex-wrap items-center gap-2.5">
-            <span className="font-mono">{detail.id}</span>
+            <span className="font-mono">{detail.cpId}</span>
             <OnlineBadge online={detail.isOnline} />
             <RegistrationBadge status={detail.registrationStatus} />
             <Badge tone="idle">{detail.securityProfile}-р профайл</Badge>
@@ -203,6 +203,7 @@ export function ChargePointView({
       {tab === 'commands' ? (
         <CommandConsole
           chargePointId={detail.id}
+          cpLabel={detail.cpId}
           isOnline={detail.isOnline}
           canOperate={canOperate}
         />
@@ -217,9 +218,16 @@ export function ChargePointView({
       {editing ? (
         <EditChargePointModal
           chargePoint={detail}
+          canRename={canAdmin}
           onClose={() => setEditing(false)}
-          onSaved={() => {
+          onSaved={(updated) => {
             setEditing(false);
+            // A rename moves the station to a new URL; this page's own address
+            // no longer resolves.
+            if (updated.id !== detail.id) {
+              router.replace(`/charge-points/${encodeURIComponent(updated.id)}`);
+              return;
+            }
             router.refresh();
           }}
         />
@@ -235,7 +243,7 @@ export function ChargePointView({
         message={
           <>
             <span className="block">
-              Энэ үйлдэл <span className="font-mono font-medium">{detail.id}</span> станц, түүний
+              Энэ үйлдэл <span className="font-mono font-medium">{detail.cpId}</span> станц, түүний
               холбогч болон хадгалагдсан тохиргоог устгаж, WebSocket холболтыг хаана.
             </span>
             <span className="mt-2 block">

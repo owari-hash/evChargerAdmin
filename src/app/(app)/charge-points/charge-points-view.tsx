@@ -21,7 +21,13 @@ import { FilterBar, Pagination } from '@/components/ui/pagination';
 import { CreateChargePointModal } from './create-charge-point-modal';
 import { EditChargePointModal } from './edit-charge-point-modal';
 
-export function ChargePointsView({ canEdit }: { canEdit: boolean }) {
+export function ChargePointsView({
+  canEdit,
+  canAdmin,
+}: {
+  canEdit: boolean;
+  canAdmin: boolean;
+}) {
   const [search, setSearch] = React.useState('');
   const [debounced, setDebounced] = React.useState('');
   const [online, setOnline] = React.useState('');
@@ -130,7 +136,7 @@ export function ChargePointsView({ canEdit }: { canEdit: boolean }) {
                         href={`/charge-points/${encodeURIComponent(cp.id)}`}
                         className="font-medium hover:text-[var(--color-brand)] hover:underline"
                       >
-                        {cp.id}
+                        {cp.cpId}
                       </Link>
                       {cp.name ? (
                         <p className="text-xs text-[var(--color-fg-muted)]">{cp.name}</p>
@@ -175,7 +181,7 @@ export function ChargePointsView({ canEdit }: { canEdit: boolean }) {
                           variant="ghost"
                           size="sm"
                           onClick={() => setEditing(cp)}
-                          aria-label={`${cp.id} станцыг засах`}
+                          aria-label={`${cp.cpId} станцыг засах`}
                         >
                           <Pencil className="h-3.5 w-3.5" />
                           Засах
@@ -235,6 +241,7 @@ export function ChargePointsView({ canEdit }: { canEdit: boolean }) {
       {editing ? (
         <EditChargePointModal
           chargePoint={editing}
+          canRename={canAdmin}
           onClose={() => setEditing(null)}
           onSaved={() => {
             setEditing(null);

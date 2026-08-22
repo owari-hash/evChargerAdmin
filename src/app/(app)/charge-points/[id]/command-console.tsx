@@ -39,10 +39,13 @@ interface Result {
 
 export function CommandConsole({
   chargePointId,
+  cpLabel,
   isOnline,
   canOperate,
 }: {
   chargePointId: string;
+  /** Shown to the operator; `chargePointId` is what the API is called with. */
+  cpLabel?: string;
   isOnline: boolean;
   canOperate: boolean;
 }) {
@@ -332,7 +335,7 @@ export function CommandConsole({
         message={
           <>
             <span className="block">
-              Энэ үйлдэл <span className="font-mono font-medium">{chargePointId}</span> станц дээрх
+              Энэ үйлдэл <span className="font-mono font-medium">{cpLabel ?? chargePointId}</span> станц дээрх
               цэнэглэлтийг тасалж болзошгүй.
             </span>
             <span className="mt-2 block text-xs">{selected.description}</span>

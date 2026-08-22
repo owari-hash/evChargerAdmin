@@ -3,15 +3,23 @@
 import * as React from 'react';
 import { toast } from 'sonner';
 import { api, errorMessage } from '@/lib/client';
+import { TriangleAlert } from 'lucide-react';
 import { Button, ErrorNote, Field, Input, Select, Textarea } from '@/components/ui/primitives';
 import { Modal } from '@/components/ui/modal';
 import { REGISTRATION_STATUS as REGISTRATION_STATUS_MN, mn } from '@/lib/mn';
 import { REGISTRATION_STATUSES, type ChargePoint } from '@/lib/types';
 
+/** Same rule the API applies to a charge point identifier. */
+const ID_PATTERN = /^[\w.:@-]+$/;
+
 /**
- * Editable site metadata for one charge point. The identifier is not here on
- * purpose: it is the OCPP identity the station connects with, so changing it
- * would orphan the station's connectors, transactions and logs.
+ * Editable details for one charge point.
+ *
+ * The identifier is editable too, but it is not an ordinary field: it is the
+ * OCPP identity the station connects with, so changing it moves every record
+ * that references the station and means the station's own configuration has to
+ * be updated to match. Only an admin sees that input, and it is saved through
+ * the dedicated rename endpoint rather than through the normal update.
  *
  * Mount this only while it is open — the form seeds itself from `chargePoint`
  * once, and remounting is what keeps a background list refresh from wiping a
@@ -19,10 +27,13 @@ import { REGISTRATION_STATUSES, type ChargePoint } from '@/lib/types';
  */
 export function EditChargePointModal({
   chargePoint,
+  canRename = false,
   onClose,
   onSaved,
 }: {
   chargePoint: ChargePoint;
+  /** Renaming needs the admin role, matching the endpoint. */
+  canRename?: boolean;
   onClose: () => void;
   onSaved?: (updated: ChargePoint) => void;
 }) {
@@ -31,6 +42,7 @@ export function EditChargePointModal({
   const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
 
   const [form, setForm] = React.useState(() => ({
+    cpId: chargePoint.cpId,
     name: chargePoint.name ?? '',
     description: chargePoint.description ?? '',
     address: chargePoint.address ?? '',
@@ -48,8 +60,19 @@ export function EditChargePointModal({
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
       setForm((f) => ({ ...f, [key]: e.target.value }));
 
+  const nextId = form.cpId.trim();
+  const renaming = canRename && nextId !== chargePoint.cpId;
+
   async function submit() {
     const errors: Record<string, string> = {};
+
+    if (canRename) {
+      if (!nextId) errors.cpId = 'Станцын дугаар хоосон байж болохгүй.';
+      else if (nextId.length > 64) errors.cpId = 'Хамгийн ихдээ 64 тэмдэгт.';
+      else if (!ID_PATTERN.test(nextId)) {
+        errors.cpId = 'Зөвхөн үсэг, тоо болон . : @ _ - тэмдэгт ашиглана.';
+      }
+    }
 
     const latitude = optionalNumber(form.latitude);
     const longitude = optionalNumber(form.longitude);
@@ -88,6 +111,7 @@ export function EditChargePointModal({
       const updated = await api.patch<ChargePoint>(
         `charge-points/${encodeURIComponent(chargePoint.id)}`,
         {
+          ...(renaming ? { cpId: nextId } : {}),
           name: form.name.trim() || null,
           description: form.description.trim() || null,
           address: form.address.trim() || null,
@@ -100,7 +124,11 @@ export function EditChargePointModal({
           tags: parseTags(form.tags),
         },
       );
-      toast.success(`${chargePoint.id} шинэчлэгдлээ`);
+      toast.success(
+        renaming
+          ? `${chargePoint.cpId} → ${updated.cpId} болж өөрчлөгдлөө`
+          : `${chargePoint.cpId} шинэчлэгдлээ`,
+      );
       onSaved?.(updated);
     } catch (err) {
       setError(errorMessage(err));
@@ -113,15 +141,19 @@ export function EditChargePointModal({
       open
       onClose={onClose}
       title="Станцын мэдээлэл засах"
-      description={chargePoint.id}
+      description={chargePoint.cpId}
       size="lg"
       footer={
         <>
           <Button variant="ghost" onClick={onClose} disabled={saving}>
             Цуцлах
           </Button>
-          <Button variant="primary" onClick={() => void submit()} loading={saving}>
-            Хадгалах
+          <Button
+            variant={renaming ? 'danger' : 'primary'}
+            onClick={() => void submit()}
+            loading={saving}
+          >
+            {renaming ? 'Дугаарыг өөрчлөх' : 'Хадгалах'}
           </Button>
         </>
       }
@@ -129,9 +161,46 @@ export function EditChargePointModal({
       <div className="space-y-4">
         {error ? <ErrorNote>{error}</ErrorNote> : null}
 
+        <Field
+          label="Станцын дугаар"
+          error={fieldErrors.cpId}
+          hint={
+            canRename
+              ? 'OCPP таних дугаар. Станц энэ нэрээр холбогдож нэвтэрдэг.'
+              : 'Дугаарыг зөвхөн админ өөрчилнө.'
+          }
+        >
+          <Input
+            value={form.cpId}
+            onChange={set('cpId')}
+            disabled={!canRename}
+            className="font-mono"
+          />
+        </Field>
+
+        {renaming ? (
+          <div className="flex items-start gap-2.5 rounded-lg border border-[var(--color-warn)]/30 bg-[var(--color-warn-soft)] px-3 py-2.5 text-xs text-[var(--color-warn)]">
+            <TriangleAlert className="mt-0.5 h-4 w-4 shrink-0" />
+            <div className="space-y-1">
+              <p className="font-medium">
+                Дугаарыг <span className="font-mono">{chargePoint.cpId}</span> →{' '}
+                <span className="font-mono">{nextId}</span> болгож өөрчлөх гэж байна.
+              </p>
+              <p>
+                Станцын холбогч, цэнэглэлт, тохиргоо болон бүх түүх хэвээр хадгалагдана —
+                тэдгээр нь дотоод дугаартай холбогдсон. Одоогийн холболт тасарна.
+              </p>
+              <p>
+                Станц өөрөө хуучин дугаараар холбогдсоор байх тул түүний тохиргоон дахь
+                WebSocket хаяг болон нэвтрэх нэрийг мөн шинэ дугаараар солино уу.
+              </p>
+            </div>
+          </div>
+        ) : null}
+
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Харагдах нэр" hint="Хоосон орхивол станцын дугаар харагдана.">
-            <Input value={form.name} onChange={set('name')} placeholder="Сүхбаатарын талбай #1" autoFocus />
+            <Input value={form.name} onChange={set('name')} placeholder="Сүхбаатарын талбай #1" />
           </Field>
           <Field label="Хаяг">
             <Input value={form.address} onChange={set('address')} placeholder="Улаанбаатар" />

@@ -137,8 +137,11 @@ export interface Connector {
 }
 
 export interface ChargePoint {
+  /** The CSMS's own identifier. Stable across renames; used in API paths. */
   id: string;
   _id?: string;
+  /** The OCPP identifier the station connects with. This is what operators read. */
+  cpId: string;
   name?: string;
   description?: string;
   chargePointVendor?: string;

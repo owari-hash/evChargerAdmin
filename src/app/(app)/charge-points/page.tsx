@@ -7,5 +7,10 @@ export const dynamic = 'force-dynamic';
 
 export default async function ChargePointsPage() {
   const user = await getSessionUser();
-  return <ChargePointsView canEdit={hasRole(user, 'OPERATOR')} />;
+  return (
+    <ChargePointsView
+      canEdit={hasRole(user, 'OPERATOR')}
+      canAdmin={hasRole(user, 'ADMIN')}
+    />
+  );
 }

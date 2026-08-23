@@ -6,8 +6,8 @@ import { useRouter } from 'next/navigation';
 import { Pause, Play, Trash2 } from 'lucide-react';
 import { Badge, Button, Dot, type Tone } from '@/components/ui/primitives';
 import { useLiveEvents } from '@/lib/use-live-events';
-import { formatRelative, humanizeEvent } from '@/lib/format';
-import { CONNECTOR_STATUS, EVENT, STOP_REASON, mn } from '@/lib/mn';
+import { formatPercent, formatPower, formatRelative, formatWh, humanizeEvent } from '@/lib/format';
+import { CONNECTOR_STATUS, EVENT, MEASURAND, STOP_REASON, mn } from '@/lib/mn';
 import type { CsmsEvent } from '@/lib/types';
 
 const EVENT_TONES: Record<string, Tone> = {
@@ -27,6 +27,20 @@ const EVENT_TONES: Record<string, Tone> = {
   'ocpp.message': 'idle',
 };
 
+/**
+ * The raw samples, for a reading the backend does not roll up — a station may
+ * report only voltage or current, and an unnamed line is worse than a long one.
+ */
+function describeSamples(value: unknown): string {
+  if (!Array.isArray(value)) return 'тоолуурын утга';
+  const parts = value.slice(0, 3).map((sample) => {
+    const sv = sample as Record<string, unknown>;
+    const label = mn(MEASURAND, (sv.measurand as string) ?? 'Energy.Active.Import.Register');
+    return `${label} ${sv.value}${sv.unit ? ` ${sv.unit}` : ''}`;
+  });
+  return parts.length > 0 ? parts.join(' · ') : 'тоолуурын утга';
+}
+
 /** One-line human summary of an event, chosen per event type. */
 function describe(event: CsmsEvent): string {
   // The stream wraps the per-event payload in `data`; only `event`,
@@ -42,10 +56,15 @@ function describe(event: CsmsEvent): string {
     case 'transaction.stopped':
       return `#${e.transactionId ?? '?'} цэнэглэлт дуусав${e.reason ? ` — ${mn(STOP_REASON, e.reason as string)}` : ''}`;
     case 'transaction.metervalue': {
-      const power = typeof e.powerW === 'number' ? `${(e.powerW / 1000).toFixed(1)} kW` : null;
-      const soc = typeof e.socPercent === 'number' ? `${e.socPercent}%` : null;
-      const parts = [power, soc].filter(Boolean).join(' · ');
-      return `#${e.transactionId ?? '?'} цэнэглэлт${parts ? ` — ${parts}` : ' — тоолуурын утга'}`;
+      // Plenty of stations sample only the energy register, so lead with it
+      // instead of falling back to a line that names no reading at all.
+      const parts = [
+        typeof e.energyWh === 'number' ? `тоолуур ${formatWh(e.energyWh)}` : null,
+        typeof e.powerW === 'number' ? formatPower(e.powerW) : null,
+        typeof e.socPercent === 'number' ? formatPercent(e.socPercent) : null,
+      ].filter(Boolean);
+      const reading = parts.length > 0 ? parts.join(' · ') : describeSamples(e.sampledValue);
+      return `#${e.transactionId ?? '?'} цэнэглэлт — ${reading}`;
     }
     case 'security.event':
       return `${e.type ?? 'Аюулгүй байдлын үйл явдал'}${e.isCritical ? ' (ноцтой)' : ''}`;

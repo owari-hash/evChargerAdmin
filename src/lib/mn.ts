@@ -122,6 +122,23 @@ export const EVENT: Record<string, string> = {
   'ocpp.message': 'OCPP мессеж',
 };
 
+/** OCPP 1.6 measurands, for readings the dashboard does not roll up itself. */
+export const MEASURAND: Record<string, string> = {
+  'Energy.Active.Import.Register': 'Тоолуур',
+  'Energy.Active.Import.Interval': 'Эрчим хүч',
+  'Energy.Active.Export.Register': 'Буцаалтын тоолуур',
+  'Power.Active.Import': 'Чадал',
+  'Power.Active.Export': 'Буцаалтын чадал',
+  'Power.Offered': 'Санал болгосон чадал',
+  'Current.Import': 'Гүйдэл',
+  'Current.Export': 'Буцаалтын гүйдэл',
+  'Current.Offered': 'Санал болгосон гүйдэл',
+  Voltage: 'Хүчдэл',
+  Frequency: 'Давтамж',
+  Temperature: 'Температур',
+  SoC: 'Цэнэг',
+};
+
 /** Reasons a charge point reports when a session stops. */
 export const STOP_REASON: Record<string, string> = {
   EmergencyStop: 'Яаралтай зогсоолт',

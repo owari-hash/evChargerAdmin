@@ -9,6 +9,7 @@ import { formatJson, formatTime } from '@/lib/format';
 import {
   buildPayload,
   COMMAND_GROUPS,
+  COMMAND_GROUP_HINT,
   commandsByGroup,
   defaultValues,
   type CommandSpec,
@@ -50,9 +51,10 @@ export function CommandConsole({
   canOperate: boolean;
 }) {
   const router = useRouter();
-  const [selected, setSelected] = React.useState<CommandSpec>(commandsByGroup('Core')[0]!);
+  // Opens on the everyday action rather than whatever happens to be first.
+  const [selected, setSelected] = React.useState<CommandSpec>(commandsByGroup('Session')[0]!);
   const [values, setValues] = React.useState<Record<string, string>>(() =>
-    defaultValues(commandsByGroup('Core')[0]!),
+    defaultValues(commandsByGroup('Session')[0]!),
   );
   const [error, setError] = React.useState<string | null>(null);
   const [sending, setSending] = React.useState(false);
@@ -145,8 +147,13 @@ export function CommandConsole({
             if (!items.length) return null;
             return (
               <div key={group} className="mb-3">
-                <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-fg-subtle)]">
+                <p className="px-2 pb-0.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-fg-subtle)]">
                   {mn(COMMAND_GROUP, group)}
+                </p>
+                {/* Saying what a group is for costs one line and saves opening
+                    three of them to find the right command. */}
+                <p className="px-2 pb-1.5 text-[10px] leading-snug text-[var(--color-fg-subtle)]">
+                  {COMMAND_GROUP_HINT[group]}
                 </p>
                 <ul className="space-y-0.5">
                   {items.map((spec) => (

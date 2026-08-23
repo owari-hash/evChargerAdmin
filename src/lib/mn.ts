@@ -139,12 +139,13 @@ export const STOP_REASON: Record<string, string> = {
 
 /** Command console groups. The keys are the CommandGroup union in lib/commands.ts. */
 export const COMMAND_GROUP: Record<string, string> = {
-  Core: 'Үндсэн',
-  Trigger: 'Дуудалт',
+  Session: 'Цэнэглэлт удирдах',
+  Availability: 'Ашиглалт ба сэргээлт',
+  Configuration: 'Тохиргоо',
   Reservation: 'Захиалга',
   'Smart charging': 'Ухаалаг цэнэглэлт',
-  'Local list': 'Дотоод жагсаалт',
+  'Local list': 'Картын дотоод жагсаалт',
   'Firmware & logs': 'Программ ба лог',
   Certificates: 'Гэрчилгээ',
-  Advanced: 'Нэмэлт',
+  Advanced: 'Нарийвчилсан',
 };

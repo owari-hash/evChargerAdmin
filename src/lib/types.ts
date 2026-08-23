@@ -422,11 +422,12 @@ export interface ApiDiscovery {
   endpoints: Record<string, string>;
 }
 
-/** Live SSE payload. `event` is the OCPP-domain event name. */
+/** Live SSE payload. `event` is the OCPP-domain event name, `data` its payload. */
 export interface CsmsEvent {
   event: string;
   chargePointId?: string;
   at?: string;
+  data?: unknown;
   [key: string]: unknown;
 }
 

@@ -29,7 +29,9 @@ const EVENT_TONES: Record<string, Tone> = {
 
 /** One-line human summary of an event, chosen per event type. */
 function describe(event: CsmsEvent): string {
-  const e = event as Record<string, unknown>;
+  // The stream wraps the per-event payload in `data`; only `event`,
+  // `chargePointId` and `at` live on the envelope itself.
+  const e = (event.data ?? {}) as Record<string, unknown>;
   switch (event.event) {
     case 'connector.status':
       return `${e.connectorId ?? '?'} холбогч → ${mn(CONNECTOR_STATUS, e.status as string)}${

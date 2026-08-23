@@ -29,9 +29,16 @@ export interface CommandField {
   path?: string;
 }
 
+/**
+ * Commands are grouped by what an operator is trying to do, not by the OCPP
+ * profile they belong to. The specification's own taxonomy puts "start a charge
+ * for a customer" in the same bucket as "clear the authorization cache", which
+ * is accurate and useless at 2am.
+ */
 export type CommandGroup =
-  | 'Core'
-  | 'Trigger'
+  | 'Session'
+  | 'Availability'
+  | 'Configuration'
   | 'Reservation'
   | 'Smart charging'
   | 'Local list'
@@ -57,7 +64,7 @@ export const COMMANDS: CommandSpec[] = [
     slug: 'remote-start',
     action: 'RemoteStartTransaction',
     label: 'Алсаас эхлүүлэх',
-    group: 'Core',
+    group: 'Session',
     description: 'RFID картын нэрийн өмнөөс цэнэглэлт эхлүүлнэ. Карт урьдчилан бүртгэлтэй байх ёстой.',
     fields: [
       { name: 'idTag', label: 'RFID карт', type: 'text', required: true, placeholder: 'TAG-0001' },
@@ -69,7 +76,7 @@ export const COMMANDS: CommandSpec[] = [
     slug: 'remote-stop',
     action: 'RemoteStopTransaction',
     label: 'Алсаас зогсоох',
-    group: 'Core',
+    group: 'Session',
     description: 'Үргэлжилж буй цэнэглэлтийг гүйлгээний дугаараар зогсооно.',
     destructive: true,
     fields: [{ name: 'transactionId', label: 'Гүйлгээний дугаар', type: 'number', required: true }],
@@ -78,7 +85,7 @@ export const COMMANDS: CommandSpec[] = [
     slug: 'reset',
     action: 'Reset',
     label: 'Дахин ачаалах',
-    group: 'Core',
+    group: 'Availability',
     description: 'Станцыг дахин ачаална. Хүчтэй дахин ачаалалт цэнэглэлтийг шууд тасална.',
     destructive: true,
     fields: [
@@ -89,7 +96,7 @@ export const COMMANDS: CommandSpec[] = [
     slug: 'unlock-connector',
     action: 'UnlockConnector',
     label: 'Холбогч тайлах',
-    group: 'Core',
+    group: 'Session',
     description: 'Холбогч дээрх кабелийн түгжээг тайлна.',
     fields: [{ name: 'connectorId', label: 'Холбогч', type: 'number', required: true, default: '1' }],
   },
@@ -97,7 +104,7 @@ export const COMMANDS: CommandSpec[] = [
     slug: 'change-availability',
     action: 'ChangeAvailability',
     label: 'Ашиглалт өөрчлөх',
-    group: 'Core',
+    group: 'Availability',
     description: 'Холбогч, эсвэл станцыг бүхэлд нь (0 дугаар холбогч) ажиллагаанд оруулах / гаргах.',
     destructive: true,
     fields: [
@@ -109,7 +116,7 @@ export const COMMANDS: CommandSpec[] = [
     slug: 'change-configuration',
     action: 'ChangeConfiguration',
     label: 'Тохиргоо өөрчлөх',
-    group: 'Core',
+    group: 'Configuration',
     description: 'OCPP тохиргооны нэг түлхүүрийг бичнэ.',
     fields: [
       { name: 'key', label: 'Түлхүүр', type: 'text', required: true, placeholder: 'HeartbeatInterval' },
@@ -120,7 +127,7 @@ export const COMMANDS: CommandSpec[] = [
     slug: 'get-configuration',
     action: 'GetConfiguration',
     label: 'Тохиргоо унших',
-    group: 'Core',
+    group: 'Configuration',
     description: 'Тохиргооны түлхүүрүүдийг уншиж, энэ станцын хамт хадгална.',
     fields: [
       {
@@ -136,7 +143,7 @@ export const COMMANDS: CommandSpec[] = [
     slug: 'clear-cache',
     action: 'ClearCache',
     label: 'Кэш цэвэрлэх',
-    group: 'Core',
+    group: 'Availability',
     description: 'Дотоод зөвшөөрлийн кэшийг цэвэрлэнэ.',
     fields: [],
   },
@@ -144,7 +151,7 @@ export const COMMANDS: CommandSpec[] = [
     slug: 'data-transfer',
     action: 'DataTransfer',
     label: 'Өгөгдөл дамжуулах',
-    group: 'Core',
+    group: 'Advanced',
     description: 'Үйлдвэрлэгчийн тусгай мессеж илгээнэ.',
     fields: [
       { name: 'vendorId', label: 'Үйлдвэрлэгчийн дугаар', type: 'text', required: true },
@@ -158,7 +165,7 @@ export const COMMANDS: CommandSpec[] = [
     slug: 'trigger-message',
     action: 'TriggerMessage',
     label: 'Мессеж дуудах',
-    group: 'Trigger',
+    group: 'Configuration',
     description: 'Станцаас тодорхой мессежийг яг одоо илгээхийг хүснэ.',
     fields: [
       {
@@ -183,7 +190,7 @@ export const COMMANDS: CommandSpec[] = [
     slug: 'extended-trigger-message',
     action: 'ExtendedTriggerMessage',
     label: 'Өргөтгөсөн дуудалт',
-    group: 'Trigger',
+    group: 'Configuration',
     description: 'Аюулгүй байдлын профайлын дуудалт, шинэ гэрчилгээний хүсэлт (CSR) авах боломжтой.',
     fields: [
       {
@@ -464,9 +471,11 @@ export const COMMANDS: CommandSpec[] = [
   },
 ];
 
+/** Ordered by how often an operator reaches for them: everyday work first. */
 export const COMMAND_GROUPS: CommandGroup[] = [
-  'Core',
-  'Trigger',
+  'Session',
+  'Availability',
+  'Configuration',
   'Reservation',
   'Smart charging',
   'Local list',
@@ -474,6 +483,19 @@ export const COMMAND_GROUPS: CommandGroup[] = [
   'Certificates',
   'Advanced',
 ];
+
+/** One line per group explaining when it is the right one to open. */
+export const COMMAND_GROUP_HINT: Record<CommandGroup, string> = {
+  Session: 'Жолоочийн цэнэглэлтийг эхлүүлэх, зогсоох, гацсан кабель суллах.',
+  Availability: 'Станцыг ашиглалтаас гаргах, эргүүлж оруулах, эсвэл сэргээх.',
+  Configuration: 'Станцын тохиргоог унших, өөрчлөх, мэдээлэл дахин илгээхийг хүсэх.',
+  Reservation: 'Холбогчийг тодорхой картад захиалах, захиалгыг цуцлах.',
+  'Smart charging': 'Чадлын хязгаар, цэнэглэх хуваарь тохируулах.',
+  'Local list': 'Станц дээр хадгалагдах картын жагсаалтыг шинэчлэх.',
+  'Firmware & logs': 'Программ шинэчлэх, оношилгоо болон лог татах.',
+  Certificates: 'Аюулгүй холболтын гэрчилгээ суулгах, устгах.',
+  Advanced: 'Үйлдвэрлэгчийн тусгай болон түүхий OCPP дуудалт.',
+};
 
 export function commandsByGroup(group: CommandGroup): CommandSpec[] {
   return COMMANDS.filter((c) => c.group === group);

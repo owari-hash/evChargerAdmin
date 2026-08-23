@@ -439,7 +439,7 @@ function OverviewTab({ detail }: { detail: ChargePointDetail }) {
       <Card className="flex flex-col">
         <CardHeader title="Шууд үйл ажиллагаа" description="Энэ станцаас ирж буй үйл явдал" />
         <LiveFeed
-          chargePointId={detail.id}
+          chargePointId={detail.cpId}
           height="h-[560px]"
           showChargePoint={false}
           refreshOnEvent

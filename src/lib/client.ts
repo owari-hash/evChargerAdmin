@@ -83,6 +83,7 @@ export const fetcher = <T>(url: string): Promise<T> => request<T>('GET', url);
 export const api = {
   get: <T>(path: string, query?: Record<string, unknown>) => request<T>('GET', apiUrl(path, query)),
   post: <T>(path: string, body?: unknown) => request<T>('POST', apiUrl(path), body ?? {}),
+  put: <T>(path: string, body?: unknown) => request<T>('PUT', apiUrl(path), body ?? {}),
   patch: <T>(path: string, body?: unknown) => request<T>('PATCH', apiUrl(path), body ?? {}),
   del: <T>(path: string) => request<T>('DELETE', apiUrl(path)),
 };

@@ -21,8 +21,6 @@ export interface EbarimtMerchantItem {
   merchantTin: string;
   districtCode: string;
   khorooCode?: string;
-  branchNo: string;
-  posNo: string;
   envMode: 'PRODUCTION' | 'TEST';
   prodApiUrl: string;
   testApiUrl: string;
@@ -59,8 +57,6 @@ export function EbarimtMerchantModal({
   const [merchantTin, setMerchantTin] = React.useState(merchant?.merchantTin ?? '');
   const [districtCode, setDistrictCode] = React.useState(merchant?.districtCode ?? '23');
   const [khorooCode, setKhorooCode] = React.useState(merchant?.khorooCode ?? '20');
-  const [branchNo, setBranchNo] = React.useState(merchant?.branchNo ?? '001');
-  const [posNo, setPosNo] = React.useState(merchant?.posNo ?? '0001');
   const [envMode, setEnvMode] = React.useState<'PRODUCTION' | 'TEST'>(merchant?.envMode ?? 'PRODUCTION');
   const [prodApiUrl, setProdApiUrl] = React.useState(
     merchant?.prodApiUrl ?? merchant?.ebarimtApiUrl ?? 'http://103.143.40.43:7080/',
@@ -87,8 +83,6 @@ export function EbarimtMerchantModal({
         merchantTin: merchantTin.trim(),
         districtCode: districtCode.trim() || '23',
         khorooCode: khorooCode.trim() || '1',
-        branchNo: branchNo.trim() || '001',
-        posNo: posNo.trim() || '0001',
         envMode,
         prodApiUrl: prodApiUrl.trim() || 'http://103.143.40.43:7080/',
         testApiUrl: testApiUrl.trim() || 'http://103.236.194.50:7080/',
@@ -182,26 +176,6 @@ export function EbarimtMerchantModal({
                 <option value={khorooCode}>{khorooCode}</option>
               )}
             </select>
-          </Field>
-        </div>
-
-        {/* Additional POS configuration */}
-        <div className="grid grid-cols-2 gap-3 pt-1">
-          <Field label="Салбарын № (Branch)" htmlFor="branchNo">
-            <Input
-              id="branchNo"
-              value={branchNo}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setBranchNo(e.target.value)}
-              placeholder="001"
-            />
-          </Field>
-          <Field label="POS №" htmlFor="posNo">
-            <Input
-              id="posNo"
-              value={posNo}
-              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPosNo(e.target.value)}
-              placeholder="0001"
-            />
           </Field>
         </div>
 

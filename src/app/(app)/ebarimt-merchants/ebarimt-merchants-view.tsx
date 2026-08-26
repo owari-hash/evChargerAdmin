@@ -155,7 +155,7 @@ export function EbarimtMerchantsView({
               <TR>
                 <TH>Байгууллагын нэр</TH>
                 <TH>Татвар төлөгчийн № (TIN)</TH>
-                <TH>Дүүрэг / Хороо / POS</TH>
+                <TH>Дүүрэг / Хороо</TH>
                 <TH>И-Баримт төлөв</TH>
                 <TH>Серверийн орчин</TH>
                 <TH align="right">Үйлдэл</TH>
@@ -203,13 +203,8 @@ export function EbarimtMerchantsView({
                       <TD className="font-mono text-base font-bold text-slate-900 dark:text-slate-100 tracking-wider">
                         {item.merchantTin}
                       </TD>
-                      <TD className="text-slate-700 dark:text-slate-300 text-sm">
-                        <div className="font-medium">
-                          {districtName}, {khorooName}
-                        </div>
-                        <div className="text-xs text-slate-500 font-mono">
-                          Branch: {item.branchNo} · POS: {item.posNo}
-                        </div>
+                      <TD className="text-slate-700 dark:text-slate-300 text-sm font-medium">
+                        {districtName}, {khorooName}
                       </TD>
                       <TD>
                         <div className="flex flex-col gap-1">

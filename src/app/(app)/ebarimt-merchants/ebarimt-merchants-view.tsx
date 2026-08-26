@@ -4,7 +4,7 @@ import * as React from 'react';
 import useSWR from 'swr';
 import { Edit2, FileText, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { api, errorMessage, fetcher } from '@/lib/client';
+import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
 import { Badge, Button, Card, EmptyState, PageHeader } from '@/components/ui/primitives';
 import { ConfirmModal } from '@/components/ui/modal';
 import { Pagination } from '@/components/ui/pagination';
@@ -39,11 +39,8 @@ export function EbarimtMerchantsView({
   const [limit, setLimit] = React.useState(10);
   const [search, setSearch] = React.useState('');
 
-  const query = new URLSearchParams({ page: String(page), limit: String(limit) });
-  if (search) query.set('search', search);
-
   const { data, error, mutate, isValidating } = useSWR<MerchantListResponse>(
-    `/ebarimt-merchants?${query.toString()}`,
+    apiUrl('ebarimt-merchants', { page, limit, search }),
     fetcher,
   );
 

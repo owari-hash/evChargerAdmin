@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import { getSessionUser, hasRole } from '@/lib/session';
-import { EbarimtMerchantsView } from './ebarimt-merchants-view';
+import { EbarimtMerchantsView } from '@/app/(app)/ebarimt-merchants/ebarimt-merchants-view';
 
 export const metadata: Metadata = { title: 'И-Баримт мерчант' };
 export const dynamic = 'force-dynamic';

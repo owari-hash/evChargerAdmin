@@ -69,8 +69,23 @@ export function EbarimtMerchantModal({
   const [autoSend, setAutoSend] = React.useState(merchant?.autoSend ?? true);
   const [submitting, setSubmitting] = React.useState(false);
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
+  React.useEffect(() => {
+    if (merchant) {
+      setName(merchant.name ?? '');
+      setMerchantTin(merchant.merchantTin ?? '');
+      setDistrictCode(merchant.districtCode ?? '23');
+      setKhorooCode(merchant.khorooCode ?? '20');
+      setEnvMode(merchant.envMode ?? 'PRODUCTION');
+      setProdApiUrl(merchant.prodApiUrl ?? merchant.ebarimtApiUrl ?? 'http://103.143.40.43:7080/');
+      setTestApiUrl(merchant.testApiUrl ?? 'http://103.236.194.50:7080/');
+      setIsDefault(merchant.isDefault ?? true);
+      setEnabled(merchant.enabled ?? true);
+      setAutoSend(merchant.autoSend ?? true);
+    }
+  }, [merchant]);
+
+  async function submit(e?: React.FormEvent) {
+    if (e) e.preventDefault();
     if (!merchantTin.trim()) {
       toast.error('Татвар төлөгчийн дугаарыг (TIN) оруулна уу');
       return;
@@ -288,7 +303,8 @@ export function EbarimtMerchantModal({
             Цуцлах
           </Button>
           <Button
-            type="submit"
+            type="button"
+            onClick={() => void submit()}
             loading={submitting}
             className="bg-emerald-600 hover:bg-emerald-700 text-white px-6 font-semibold shadow-md"
           >

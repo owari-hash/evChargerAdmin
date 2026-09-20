@@ -150,8 +150,8 @@ export function ActiveMerchantModal({
 
   const bankCode = selectedBank === 'custom' ? customBankCode.trim() : selectedBank;
 
-  async function handleSave(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSave(e?: React.FormEvent) {
+    if (e) e.preventDefault();
     if (!merchantId.trim()) {
       setError('Мерчант сонгоно уу эсвэл ID оруулна уу');
       return;
@@ -202,7 +202,13 @@ export function ActiveMerchantModal({
           <Button variant="ghost" size="sm" type="button" onClick={onClose} disabled={saving}>
             Болих
           </Button>
-          <Button variant="primary" size="sm" type="submit" form="active-merchant-form" loading={saving}>
+          <Button
+            variant="primary"
+            size="sm"
+            type="button"
+            onClick={() => void handleSave()}
+            loading={saving}
+          >
             Хадгалах
           </Button>
         </div>

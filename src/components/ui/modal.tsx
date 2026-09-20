@@ -63,7 +63,7 @@ export function Modal({
       )}
     >
       {open ? (
-        <form method="dialog" onSubmit={(e) => e.preventDefault()}>
+        <div className="flex flex-col">
           <div className="flex items-start justify-between gap-4 border-b border-[var(--color-border)] px-5 py-4">
             <div className="min-w-0">
               <h2 className="text-sm font-semibold">{title}</h2>
@@ -83,7 +83,7 @@ export function Modal({
               {footer}
             </div>
           ) : null}
-        </form>
+        </div>
       ) : null}
     </dialog>
   );

@@ -3,10 +3,10 @@
 import * as React from 'react';
 import Link from 'next/link';
 import useSWR from 'swr';
-import { Pencil, Plus, RefreshCw, Search, Zap } from 'lucide-react';
+import { Building2, Pencil, Plus, RefreshCw, Search, Zap } from 'lucide-react';
 import { apiUrl, fetcher } from '@/lib/client';
 import { formatNumber, formatRelative } from '@/lib/format';
-import type { ChargePoint, Paginated } from '@/lib/types';
+import type { ChargePoint, Client, Paginated } from '@/lib/types';
 import {
   Button,
   Card,
@@ -31,10 +31,17 @@ export function ChargePointsView({
   const [search, setSearch] = React.useState('');
   const [debounced, setDebounced] = React.useState('');
   const [online, setOnline] = React.useState('');
+  const [clientId, setClientId] = React.useState('');
   const [page, setPage] = React.useState(1);
   const [limit, setLimit] = React.useState(50);
   const [creating, setCreating] = React.useState(false);
   const [editing, setEditing] = React.useState<ChargePoint | null>(null);
+
+  const { data: clientsData } = useSWR<Paginated<Client>>(
+    apiUrl('clients', { limit: 100 }),
+    fetcher,
+  );
+  const clients = clientsData?.data ?? [];
 
   // Debounce so typing does not fire a request per keystroke.
   React.useEffect(() => {
@@ -45,14 +52,20 @@ export function ChargePointsView({
     return () => clearTimeout(t);
   }, [search]);
 
-  const key = apiUrl('charge-points', { search: debounced, online, page, limit });
+  const key = apiUrl('charge-points', {
+    search: debounced,
+    online,
+    clientId: clientId || undefined,
+    page,
+    limit,
+  });
   const { data, error, isLoading, mutate } = useSWR<Paginated<ChargePoint>>(key, fetcher, {
     refreshInterval: 15_000,
     keepPreviousData: true,
   });
 
   const rows = data?.data ?? [];
-  const columns = canEdit ? 8 : 7;
+  const columns = canEdit ? 9 : 8;
 
   return (
     <>
@@ -88,6 +101,23 @@ export function ChargePointsView({
           </div>
           <Select
             className="w-auto"
+            value={clientId}
+            onChange={(e) => {
+              setClientId(e.target.value);
+              setPage(1);
+            }}
+            aria-label="Харилцагчийн шүүлтүүр"
+          >
+            <option value="">Бүх харилцагч</option>
+            <option value="none">Харилцагчгүй</option>
+            {clients.map((cl) => (
+              <option key={cl.id} value={cl.id}>
+                {cl.name}
+              </option>
+            ))}
+          </Select>
+          <Select
+            className="w-auto"
             value={online}
             onChange={(e) => {
               setOnline(e.target.value);
@@ -106,6 +136,7 @@ export function ChargePointsView({
             <THead>
               <tr>
                 <TH>Цэнэглэх станц</TH>
+                <TH>Харилцагч</TH>
                 <TH>Холболт</TH>
                 <TH>Холбогч</TH>
                 <TH>Үйлдвэрлэгч / загвар</TH>
@@ -126,7 +157,7 @@ export function ChargePointsView({
                 <TableEmpty colSpan={columns}>Станцын мэдээлэл ачаалж чадсангүй.</TableEmpty>
               ) : rows.length === 0 ? (
                 <TableEmpty colSpan={columns}>
-                  {debounced || online ? 'Энэ шүүлтүүрт тохирох станц алга.' : 'Одоогоор станц бүртгэгдээгүй байна.'}
+                  {debounced || online || clientId ? 'Энэ шүүлтүүрт тохирох станц алга.' : 'Одоогоор станц бүртгэгдээгүй байна.'}
                 </TableEmpty>
               ) : (
                 rows.map((cp) => (
@@ -141,6 +172,19 @@ export function ChargePointsView({
                       {cp.name ? (
                         <p className="text-xs text-[var(--color-fg-muted)]">{cp.name}</p>
                       ) : null}
+                    </TD>
+                    <TD className="text-xs">
+                      {cp.client ? (
+                        <Link
+                          href={`/clients/${encodeURIComponent(cp.client.id)}`}
+                          className="font-medium text-[var(--color-brand)] hover:underline inline-flex items-center gap-1"
+                        >
+                          <Building2 className="h-3 w-3 shrink-0" />
+                          <span>{cp.client.name}</span>
+                        </Link>
+                      ) : (
+                        <span className="text-[var(--color-fg-subtle)]">—</span>
+                      )}
                     </TD>
                     <TD>
                       <OnlineBadge online={cp.isOnline} />

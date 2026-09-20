@@ -1,6 +1,7 @@
 import {
   Activity,
   BatteryCharging,
+  Building2,
   CalendarClock,
   CreditCard,
   Cpu,
@@ -52,6 +53,7 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     title: 'Удирдлага',
     items: [
+      { href: '/clients', label: 'Харилцагч', icon: Building2, minRole: 'OPERATOR', prefix: true },
       { href: '/charging-profiles', label: 'Ухаалаг цэнэглэлт', icon: SlidersHorizontal },
       { href: '/jobs', label: 'Программ хангамж ба лог', icon: Cpu },
       { href: '/merchants', label: 'QPay мерчант', icon: Store, minRole: 'OPERATOR' },

@@ -170,6 +170,8 @@ export interface ChargePoint {
   address?: string;
   tariffPerKwh?: number;
   tags: string[];
+  clientId?: string | null;
+  client?: { id: string; name: string; businessRegister?: string } | null;
   createdAt: string;
   updatedAt: string;
   connectors?: Connector[];
@@ -532,3 +534,36 @@ export interface QpayActiveMerchantConfig {
   isActive: boolean;
   updatedAt?: string;
 }
+
+// ---------------------------------------------------------------------------
+// Харилцагч (Clients / Partners) (backend: /api/clients/*)
+// ---------------------------------------------------------------------------
+
+export interface Client {
+  id: string;
+  _id?: string;
+  name: string;
+  businessRegister?: string | null;
+  contactPerson?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  address?: string | null;
+  description?: string | null;
+  isActive: boolean;
+  stationCount?: number;
+  stations?: ChargePoint[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ClientInput {
+  name: string;
+  businessRegister?: string | null;
+  contactPerson?: string | null;
+  phone?: string | null;
+  email?: string | null;
+  address?: string | null;
+  description?: string | null;
+  isActive?: boolean;
+}
+

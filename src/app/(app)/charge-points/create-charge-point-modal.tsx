@@ -2,14 +2,15 @@
 
 import * as React from 'react';
 import { useRouter } from 'next/navigation';
+import useSWR from 'swr';
 import { KeyRound, TriangleAlert } from 'lucide-react';
 import { toast } from 'sonner';
-import { api, errorMessage } from '@/lib/client';
+import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
 import { Button, ErrorNote, Field, Input, Select } from '@/components/ui/primitives';
 import { Modal } from '@/components/ui/modal';
 import { CopyButton } from '@/components/ui/copy-button';
 import { REGISTRATION_STATUS as REGISTRATION_STATUS_MN, mn } from '@/lib/mn';
-import { REGISTRATION_STATUSES } from '@/lib/types';
+import { REGISTRATION_STATUSES, type Client, type Paginated } from '@/lib/types';
 
 interface CreatedResponse {
   id: string;
@@ -30,9 +31,16 @@ export function CreateChargePointModal({
   const [error, setError] = React.useState<string | null>(null);
   const [created, setCreated] = React.useState<CreatedResponse | null>(null);
 
+  const { data: clientsData } = useSWR<Paginated<Client>>(
+    open ? apiUrl('clients', { limit: 100 }) : null,
+    fetcher,
+  );
+  const clients = clientsData?.data ?? [];
+
   const [form, setForm] = React.useState({
     id: '',
     name: '',
+    clientId: '',
     address: '',
     registrationStatus: 'Accepted',
     heartbeatInterval: '300',
@@ -49,6 +57,7 @@ export function CreateChargePointModal({
     setForm({
       id: '',
       name: '',
+      clientId: '',
       address: '',
       registrationStatus: 'Accepted',
       heartbeatInterval: '300',
@@ -78,6 +87,7 @@ export function CreateChargePointModal({
         heartbeatInterval: Number(form.heartbeatInterval) || 300,
       };
       if (form.name.trim()) body.name = form.name.trim();
+      if (form.clientId) body.clientId = form.clientId;
       if (form.address.trim()) body.address = form.address.trim();
       if (form.tariffPerKwh) body.tariffPerKwh = Number(form.tariffPerKwh);
       if (form.latitude) body.latitude = Number(form.latitude);
@@ -179,10 +189,21 @@ export function CreateChargePointModal({
           <Field label="Харагдах нэр">
             <Input value={form.name} onChange={set('name')} placeholder="Сүхбаатарын талбай #1" />
           </Field>
-          <Field label="Хаяг">
-            <Input value={form.address} onChange={set('address')} placeholder="Улаанбаатар" />
+          <Field label="Харилцагч" hint="Энэ станцыг эзэмшигч байгууллага">
+            <Select value={form.clientId} onChange={set('clientId')}>
+              <option value="">(Харилцагч сонгоогүй / Холбоогүй)</option>
+              {clients.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name} {c.businessRegister ? `(${c.businessRegister})` : ''}
+                </option>
+              ))}
+            </Select>
           </Field>
         </div>
+
+        <Field label="Хаяг">
+          <Input value={form.address} onChange={set('address')} placeholder="Улаанбаатар" />
+        </Field>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Өргөрөг">

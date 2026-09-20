@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
   ArrowLeft,
+  Building2,
   KeyRound,
   MapPin,
   Pencil,
@@ -407,6 +408,19 @@ function OverviewTab({ detail }: { detail: ChargePointDetail }) {
         <Card>
           <CardHeader title="Байршил" />
           <dl className="divide-y divide-[var(--color-border)] px-5 py-2">
+            <DataRow label="Харилцагч">
+              {detail.client ? (
+                <Link
+                  href={`/clients/${encodeURIComponent(detail.client.id)}`}
+                  className="font-medium text-[var(--color-brand)] hover:underline inline-flex items-center gap-1"
+                >
+                  <Building2 className="h-3.5 w-3.5" />
+                  <span>{detail.client.name}</span>
+                </Link>
+              ) : (
+                '—'
+              )}
+            </DataRow>
             <DataRow label="Нэр">{detail.name ?? '—'}</DataRow>
             <DataRow label="Тайлбар">{detail.description ?? '—'}</DataRow>
             <DataRow label="Хаяг">{detail.address ?? '—'}</DataRow>

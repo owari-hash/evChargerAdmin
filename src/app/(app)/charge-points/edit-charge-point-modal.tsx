@@ -1,13 +1,14 @@
 'use client';
 
 import * as React from 'react';
+import useSWR from 'swr';
 import { toast } from 'sonner';
-import { api, errorMessage } from '@/lib/client';
+import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
 import { TriangleAlert } from 'lucide-react';
 import { Button, ErrorNote, Field, Input, Select, Textarea } from '@/components/ui/primitives';
 import { Modal } from '@/components/ui/modal';
 import { REGISTRATION_STATUS as REGISTRATION_STATUS_MN, mn } from '@/lib/mn';
-import { REGISTRATION_STATUSES, type ChargePoint } from '@/lib/types';
+import { REGISTRATION_STATUSES, type ChargePoint, type Client, type Paginated } from '@/lib/types';
 
 /** Same rule the API applies to a charge point identifier. */
 const ID_PATTERN = /^[\w.:@-]+$/;
@@ -41,9 +42,16 @@ export function EditChargePointModal({
   const [error, setError] = React.useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = React.useState<Record<string, string>>({});
 
+  const { data: clientsData } = useSWR<Paginated<Client>>(
+    apiUrl('clients', { limit: 100 }),
+    fetcher,
+  );
+  const clients = clientsData?.data ?? [];
+
   const [form, setForm] = React.useState(() => ({
     cpId: chargePoint.cpId,
     name: chargePoint.name ?? '',
+    clientId: chargePoint.clientId ?? '',
     description: chargePoint.description ?? '',
     address: chargePoint.address ?? '',
     latitude: chargePoint.latitude?.toString() ?? '',
@@ -113,6 +121,7 @@ export function EditChargePointModal({
         {
           ...(renaming ? { cpId: nextId } : {}),
           name: form.name.trim() || null,
+          clientId: form.clientId ? form.clientId : null,
           description: form.description.trim() || null,
           address: form.address.trim() || null,
           latitude,
@@ -202,10 +211,21 @@ export function EditChargePointModal({
           <Field label="Харагдах нэр" hint="Хоосон орхивол станцын дугаар харагдана.">
             <Input value={form.name} onChange={set('name')} placeholder="Сүхбаатарын талбай #1" />
           </Field>
-          <Field label="Хаяг">
-            <Input value={form.address} onChange={set('address')} placeholder="Улаанбаатар" />
+          <Field label="Харилцагч" hint="Энэ станцыг эзэмшигч байгууллага">
+            <Select value={form.clientId} onChange={set('clientId')}>
+              <option value="">(Харилцагч сонгоогүй / Холбоогүй)</option>
+              {clients.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name} {c.businessRegister ? `(${c.businessRegister})` : ''}
+                </option>
+              ))}
+            </Select>
           </Field>
         </div>
+
+        <Field label="Хаяг">
+          <Input value={form.address} onChange={set('address')} placeholder="Улаанбаатар" />
+        </Field>
 
         <Field label="Тайлбар">
           <Textarea

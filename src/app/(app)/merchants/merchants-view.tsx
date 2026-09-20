@@ -2,10 +2,10 @@
 
 import * as React from 'react';
 import useSWR from 'swr';
-import { Plus, RefreshCw, Store, Trash2, TriangleAlert } from 'lucide-react';
+import { Check, CheckCircle2, Plus, RefreshCw, Settings, Store, Trash2, TriangleAlert } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
-import type { PaymentsConfig, QpayMerchant } from '@/lib/types';
+import type { PaymentsConfig, QpayActiveMerchantConfig, QpayMerchant } from '@/lib/types';
 import { Badge, Button, Card, EmptyState, PageHeader } from '@/components/ui/primitives';
 import { CopyButton } from '@/components/ui/copy-button';
 import { ConfirmModal } from '@/components/ui/modal';
@@ -22,6 +22,7 @@ import {
   TR,
 } from '@/components/ui/table';
 import { MerchantModal } from './merchant-modal';
+import { ActiveMerchantModal } from './active-merchant-modal';
 
 /**
  * QuickQR returns the merchant list as `{ rows, count }`, but a bare array shows
@@ -59,11 +60,18 @@ export function MerchantsView({
   const [limit, setLimit] = React.useState(10);
   const [creating, setCreating] = React.useState(false);
   const [deleting, setDeleting] = React.useState<QpayMerchant | null>(null);
+  const [configuringActive, setConfiguringActive] = React.useState(false);
+  const [selectedForActive, setSelectedForActive] = React.useState<Partial<QpayActiveMerchantConfig> | null>(null);
   const [busy, setBusy] = React.useState(false);
 
   // Whether QuickQR is configured at all decides between "empty" and "not set up".
   const { data: config } = useSWR<PaymentsConfig>(apiUrl('payments/config'), fetcher);
   const ready = config?.quickQrEnabled ?? true;
+
+  const { data: activeMerchant, mutate: mutateActive } = useSWR<QpayActiveMerchantConfig>(
+    ready ? apiUrl('qpay/active-merchant') : null,
+    fetcher,
+  );
 
   const { data, error, isLoading, mutate } = useSWR<MerchantList | QpayMerchant[]>(
     ready ? apiUrl('qpay/merchants', { page, limit }) : null,
@@ -96,7 +104,15 @@ export function MerchantsView({
         description="QuickQR дээр төлбөр хүлээн авах мерчантуудын бүртгэл."
         actions={
           <>
-            <Button variant="ghost" size="sm" onClick={() => void mutate()} disabled={!ready}>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => {
+                void mutate();
+                void mutateActive();
+              }}
+              disabled={!ready}
+            >
               <RefreshCw className="h-3.5 w-3.5" />
               Шинэчлэх
             </Button>
@@ -136,6 +152,60 @@ export function MerchantsView({
         </Card>
       ) : null}
 
+      {/* Active QuickQR Merchant Configuration Card */}
+      <Card className="mb-6 overflow-hidden border-[var(--color-border)]">
+        <div className="flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-3.5">
+            <div className="grid size-10 shrink-0 place-items-center rounded-xl bg-emerald-500/10 text-emerald-600 ring-1 ring-emerald-500/20">
+              <CheckCircle2 className="size-5" />
+            </div>
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-semibold text-[var(--color-fg)]">
+                  {activeMerchant?.merchantName || 'ЗЭВ ТАБС ХХК'}
+                </span>
+                <Badge tone="ok">Идэвхтэй мерчант</Badge>
+              </div>
+              <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-[var(--color-fg-muted)]">
+                <span>
+                  Мерчант ID:{' '}
+                  <code className="font-mono text-[var(--color-fg)]">
+                    {activeMerchant?.merchantId || 'cc1a2b2f-aa84-474a-953c-c55b575a9883'}
+                  </code>
+                </span>
+                <span>
+                  MCC:{' '}
+                  <span className="font-medium text-[var(--color-fg)]">
+                    {activeMerchant?.mccCode || '5311'}
+                  </span>
+                </span>
+                <span>
+                  Данс:{' '}
+                  <span className="font-medium text-[var(--color-fg)]">
+                    {activeMerchant?.bankCode || '050000'} · {activeMerchant?.accountNumber || '5475332224'} (
+                    {activeMerchant?.accountName || 'ЗЭВ ТАБС ХХК'})
+                  </span>
+                </span>
+              </div>
+            </div>
+          </div>
+          {canEdit && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => {
+                setSelectedForActive(activeMerchant ?? null);
+                setConfiguringActive(true);
+              }}
+              className="shrink-0"
+            >
+              <Settings className="h-3.5 w-3.5" />
+              Мерчант тохируулах
+            </Button>
+          )}
+        </div>
+      </Card>
+
       <Card>
         <TableWrap>
           <Table>
@@ -160,14 +230,24 @@ export function MerchantsView({
               ) : rows.length === 0 ? (
                 <TableEmpty colSpan={7}>Одоогоор бүртгэсэн мерчант алга.</TableEmpty>
               ) : (
-                rows.map((m, i) => (
-                  <TR key={m.merchant_id ?? i}>
-                    <TD className="text-xs font-medium">
-                      {merchantName(m)}
-                      {m.company_name && m.company_name !== merchantName(m) ? (
-                        <p className="text-[var(--color-fg-subtle)]">{m.company_name}</p>
-                      ) : null}
-                    </TD>
+                rows.map((m, i) => {
+                  const isActive = !!(
+                    m.merchant_id &&
+                    activeMerchant?.merchantId &&
+                    m.merchant_id === activeMerchant.merchantId
+                  );
+
+                  return (
+                    <TR key={m.merchant_id ?? i}>
+                      <TD className="text-xs font-medium">
+                        <div className="flex items-center gap-2">
+                          <span>{merchantName(m)}</span>
+                          {isActive && <Badge tone="ok">Идэвхтэй</Badge>}
+                        </div>
+                        {m.company_name && m.company_name !== merchantName(m) ? (
+                          <p className="text-[var(--color-fg-subtle)]">{m.company_name}</p>
+                        ) : null}
+                      </TD>
                     <TD>
                       {m.merchant_id ? (
                         <span className="inline-flex items-center gap-1">
@@ -193,20 +273,45 @@ export function MerchantsView({
                     <TD className="max-w-[220px] truncate text-xs text-[var(--color-fg-muted)]">
                       {m.address ?? '—'}
                     </TD>
-                    <TD align="right">
-                      {canDelete && m.merchant_id ? (
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setDeleting(m)}
-                          title="Устгах"
-                        >
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </Button>
-                      ) : null}
-                    </TD>
-                  </TR>
-                ))
+                      <TD align="right">
+                        <div className="flex items-center justify-end gap-1">
+                          {!isActive && canEdit && m.merchant_id ? (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedForActive({
+                                  merchantId: m.merchant_id,
+                                  merchantName: merchantName(m) || m.company_name || '',
+                                  mccCode: m.mcc_code || activeMerchant?.mccCode || '5311',
+                                  bankCode: activeMerchant?.bankCode || '050000',
+                                  accountNumber: activeMerchant?.accountNumber || '',
+                                  accountName: activeMerchant?.accountName || merchantName(m) || '',
+                                });
+                                setConfiguringActive(true);
+                              }}
+                              className="h-8 px-2 text-xs"
+                              title="Энэ мерчантыг үндсэн болгох"
+                            >
+                              <Check className="mr-1 h-3 w-3" />
+                              Сонгох
+                            </Button>
+                          ) : null}
+                          {canDelete && m.merchant_id ? (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setDeleting(m)}
+                              title="Устгах"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </Button>
+                          ) : null}
+                        </div>
+                      </TD>
+                    </TR>
+                  );
+                })
               )}
             </TBody>
           </Table>
@@ -240,6 +345,14 @@ export function MerchantsView({
           />
         ) : null}
       </Card>
+
+      <ActiveMerchantModal
+        key={configuringActive ? 'active-open' : 'active-closed'}
+        open={configuringActive}
+        onClose={() => setConfiguringActive(false)}
+        initialData={selectedForActive}
+        onSuccess={() => void mutateActive()}
+      />
 
       <MerchantModal
         key={creating ? 'create' : 'closed'}

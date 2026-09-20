@@ -520,3 +520,15 @@ export interface PaymentsConfig {
   credentialsConfigured: boolean;
   tokens: { scope: string; cached: boolean; accessExpiresAt?: string }[];
 }
+
+export interface QpayActiveMerchantConfig {
+  id?: string;
+  merchantId: string;
+  merchantName?: string;
+  mccCode: string;
+  bankCode: string;
+  accountNumber: string;
+  accountName: string;
+  isActive: boolean;
+  updatedAt?: string;
+}

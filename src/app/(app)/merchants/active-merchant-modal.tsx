@@ -1,10 +1,12 @@
 'use client';
 
 import * as React from 'react';
+import useSWR from 'swr';
 import { toast } from 'sonner';
-import { api, errorMessage } from '@/lib/client';
-import type { QpayActiveMerchantConfig } from '@/lib/types';
-import { Button, ErrorNote, Field, Input, Select } from '@/components/ui/primitives';
+import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
+import type { QpayActiveMerchantConfig, QpayMerchant } from '@/lib/types';
+import { Badge, Button, ErrorNote, Field, Input, Select } from '@/components/ui/primitives';
+import { CopyButton } from '@/components/ui/copy-button';
 import { Modal } from '@/components/ui/modal';
 
 const POPULAR_BANKS: { code: string; name: string }[] = [
@@ -21,17 +23,46 @@ const POPULAR_BANKS: { code: string; name: string }[] = [
   { code: 'custom', name: 'Өөр банкны код бичих…' },
 ];
 
+function getMerchantDisplayName(m: QpayMerchant): string {
+  const person = [m.last_name, m.first_name].filter(Boolean).join(' ');
+  return m.name || m.business_name || m.company_name || person || '—';
+}
+
+interface MerchantListResponse {
+  rows?: QpayMerchant[];
+  count?: number;
+}
+
 export function ActiveMerchantModal({
   open,
   onClose,
   initialData,
+  merchants = [],
   onSuccess,
 }: {
   open: boolean;
   onClose: () => void;
   initialData?: Partial<QpayActiveMerchantConfig> | null;
+  merchants?: QpayMerchant[];
   onSuccess: () => void;
 }) {
+  // If no merchants were passed in, fetch from QuickQR endpoint
+  const { data: fetchedData } = useSWR<MerchantListResponse | QpayMerchant[]>(
+    open && (!merchants || merchants.length === 0)
+      ? apiUrl('qpay/merchants', { page: 1, limit: 100 })
+      : null,
+    fetcher,
+  );
+
+  const allMerchants = React.useMemo(() => {
+    if (merchants && merchants.length > 0) return merchants;
+    if (!fetchedData) return [];
+    return Array.isArray(fetchedData) ? fetchedData : (fetchedData.rows ?? []);
+  }, [merchants, fetchedData]);
+
+  const [selectedMerchantId, setSelectedMerchantId] = React.useState<string>('');
+  const [isManualInput, setIsManualInput] = React.useState<boolean>(false);
+
   const [merchantId, setMerchantId] = React.useState('');
   const [merchantName, setMerchantName] = React.useState('');
   const [mccCode, setMccCode] = React.useState('5311');
@@ -42,21 +73,42 @@ export function ActiveMerchantModal({
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
+  // Sync state when opened
   React.useEffect(() => {
     if (open) {
       setError(null);
-      const mId = initialData?.merchantId ?? 'cc1a2b2f-aa84-474a-953c-c55b575a9883';
-      const mName = initialData?.merchantName ?? 'ЗЭВ ТАБС ХХК';
-      const mcc = initialData?.mccCode ?? '5311';
+      const targetId = initialData?.merchantId ?? 'cc1a2b2f-aa84-474a-953c-c55b575a9883';
       const bCode = initialData?.bankCode ?? '050000';
       const accNum = initialData?.accountNumber ?? '5475332224';
       const accName = initialData?.accountName ?? 'ЗЭВ ТАБС ХХК';
 
-      setMerchantId(mId);
-      setMerchantName(mName);
-      setMccCode(mcc);
+      const matched = allMerchants.find((m) => m.merchant_id === targetId);
+
+      if (matched && matched.merchant_id) {
+        setSelectedMerchantId(matched.merchant_id);
+        setIsManualInput(false);
+        setMerchantId(matched.merchant_id);
+        const name = getMerchantDisplayName(matched) || initialData?.merchantName || 'ЗЭВ ТАБС ХХК';
+        setMerchantName(name);
+        setMccCode(matched.mcc_code || initialData?.mccCode || '5311');
+        setAccountName(accName || name);
+      } else if (targetId) {
+        setSelectedMerchantId(targetId);
+        setIsManualInput(false);
+        setMerchantId(targetId);
+        setMerchantName(initialData?.merchantName ?? 'ЗЭВ ТАБС ХХК');
+        setMccCode(initialData?.mccCode ?? '5311');
+        setAccountName(accName);
+      } else {
+        setSelectedMerchantId('');
+        setIsManualInput(false);
+        setMerchantId('');
+        setMerchantName('');
+        setMccCode('5311');
+        setAccountName('');
+      }
+
       setAccountNumber(accNum);
-      setAccountName(accName);
 
       const known = POPULAR_BANKS.some((b) => b.code === bCode);
       if (known) {
@@ -67,14 +119,41 @@ export function ActiveMerchantModal({
         setCustomBankCode(bCode);
       }
     }
-  }, [open, initialData]);
+  }, [open, initialData, allMerchants]);
+
+  // Handle dropdown selection
+  function handleSelectMerchant(value: string) {
+    setSelectedMerchantId(value);
+    if (value === '__manual__') {
+      setIsManualInput(true);
+      return;
+    }
+
+    setIsManualInput(false);
+    const matched = allMerchants.find((m) => m.merchant_id === value);
+    if (matched && matched.merchant_id) {
+      setMerchantId(matched.merchant_id);
+      const name = getMerchantDisplayName(matched);
+      setMerchantName(name);
+      setMccCode(matched.mcc_code || '5311');
+      if (!accountName || accountName === 'ЗЭВ ТАБС ХХК') {
+        setAccountName(name);
+      }
+    } else {
+      setMerchantId(value);
+    }
+  }
+
+  const selectedMerchant = React.useMemo(() => {
+    return allMerchants.find((m) => m.merchant_id === merchantId) ?? null;
+  }, [allMerchants, merchantId]);
 
   const bankCode = selectedBank === 'custom' ? customBankCode.trim() : selectedBank;
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     if (!merchantId.trim()) {
-      setError('Мерчант ID оруулна уу');
+      setError('Мерчант сонгоно уу эсвэл ID оруулна уу');
       return;
     }
     if (!bankCode) {
@@ -101,7 +180,7 @@ export function ActiveMerchantModal({
         accountNumber: accountNumber.trim(),
         accountName: accountName.trim(),
       });
-      toast.success('QPay идэвхтэй мерчант амжилттай хадгалагдлаа');
+      toast.success('QPay идэвхтэй мерчант амжилттай тохируулагдлаа');
       onSuccess();
       onClose();
     } catch (err) {
@@ -133,32 +212,126 @@ export function ActiveMerchantModal({
         {error ? <ErrorNote>{error}</ErrorNote> : null}
 
         <div className="space-y-3">
-          <Field label="Мерчант ID (UUID) *" hint="QPay QuickQR мерчантын дахин давтагдашгүй дугаар">
-            <Input
-              value={merchantId}
-              onChange={(e) => setMerchantId(e.target.value)}
-              placeholder="жишээ: cc1a2b2f-aa84-474a-953c-c55b575a9883"
-              className="font-mono text-xs"
-              required
-            />
+          {/* Dropdown selector so user does not have to fill or type UUID */}
+          <Field
+            label="Бүртгэлтэй мерчантаас сонгох *"
+            hint="Сонгосон мерчантын ID, нэр, регистр, MCC мэдээлэл автоматаар татагдана"
+          >
+            <Select
+              value={isManualInput ? '__manual__' : selectedMerchantId}
+              onChange={(e) => handleSelectMerchant(e.target.value)}
+            >
+              <option value="" disabled>
+                — Жагсаалтаас мерчант сонгох —
+              </option>
+              {allMerchants.map((m) => {
+                const name = getMerchantDisplayName(m);
+                const reg = m.register_number ? `РД: ${m.register_number}` : '';
+                const mcc = m.mcc_code ? `MCC: ${m.mcc_code}` : '';
+                const extra = [reg, mcc].filter(Boolean).join(' · ');
+                return (
+                  <option key={m.merchant_id} value={m.merchant_id}>
+                    {name} {extra ? `(${extra})` : ''}
+                  </option>
+                );
+              })}
+              {/* If initial merchant is not in list, render it as an option */}
+              {merchantId && !allMerchants.some((m) => m.merchant_id === merchantId) && !isManualInput && (
+                <option value={merchantId}>
+                  {merchantName || merchantId} (Одоогийн үндсэн мерчант)
+                </option>
+              )}
+              <option value="__manual__">Гараар өөр UUID оруулах…</option>
+            </Select>
           </Field>
 
-          <Field label="Мерчантын нэр" hint="Байгууллага эсвэл бизнесийн нэр">
-            <Input
-              value={merchantName}
-              onChange={(e) => setMerchantName(e.target.value)}
-              placeholder="ЗЭВ ТАБС ХХК"
-            />
-          </Field>
+          {/* Auto-populated details card with user's requested 6 items */}
+          {(!isManualInput && (selectedMerchant || merchantId)) && (
+            <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] p-3 space-y-2.5">
+              <div className="flex items-start justify-between gap-2">
+                <div>
+                  <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-fg-subtle)]">
+                    Сонгогдсон мерчант
+                  </span>
+                  <p className="text-sm font-semibold text-[var(--color-fg)]">
+                    {selectedMerchant ? getMerchantDisplayName(selectedMerchant) : merchantName || '—'}
+                  </p>
+                  {selectedMerchant?.company_name &&
+                    selectedMerchant.company_name !== getMerchantDisplayName(selectedMerchant) && (
+                      <p className="text-xs text-[var(--color-fg-subtle)]">
+                        {selectedMerchant.company_name}
+                      </p>
+                    )}
+                </div>
+                {mccCode && <Badge tone="info">MCC: {mccCode}</Badge>}
+              </div>
 
-          <Field label="MCC код *" hint="Худалдааны салбарын код (ихэвчлэн 5311 эсвэл 5541)">
-            <Input
-              value={mccCode}
-              onChange={(e) => setMccCode(e.target.value)}
-              placeholder="5311"
-              required
-            />
-          </Field>
+              <div className="grid grid-cols-2 gap-x-4 gap-y-2 border-t border-[var(--color-border)] pt-2 text-xs">
+                <div>
+                  <span className="text-[var(--color-fg-muted)]">Мерчант ID:</span>
+                  <div className="flex items-center gap-1 font-mono text-[11px] text-[var(--color-fg)]">
+                    <span className="truncate">{merchantId || '—'}</span>
+                    {merchantId && <CopyButton value={merchantId} size="icon" className="h-5 w-5" />}
+                  </div>
+                </div>
+
+                <div>
+                  <span className="text-[var(--color-fg-muted)]">Регистр:</span>
+                  <p className="font-mono text-[var(--color-fg)]">
+                    {selectedMerchant?.register_number || '—'}
+                  </p>
+                </div>
+
+                <div>
+                  <span className="text-[var(--color-fg-muted)]">Холбоо барих:</span>
+                  <p className="truncate text-[var(--color-fg)]">
+                    {selectedMerchant?.phone || selectedMerchant?.email || '—'}
+                  </p>
+                </div>
+
+                <div>
+                  <span className="text-[var(--color-fg-muted)]">Хаяг:</span>
+                  <p className="truncate text-[var(--color-fg)]" title={selectedMerchant?.address || ''}>
+                    {selectedMerchant?.address ||
+                      [selectedMerchant?.city, selectedMerchant?.district].filter(Boolean).join(', ') ||
+                      '—'}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Fallback manual inputs only shown if user chooses manual UUID mode */}
+          {isManualInput && (
+            <div className="space-y-3 rounded-lg border border-dashed border-[var(--color-border)] p-3">
+              <Field label="Мерчант ID (UUID) *" hint="QPay QuickQR мерчантын ID оруулна уу">
+                <Input
+                  value={merchantId}
+                  onChange={(e) => setMerchantId(e.target.value)}
+                  placeholder="жишээ: cc1a2b2f-aa84-474a-953c-c55b575a9883"
+                  className="font-mono text-xs"
+                  required
+                />
+              </Field>
+
+              <Field label="Мерчантын нэр" hint="Байгууллага эсвэл бизнесийн нэр">
+                <Input
+                  value={merchantName}
+                  onChange={(e) => setMerchantName(e.target.value)}
+                  placeholder="ЗЭВ ТАБС ХХК"
+                />
+              </Field>
+
+              <Field label="MCC код *" hint="Худалдааны салбарын код (жишээ нь 5311)">
+                <Input
+                  value={mccCode}
+                  onChange={(e) => setMccCode(e.target.value)}
+                  placeholder="5311"
+                  required
+                />
+              </Field>
+            </div>
+          )}
 
           <div className="border-t border-[var(--color-border)] pt-3">
             <p className="mb-2 text-xs font-semibold text-[var(--color-fg)]">

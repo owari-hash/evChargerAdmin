@@ -351,6 +351,7 @@ export function MerchantsView({
         open={configuringActive}
         onClose={() => setConfiguringActive(false)}
         initialData={selectedForActive}
+        merchants={rows}
         onSuccess={() => void mutateActive()}
       />
 

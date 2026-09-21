@@ -13,9 +13,10 @@ export const metadata: Metadata = {
   robots: { index: false, follow: false },
   icons: {
     // `metadata.icons` is emitted verbatim — unlike <Link> and asset URLs, Next
-    // does not apply basePath to it, so a bare '/icon.svg' would resolve against
+    // does not apply basePath to it, so a bare '/icon.png' would resolve against
     // the domain root and land on whatever else is served there.
-    icon: [{ url: withBasePath('/icon.svg'), type: 'image/svg+xml' }],
+    icon: [{ url: withBasePath('/icon.png'), type: 'image/png' }],
+    apple: [{ url: withBasePath('/apple-icon.png') }],
   },
 };
 

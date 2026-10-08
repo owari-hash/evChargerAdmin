@@ -30,8 +30,8 @@ export function StatCard({
   const body = (
     <div
       className={cn(
-        'flex h-full items-start gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm transition',
-        href && 'hover:border-[var(--color-border-strong)]',
+        'flex h-full items-start gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm transition duration-150',
+        href && 'hover:-translate-y-0.5 hover:border-[var(--color-border-strong)] hover:shadow-md',
       )}
     >
       {Icon ? (

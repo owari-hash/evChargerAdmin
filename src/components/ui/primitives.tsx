@@ -81,13 +81,13 @@ type ButtonSize = 'sm' | 'md' | 'icon';
 
 const BUTTON_VARIANTS: Record<ButtonVariant, string> = {
   primary:
-    'bg-[var(--color-brand)] text-[var(--color-brand-fg)] hover:opacity-90 border border-transparent',
+    'bg-[var(--color-brand)] text-[var(--color-brand-fg)] hover:brightness-95 border border-transparent shadow-sm',
   secondary:
     'bg-[var(--color-surface)] text-[var(--color-fg)] border border-[var(--color-border-strong)] hover:bg-[var(--color-surface-2)]',
   ghost:
     'bg-transparent text-[var(--color-fg-muted)] border border-transparent hover:bg-[var(--color-surface-2)] hover:text-[var(--color-fg)]',
   danger:
-    'bg-[var(--color-danger)] text-white hover:opacity-90 border border-transparent dark:text-[#2a0a0e]',
+    'bg-[var(--color-danger)] text-white hover:brightness-95 border border-transparent shadow-sm dark:text-[#2a0a0e]',
   subtle:
     'bg-[var(--color-surface-2)] text-[var(--color-fg)] border border-transparent hover:border-[var(--color-border-strong)]',
 };
@@ -116,8 +116,9 @@ export function Button({
   return (
     <button
       className={cn(
-        'inline-flex select-none items-center rounded-lg font-medium transition',
-        'disabled:cursor-not-allowed disabled:opacity-50',
+        'inline-flex select-none items-center rounded-xl font-medium transition duration-150',
+        'active:scale-[0.98] motion-reduce:active:scale-100',
+        'disabled:cursor-not-allowed disabled:opacity-50 disabled:active:scale-100',
         BUTTON_VARIANTS[variant],
         BUTTON_SIZES[size],
         className,

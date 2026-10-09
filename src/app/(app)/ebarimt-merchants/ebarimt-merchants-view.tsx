@@ -60,7 +60,7 @@ export function EbarimtMerchantsView({
   canDelete: boolean;
 }) {
   const [page, setPage] = React.useState(1);
-  const [limit, setLimit] = React.useState(10);
+  const [limit, setLimit] = React.useState(50);
   const [search] = React.useState('');
 
   const { data, error, mutate, isValidating } = useSWR<MerchantListResponse>(

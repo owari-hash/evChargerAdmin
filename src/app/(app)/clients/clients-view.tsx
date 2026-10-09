@@ -52,7 +52,7 @@ export function ClientsView({
   const [debounced, setDebounced] = React.useState('');
   const [status, setStatus] = React.useState<'all' | 'active' | 'inactive'>('all');
   const [page, setPage] = React.useState(1);
-  const [limit, setLimit] = React.useState(20);
+  const [limit, setLimit] = React.useState(50);
 
   const [modalOpen, setModalOpen] = React.useState(false);
   const [editingClient, setEditingClient] = React.useState<Client | null>(null);

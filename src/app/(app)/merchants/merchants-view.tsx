@@ -58,7 +58,7 @@ export function MerchantsView({
   canDelete: boolean;
 }) {
   const [page, setPage] = React.useState(1);
-  const [limit, setLimit] = React.useState(10);
+  const [limit, setLimit] = React.useState(50);
   const [creating, setCreating] = React.useState(false);
   const [deleting, setDeleting] = React.useState<QpayMerchant | null>(null);
   const [configuringActive, setConfiguringActive] = React.useState(false);
@@ -310,6 +310,7 @@ export function MerchantsView({
           <Pagination
             page={page}
             limit={limit}
+            maxLimit={100}
             total={total}
             onPageChange={setPage}
             onLimitChange={(n) => {

@@ -34,7 +34,7 @@ export function ConnectorsView({
   const [debouncedCp, setDebouncedCp] = React.useState(initialChargePointId);
   const [includeZero, setIncludeZero] = React.useState(false);
   const [page, setPage] = React.useState(1);
-  const [limit, setLimit] = React.useState(100);
+  const [limit, setLimit] = React.useState(50);
   const [editing, setEditing] = React.useState<Connector | null>(null);
 
   React.useEffect(() => {

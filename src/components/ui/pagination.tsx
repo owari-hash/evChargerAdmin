@@ -25,6 +25,17 @@ function pageWindow(page: number, pages: number): (number | 'gap')[] {
   return out;
 }
 
+const PAGE_SIZES = [25, 50, 100, 200];
+
+/**
+ * The standard sizes up to what the endpoint accepts, plus `limit` itself if
+ * a page asked for another one.
+ */
+function pageSizes(limit: number, maxLimit: number): number[] {
+  const sizes = PAGE_SIZES.filter((n) => n <= maxLimit);
+  return sizes.includes(limit) ? sizes : [...sizes, limit].sort((a, b) => a - b);
+}
+
 const PAGE_BTN =
   'inline-flex h-8 min-w-8 items-center justify-center rounded-lg border px-2 text-xs font-medium tnum ' +
   'transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-brand)] ' +
@@ -42,6 +53,7 @@ export function Pagination({
   onPageChange,
   onLimitChange,
   label = 'rows',
+  maxLimit = Infinity,
 }: {
   page: number;
   limit: number;
@@ -49,6 +61,8 @@ export function Pagination({
   onPageChange: (page: number) => void;
   onLimitChange?: (limit: number) => void;
   label?: string;
+  /** The endpoint's own page-size cap, so no size it rejects is offered. */
+  maxLimit?: number;
 }) {
   const pages = Math.max(1, Math.ceil(total / limit));
   const first = total === 0 ? 0 : (page - 1) * limit + 1;
@@ -110,7 +124,7 @@ export function Pagination({
             onChange={(e) => onLimitChange(Number(e.target.value))}
             aria-label="Хуудсанд харуулах мөр"
           >
-            {[25, 50, 100, 200].map((n) => (
+            {pageSizes(limit, maxLimit).map((n) => (
               <option key={n} value={n}>
                 {n} / хуудас
               </option>

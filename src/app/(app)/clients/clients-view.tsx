@@ -173,19 +173,26 @@ export function ClientsView({
               ) : (
                 rows.map((c) => (
                   <TR key={c.id}>
-                    <TD>
-                      <Link
-                        href={`/clients/${encodeURIComponent(c.id)}`}
-                        className="font-medium hover:text-[var(--color-brand)] hover:underline flex items-center gap-2 justify-center"
-                      >
-                        <Building2 className="h-4 w-4 text-[var(--color-fg-muted)] shrink-0" />
-                        <span>{c.name}</span>
-                      </Link>
-                      {c.contactPerson ? (
-                        <p className="text-xs text-[var(--color-fg-muted)] pl-6">
-                          Холбоо барих: {c.contactPerson}
-                        </p>
-                      ) : null}
+                    <TD className="whitespace-nowrap">
+                      {/* One line: name, then the contact person muted. */}
+                      <div className="inline-flex max-w-[280px] items-center gap-2">
+                        <Building2 className="h-4 w-4 shrink-0 text-[var(--color-fg-muted)]" />
+                        <Link
+                          href={`/clients/${encodeURIComponent(c.id)}`}
+                          className="truncate font-medium hover:text-[var(--color-brand)] hover:underline"
+                          title={c.name}
+                        >
+                          {c.name}
+                        </Link>
+                        {c.contactPerson ? (
+                          <span
+                            className="truncate text-xs text-[var(--color-fg-muted)]"
+                            title={`Холбоо барих: ${c.contactPerson}`}
+                          >
+                            · {c.contactPerson}
+                          </span>
+                        ) : null}
+                      </div>
                     </TD>
                     <TD className="font-mono text-xs text-[var(--color-fg-muted)]">
                       {c.businessRegister ?? '—'}
@@ -199,22 +206,33 @@ export function ClientsView({
                         <span>{c.stationCount ?? 0} станц</span>
                       </Link>
                     </TD>
-                    <TD className="text-xs">
-                      <div className="space-y-0.5">
-                        {c.phone ? (
-                          <div className="flex items-center justify-center gap-1 text-[var(--color-fg-muted)]">
-                            <Phone className="h-3 w-3 shrink-0" />
-                            <span>{c.phone}</span>
-                          </div>
-                        ) : null}
-                        {c.email ? (
-                          <div className="flex items-center gap-1 text-[var(--color-fg-muted)]">
-                            <Mail className="h-3 w-3 shrink-0" />
-                            <span>{c.email}</span>
-                          </div>
-                        ) : null}
-                        {!c.phone && !c.email ? '—' : null}
-                      </div>
+                    <TD className="whitespace-nowrap text-xs text-[var(--color-fg-muted)]">
+                      {/* Phone and email side by side; a long address truncates. */}
+                      {c.phone || c.email ? (
+                        <div className="inline-flex max-w-[340px] items-center gap-3">
+                          {c.phone ? (
+                            <a
+                              href={`tel:${c.phone}`}
+                              className="inline-flex shrink-0 items-center gap-1 hover:text-[var(--color-fg)]"
+                            >
+                              <Phone className="h-3 w-3 shrink-0" />
+                              <span className="tnum">{c.phone}</span>
+                            </a>
+                          ) : null}
+                          {c.email ? (
+                            <a
+                              href={`mailto:${c.email}`}
+                              className="inline-flex min-w-0 items-center gap-1 hover:text-[var(--color-fg)]"
+                              title={c.email}
+                            >
+                              <Mail className="h-3 w-3 shrink-0" />
+                              <span className="truncate">{c.email}</span>
+                            </a>
+                          ) : null}
+                        </div>
+                      ) : (
+                        '—'
+                      )}
                     </TD>
                     <TD className="text-xs text-[var(--color-fg-muted)] max-w-[200px] truncate">
                       {c.address ?? '—'}

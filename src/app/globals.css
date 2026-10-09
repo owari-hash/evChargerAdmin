@@ -128,6 +128,14 @@
     }
   }
 
+  /* Scrollable but scrollbar-free, for tab strips and chip rows. */
+  .scroll-none {
+    scrollbar-width: none;
+  }
+  .scroll-none::-webkit-scrollbar {
+    display: none;
+  }
+
   /* Thin, theme-coloured scrollbar for inner scroll areas (tables, popovers). */
   .scroll-thin {
     scrollbar-width: thin;

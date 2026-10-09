@@ -9,28 +9,96 @@ import { cn } from '@/lib/cn';
  * stays in view below it and the page itself rarely needs to scroll.
  */
 
+/** Never shrink a list below this, however little room is left. */
+const MIN_HEIGHT = 240;
+
 /**
- * Default scroll height: the viewport minus the app chrome around a list
- * (topbar, page padding, filter bar, pagination), never below 320px.
+ * Space taken below `el` up to the end of <main>: following siblings at each
+ * level (pagination, footnotes) plus each container's bottom padding, border
+ * and margin. Measured, so a page with tabs or stat cards above its table
+ * still keeps the pagination on screen.
  */
-const DEFAULT_MAX_HEIGHT = 'max(320px, calc(100dvh - 17rem))';
+function spaceBelow(el: HTMLElement): number {
+  let total = 0;
+  let node: HTMLElement | null = el;
+  while (node && node.tagName !== 'MAIN' && node !== document.body) {
+    total += parseFloat(getComputedStyle(node).marginBottom) || 0;
+    let sib = node.nextElementSibling as HTMLElement | null;
+    while (sib) {
+      const cs = getComputedStyle(sib);
+      if (cs.position !== 'absolute' && cs.position !== 'fixed') {
+        total += sib.offsetHeight + (parseFloat(cs.marginTop) || 0) + (parseFloat(cs.marginBottom) || 0);
+      }
+      sib = sib.nextElementSibling as HTMLElement | null;
+    }
+    const parent: HTMLElement | null = node.parentElement;
+    if (!parent) break;
+    const ps = getComputedStyle(parent);
+    total += (parseFloat(ps.paddingBottom) || 0) + (parseFloat(ps.borderBottomWidth) || 0);
+    // Flex/grid gaps between this level's children.
+    const gap = parseFloat(ps.rowGap) || 0;
+    if (gap && node.nextElementSibling) total += gap;
+    node = parent;
+  }
+  return total;
+}
+
+/** Fills the viewport from the table's top down to just above what follows it. */
+function useFitHeight(ref: React.RefObject<HTMLDivElement | null>, enabled: boolean) {
+  const [height, setHeight] = React.useState<number | null>(null);
+
+  React.useLayoutEffect(() => {
+    const el = ref.current;
+    if (!enabled || !el) return;
+    let frame = 0;
+    const measure = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => {
+        const top = el.getBoundingClientRect().top + window.scrollY;
+        const next = Math.max(MIN_HEIGHT, Math.floor(window.innerHeight - top - spaceBelow(el)));
+        setHeight((prev) => (prev === next ? prev : next));
+      });
+    };
+    measure();
+    window.addEventListener('resize', measure);
+    // Content above or below (stat cards loading, filters wrapping) moves it.
+    const observer = new ResizeObserver(measure);
+    const main = el.closest('main') ?? document.body;
+    observer.observe(main);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener('resize', measure);
+      observer.disconnect();
+    };
+  }, [ref, enabled]);
+
+  return height;
+}
 
 export function TableWrap({
   className,
   style,
   scroll = true,
-  maxHeight = DEFAULT_MAX_HEIGHT,
+  maxHeight,
   onScroll,
   ...props
 }: React.ComponentProps<'div'> & {
   /** false = no vertical scroll box (the table grows with its rows). */
   scroll?: boolean;
-  /** Any CSS length; smaller for embedded tables, e.g. '24rem'. */
+  /**
+   * Any CSS length for embedded tables, e.g. '24rem'. Left out, the table
+   * fills the screen height that is left, keeping pagination in view.
+   */
   maxHeight?: string;
 }) {
+  const ref = React.useRef<HTMLDivElement>(null);
+  const fitted = useFitHeight(ref, scroll && maxHeight === undefined);
   const [scrolled, setScrolled] = React.useState(false);
+  const resolved = maxHeight ?? (fitted !== null ? `${fitted}px` : undefined);
+
   return (
     <div
+      ref={ref}
       data-scrolled={scrolled || undefined}
       onScroll={(e) => {
         const next = e.currentTarget.scrollTop > 0;
@@ -42,7 +110,7 @@ export function TableWrap({
         scroll && 'overflow-y-auto overscroll-y-contain',
         className,
       )}
-      style={scroll ? { maxHeight, ...style } : style}
+      style={scroll && resolved ? { maxHeight: resolved, ...style } : style}
       {...props}
     />
   );

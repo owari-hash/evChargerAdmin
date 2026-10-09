@@ -24,7 +24,8 @@ export function Tabs({
     <div
       role="tablist"
       className={cn(
-        'flex gap-1 overflow-x-auto border-b border-[var(--color-border)] px-2',
+        // Scrolls sideways on narrow screens, without ever showing a scrollbar.
+        'scroll-none flex gap-1 overflow-x-auto overflow-y-hidden border-b border-[var(--color-border)] px-2',
         className,
       )}
     >
@@ -49,7 +50,7 @@ export function Tabs({
               {item.badge}
             </span>
             {active ? (
-              <span className="absolute inset-x-2 -bottom-px h-0.5 rounded-full bg-[var(--color-brand)]" />
+              <span className="absolute inset-x-2 bottom-0 h-0.5 rounded-full bg-[var(--color-brand)]" />
             ) : null}
           </button>
         );

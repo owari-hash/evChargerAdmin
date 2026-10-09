@@ -50,7 +50,8 @@ const PANEL_MAX_HEIGHT = 320;
 const ROW_HEIGHT = 34;
 const SEARCH_HEIGHT = 45;
 
-const TRIGGER_BASE =
+/** Trigger look shared by every popover field (Select, DatePicker). */
+export const TRIGGER_BASE =
   'relative inline-flex w-full items-center gap-2 rounded-lg border border-[var(--color-border-strong)] bg-[var(--color-surface)] pl-3 pr-8 text-left text-sm text-[var(--color-fg)] transition ' +
   'hover:border-[var(--color-fg-subtle)] aria-expanded:border-[var(--color-brand)] aria-expanded:ring-2 aria-expanded:ring-[var(--color-brand)]/20 ' +
   'disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:border-[var(--color-border-strong)]';
@@ -448,7 +449,7 @@ export function Select({
               role="listbox"
               aria-label={ariaLabel}
               aria-labelledby={ariaLabelledby}
-              className="relative min-h-0 flex-1 overflow-y-auto overscroll-contain p-1"
+              className="scroll-thin relative min-h-0 flex-1 overflow-y-auto overscroll-contain p-1"
             >
               {visible.length === 0 ? (
                 <p className="px-3 py-3 text-center text-xs text-[var(--color-fg-muted)]">

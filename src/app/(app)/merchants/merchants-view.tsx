@@ -7,7 +7,7 @@ import { toast } from 'sonner';
 import { REFRESH } from '@/lib/live-query';
 import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
 import type { PaymentsConfig, QpayActiveMerchantConfig, QpayMerchant } from '@/lib/types';
-import { Badge, Button, Card, EmptyState, PageToolbar } from '@/components/ui/primitives';
+import { Badge, Button, Card, CardHeader, EmptyState } from '@/components/ui/primitives';
 import { CopyButton } from '@/components/ui/copy-button';
 import { ConfirmModal } from '@/components/ui/modal';
 import { Pagination } from '@/components/ui/pagination';
@@ -103,24 +103,6 @@ export function MerchantsView({
 
   return (
     <>
-      <PageToolbar
-        actions={
-          <>
-            {canEdit ? (
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => setCreating(true)}
-                disabled={!ready}
-              >
-                <Plus className="h-3.5 w-3.5" />
-                Шинэ мерчант
-              </Button>
-            ) : null}
-          </>
-        }
-      />
-
       {config && !config.quickQrEnabled ? (
         <Card className="mb-6">
           <div className="flex items-start gap-3 px-5 py-4">
@@ -197,6 +179,23 @@ export function MerchantsView({
       </Card>
 
       <Card>
+        <CardHeader
+          title="QuickQR мерчантууд"
+          description="QPay QuickQR дээр бүртгэлтэй мерчантууд"
+          actions={
+            canEdit ? (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => setCreating(true)}
+                disabled={!ready}
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Шинэ мерчант
+              </Button>
+            ) : null
+          }
+        />
         <TableWrap>
           <Table>
             <THead>

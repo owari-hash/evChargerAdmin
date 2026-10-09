@@ -33,7 +33,7 @@ import {
   CardHeader,
   DataRow,
   EmptyState,
-  PageToolbar,
+  DetailHeader,
 } from '@/components/ui/primitives';
 import { Tabs, TabCount, type TabItem } from '@/components/ui/tabs';
 import { ConfirmModal, Modal } from '@/components/ui/modal';
@@ -135,60 +135,59 @@ export function ChargePointView({
         Бүх цэнэглэх станц
       </Link>
 
-      <PageToolbar
-        leading={
-          <>
-            <span className="text-sm font-semibold text-[var(--color-fg)]">
-              {detail.name?.trim() || <span className="font-mono">{detail.cpId}</span>}
-            </span>
-            {detail.name?.trim() ? (
-              <span className="font-mono text-xs text-[var(--color-fg-subtle)]">{detail.cpId}</span>
-            ) : null}
-            <OnlineBadge online={detail.isOnline} />
-            <RegistrationBadge status={detail.registrationStatus} />
-            <Badge tone="idle">{detail.securityProfile}-р профайл</Badge>
-            {detail.address ? (
-              <span className="inline-flex items-center gap-1 text-xs text-[var(--color-fg-muted)]">
-                <MapPin className="h-3 w-3" />
-                {detail.address}
-              </span>
-            ) : null}
-            <span className="text-xs text-[var(--color-fg-muted)]">
-              Сүүлд холбогдсон {formatRelative(detail.lastSeenAt)}
-            </span>
-          </>
-        }
-        actions={
-          <>
-            {canOperate ? (
-              <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
-                <Pencil className="h-3.5 w-3.5" />
-                Засах
-              </Button>
-            ) : null}
-            {canOperate && detail.isOnline ? (
-              <Button variant="secondary" size="sm" onClick={() => void disconnect()} loading={busy}>
-                <Unplug className="h-3.5 w-3.5" />
-                Дахин холбуулах
-              </Button>
-            ) : null}
-            {canAdmin ? (
-              <>
-                <Button variant="secondary" size="sm" onClick={() => setConfirmRotate(true)}>
-                  <KeyRound className="h-3.5 w-3.5" />
-                  Түлхүүр шинэчлэх
-                </Button>
-                <Button variant="danger" size="sm" onClick={() => setConfirmDelete(true)}>
-                  <Trash2 className="h-3.5 w-3.5" />
-                  Устгах
-                </Button>
-              </>
-            ) : null}
-          </>
-        }
-      />
-
       <Card className="mb-4 overflow-hidden">
+        <DetailHeader
+          leading={
+            <>
+              <span className="text-sm font-semibold text-[var(--color-fg)]">
+                {detail.name?.trim() || <span className="font-mono">{detail.cpId}</span>}
+              </span>
+              {detail.name?.trim() ? (
+                <span className="font-mono text-xs text-[var(--color-fg-subtle)]">{detail.cpId}</span>
+              ) : null}
+              <OnlineBadge online={detail.isOnline} />
+              <RegistrationBadge status={detail.registrationStatus} />
+              <Badge tone="idle">{detail.securityProfile}-р профайл</Badge>
+              {detail.address ? (
+                <span className="inline-flex items-center gap-1 text-xs text-[var(--color-fg-muted)]">
+                  <MapPin className="h-3 w-3" />
+                  {detail.address}
+                </span>
+              ) : null}
+              <span className="text-xs text-[var(--color-fg-muted)]">
+                Сүүлд холбогдсон {formatRelative(detail.lastSeenAt)}
+              </span>
+            </>
+          }
+          actions={
+            <>
+              {canOperate ? (
+                <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
+                  <Pencil className="h-3.5 w-3.5" />
+                  Засах
+                </Button>
+              ) : null}
+              {canOperate && detail.isOnline ? (
+                <Button variant="secondary" size="sm" onClick={() => void disconnect()} loading={busy}>
+                  <Unplug className="h-3.5 w-3.5" />
+                  Дахин холбуулах
+                </Button>
+              ) : null}
+              {canAdmin ? (
+                <>
+                  <Button variant="secondary" size="sm" onClick={() => setConfirmRotate(true)}>
+                    <KeyRound className="h-3.5 w-3.5" />
+                    Түлхүүр шинэчлэх
+                  </Button>
+                  <Button variant="danger" size="sm" onClick={() => setConfirmDelete(true)}>
+                    <Trash2 className="h-3.5 w-3.5" />
+                    Устгах
+                  </Button>
+                </>
+              ) : null}
+            </>
+          }
+        />
         <Tabs items={tabs} value={tab} onChange={(k) => setTab(k as TabKey)} />
       </Card>
 
@@ -316,7 +315,7 @@ function OverviewTab({ detail }: { detail: ChargePointDetail }) {
             title="Идэвхтэй цэнэглэлт"
             description={`Энэ станц дээр ${formatNumber(active.length)} цэнэглэлт үргэлжилж байна`}
           />
-          <TableWrap>
+          <TableWrap maxHeight="24rem">
             <Table>
               <THead>
                 <tr>
@@ -534,7 +533,7 @@ function ConnectorsTab({ detail }: { detail: ChargePointDetail }) {
           title="Бүх холбогч"
           description="0 дугаар холбогч нь станцыг бүхэлд нь илэрхийлнэ."
         />
-        <TableWrap>
+        <TableWrap maxHeight="24rem">
           <Table>
             <THead>
               <tr>

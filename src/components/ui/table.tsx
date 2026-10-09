@@ -1,13 +1,51 @@
+'use client';
+
 import * as React from 'react';
 import { cn } from '@/lib/cn';
 
 /**
- * Tables are the primary surface in this console, so they get a fixed header,
- * horizontal scrolling inside their own container, and tabular numerals.
+ * Tables are the primary surface in this console. Each one scrolls inside its
+ * own box — both axes — with a sticky header, so the card's pagination footer
+ * stays in view below it and the page itself rarely needs to scroll.
  */
 
-export function TableWrap({ className, ...props }: React.ComponentProps<'div'>) {
-  return <div className={cn('w-full overflow-x-auto', className)} {...props} />;
+/**
+ * Default scroll height: the viewport minus the app chrome around a list
+ * (topbar, page padding, filter bar, pagination), never below 320px.
+ */
+const DEFAULT_MAX_HEIGHT = 'max(320px, calc(100dvh - 17rem))';
+
+export function TableWrap({
+  className,
+  style,
+  scroll = true,
+  maxHeight = DEFAULT_MAX_HEIGHT,
+  onScroll,
+  ...props
+}: React.ComponentProps<'div'> & {
+  /** false = no vertical scroll box (the table grows with its rows). */
+  scroll?: boolean;
+  /** Any CSS length; smaller for embedded tables, e.g. '24rem'. */
+  maxHeight?: string;
+}) {
+  const [scrolled, setScrolled] = React.useState(false);
+  return (
+    <div
+      data-scrolled={scrolled || undefined}
+      onScroll={(e) => {
+        const next = e.currentTarget.scrollTop > 0;
+        if (next !== scrolled) setScrolled(next);
+        onScroll?.(e);
+      }}
+      className={cn(
+        'group/table scroll-thin w-full overflow-x-auto',
+        scroll && 'overflow-y-auto overscroll-y-contain',
+        className,
+      )}
+      style={scroll ? { maxHeight, ...style } : style}
+      {...props}
+    />
+  );
 }
 
 export function Table({ className, ...props }: React.ComponentProps<'table'>) {
@@ -17,7 +55,14 @@ export function Table({ className, ...props }: React.ComponentProps<'table'>) {
 export function THead({ className, ...props }: React.ComponentProps<'thead'>) {
   return (
     <thead
-      className={cn('border-b border-[var(--color-border)] bg-[var(--color-surface-2)]', className)}
+      className={cn(
+        // Sticky inside TableWrap. Borders on sticky rows vanish with
+        // border-collapse, so the divider is an inset shadow on the cells.
+        'sticky top-0 z-[1] bg-[var(--color-surface)]',
+        '[&_th]:bg-[var(--color-surface)] [&_th]:shadow-[inset_0_-1px_0_var(--color-border)]',
+        'group-data-[scrolled]/table:[&_th]:shadow-[inset_0_-1px_0_var(--color-border),0_6px_10px_-8px_rgba(0,0,0,0.35)]',
+        className,
+      )}
       {...props}
     />
   );

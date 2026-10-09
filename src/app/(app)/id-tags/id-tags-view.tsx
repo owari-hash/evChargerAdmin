@@ -9,10 +9,10 @@ import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
 import { formatDate, formatNumber, formatRelative } from '@/lib/format';
 import { useNow } from '@/lib/use-now';
 import { AUTHORIZATION_STATUSES, type IdTag, type Paginated } from '@/lib/types';
-import { Badge, Button, Card, EmptyState, Input, PageToolbar, Select } from '@/components/ui/primitives';
+import { Badge, Button, Card, EmptyState, Input, Select } from '@/components/ui/primitives';
 import { AuthStatusBadge } from '@/components/ui/status';
 import { ConfirmModal } from '@/components/ui/modal';
-import { FilterBar, Pagination } from '@/components/ui/pagination';
+import { FilterActions, FilterBar, Pagination } from '@/components/ui/pagination';
 import { ID_TAG_STATUS, mn } from '@/lib/mn';
 import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty, TableLoading } from '@/components/ui/table';
 import { IdTagModal } from './id-tag-modal';
@@ -73,25 +73,6 @@ export function IdTagsView({
 
   return (
     <>
-      <PageToolbar
-        actions={
-          <>
-            {canEdit ? (
-              <>
-                <Button variant="secondary" size="sm" onClick={() => setImporting(true)}>
-                  <Upload className="h-3.5 w-3.5" />
-                  Бөөнөөр оруулах
-                </Button>
-                <Button variant="primary" size="sm" onClick={() => setCreating(true)}>
-                  <Plus className="h-3.5 w-3.5" />
-                  Шинэ карт
-                </Button>
-              </>
-            ) : null}
-          </>
-        }
-      />
-
       <Card>
         <FilterBar>
           <div className="relative min-w-[220px] flex-1">
@@ -119,6 +100,18 @@ export function IdTagsView({
               </option>
             ))}
           </Select>
+          {canEdit ? (
+            <FilterActions>
+              <Button variant="secondary" size="md" onClick={() => setImporting(true)}>
+                <Upload className="h-3.5 w-3.5" />
+                Бөөнөөр оруулах
+              </Button>
+              <Button variant="primary" size="md" onClick={() => setCreating(true)}>
+                <Plus className="h-3.5 w-3.5" />
+                Шинэ карт
+              </Button>
+            </FilterActions>
+          ) : null}
         </FilterBar>
 
         <TableWrap>

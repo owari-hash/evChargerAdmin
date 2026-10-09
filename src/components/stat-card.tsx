@@ -58,3 +58,32 @@ export function StatCard({
     body
   );
 }
+
+/**
+ * One-row group of KPI cards. Columns are equal width and sized to the number
+ * of cards (grid-auto-flow: column), so five cards are five columns rather than
+ * wrapping 4 + 1. When they cannot fit at their minimum width the row scrolls
+ * horizontally with snapping instead of wrapping.
+ */
+export function StatGrid({
+  children,
+  min = '11rem',
+  className,
+}: {
+  children: React.ReactNode;
+  /** Minimum width of one card before the row starts to scroll. */
+  min?: string;
+  className?: string;
+}) {
+  return (
+    <div
+      className={cn(
+        'grid snap-x snap-mandatory grid-flow-col gap-3 overflow-x-auto overscroll-x-contain pb-1 [&>*]:snap-start',
+        className,
+      )}
+      style={{ gridAutoColumns: `minmax(${min}, 1fr)` }}
+    >
+      {children}
+    </div>
+  );
+}

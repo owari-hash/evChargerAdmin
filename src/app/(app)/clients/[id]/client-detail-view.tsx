@@ -27,7 +27,6 @@ import {
   CardHeader,
   DataRow,
   EmptyState,
-  PageToolbar,
 } from '@/components/ui/primitives';
 import {
   Table,
@@ -41,6 +40,7 @@ import {
   TR,
 } from '@/components/ui/table';
 import { ConnectorStatusBadge, OnlineBadge } from '@/components/ui/status';
+import { StatGrid } from '@/components/stat-card';
 import { ClientModal } from '../client-modal';
 import { EditChargePointModal } from '../../charge-points/edit-charge-point-modal';
 
@@ -104,20 +104,9 @@ export function ClientDetailView({
         </Link>
       </div>
 
-      <PageToolbar
-        leading={<span className="text-sm font-semibold text-[var(--color-fg)]">{client.name}</span>}
-        actions={
-          canEdit ? (
-            <Button variant="secondary" size="sm" onClick={() => setEditingClient(true)}>
-              <Edit2 className="h-3.5 w-3.5" />
-              Мэдээлэл засах
-            </Button>
-          ) : null
-        }
-      />
 
       {/* Metric summary */}
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3 mb-6">
+      <StatGrid min="13rem" className="mb-6 gap-4">
         <Card className="p-4 flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-[var(--color-brand)]/10 text-[var(--color-brand)]">
             <Zap className="h-5 w-5" />
@@ -149,7 +138,7 @@ export function ClientDetailView({
             <div className="text-xs text-[var(--color-fg-muted)]">Нийт холбогч (буу)</div>
           </div>
         </Card>
-      </div>
+      </StatGrid>
 
       <div className="grid gap-6 xl:grid-cols-3">
         {/* Left 2 cols: Stations table */}
@@ -159,7 +148,7 @@ export function ClientDetailView({
               title={`Харьяалагдах цэнэглэх станцууд (${stations.length})`}
               description="Энэ харилцагчийн эзэмшилд бүртгэгдсэн бүх станц"
             />
-            <TableWrap>
+            <TableWrap maxHeight="24rem">
               <Table>
                 <THead>
                   <tr>
@@ -256,7 +245,18 @@ export function ClientDetailView({
         {/* Right col: Client details card */}
         <div className="space-y-4">
           <Card>
-            <CardHeader title="Харилцагчийн мэдээлэл" />
+            <CardHeader
+              title={client.name}
+              description="Харилцагчийн мэдээлэл"
+              actions={
+                canEdit ? (
+                  <Button variant="secondary" size="sm" onClick={() => setEditingClient(true)}>
+                    <Edit2 className="h-3.5 w-3.5" />
+                    Засах
+                  </Button>
+                ) : null
+              }
+            />
             <dl className="divide-y divide-[var(--color-border)] px-5 py-2">
               <DataRow label="Нэр">{client.name}</DataRow>
               <DataRow label="Регистр" mono>

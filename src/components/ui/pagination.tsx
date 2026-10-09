@@ -82,3 +82,14 @@ export function FilterBar({ children }: { children: React.ReactNode }) {
     </div>
   );
 }
+
+/**
+ * The page's own actions (e.g. "+ Станц бүртгэх"), placed last in a FilterBar
+ * so they share the filters' line and height instead of floating above the
+ * card. `ml-auto` keeps them right-aligned, including when the row wraps on
+ * narrow screens. Renders nothing when there is nothing to show.
+ */
+export function FilterActions({ children }: { children?: React.ReactNode }) {
+  if (!children) return null;
+  return <div className="ml-auto flex shrink-0 flex-wrap items-center justify-end gap-2">{children}</div>;
+}

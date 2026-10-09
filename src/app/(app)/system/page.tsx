@@ -8,7 +8,7 @@ import { formatDateTime, formatNumber, formatUptime } from '@/lib/format';
 import type { ApiDiscovery, HealthResponse } from '@/lib/types';
 import { Badge, Card, CardHeader, DataRow } from '@/components/ui/primitives';
 import { RoleBadge } from '@/components/ui/status';
-import { StatCard } from '@/components/stat-card';
+import { StatCard, StatGrid } from '@/components/stat-card';
 import { BackendDown } from '@/components/backend-down';
 
 export const metadata: Metadata = { title: 'Систем' };
@@ -38,7 +38,7 @@ export default async function SystemPage() {
     <>
       {/* Health/uptime are server-rendered; re-render in place every 30s while visible. */}
       <AutoRefresh interval={30_000} />
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+      <StatGrid min="13rem">
         <StatCard
           label="Сервер"
           value={healthy ? 'Хэвийн' : (health?.status ?? 'Холбогдохгүй байна')}
@@ -67,7 +67,7 @@ export default async function SystemPage() {
           icon={ShieldCheck}
           tone={note?.tone ?? 'idle'}
         />
-      </div>
+      </StatGrid>
 
       <div className="mt-4 grid gap-4 lg:grid-cols-2">
         <Card>

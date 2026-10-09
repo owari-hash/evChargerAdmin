@@ -51,22 +51,27 @@ export function CardBody({ className, ...props }: React.ComponentProps<'div'>) {
 }
 
 /**
- * Toolbar row at the top of a page. Pages carry no heading/description block —
- * the sidebar already says where you are — so this only holds the page's
- * actions (right-aligned) and, on detail pages, a compact `leading` identity
- * line. Renders nothing when both are empty, so no gap is left behind.
+ * Identity + actions row for a detail page, rendered as the header of the
+ * page's first card (never as a free-floating row above the content). The
+ * identity wraps on the left; actions stay right-aligned when the row wraps.
  */
-export function PageToolbar({
+export function DetailHeader({
   leading,
   actions,
+  className,
 }: {
-  leading?: React.ReactNode;
+  leading: React.ReactNode;
   actions?: React.ReactNode;
+  className?: string;
 }) {
-  if (!leading && !actions) return null;
   return (
-    <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-      {leading ? <div className="flex min-w-0 flex-wrap items-center gap-2">{leading}</div> : null}
+    <div
+      className={cn(
+        'flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border)] px-5 py-3.5',
+        className,
+      )}
+    >
+      <div className="flex min-w-0 flex-wrap items-center gap-2">{leading}</div>
       {actions ? (
         <div className="ml-auto flex flex-wrap items-center justify-end gap-2">{actions}</div>
       ) : null}

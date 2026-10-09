@@ -64,7 +64,7 @@ export function ConnectorsView({
   return (
     <>
       {counts.length > 0 ? (
-        <div className="mb-4 flex flex-wrap gap-2">
+        <div className="scroll-thin mb-4 flex snap-x gap-2 overflow-x-auto pb-1">
           {counts.map(([s, n]) => (
             <button
               key={s}
@@ -73,7 +73,7 @@ export function ConnectorsView({
                 setStatus(status === s ? '' : s);
                 setPage(1);
               }}
-              className={`rounded-lg border px-3 py-1.5 text-xs transition ${
+              className={`shrink-0 snap-start rounded-lg border px-3 py-1.5 text-xs transition ${
                 status === s
                   ? 'border-[var(--color-brand)] bg-[var(--color-brand-soft)]'
                   : 'border-[var(--color-border)] hover:border-[var(--color-border-strong)]'

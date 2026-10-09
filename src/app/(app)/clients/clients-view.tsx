@@ -24,7 +24,6 @@ import {
   Card,
   EmptyState,
   Input,
-  PageToolbar,
   Select,
 } from '@/components/ui/primitives';
 import {
@@ -39,7 +38,7 @@ import {
   TR,
 } from '@/components/ui/table';
 import { ConfirmModal } from '@/components/ui/modal';
-import { FilterBar, Pagination } from '@/components/ui/pagination';
+import { FilterActions, FilterBar, Pagination } from '@/components/ui/pagination';
 import { ClientModal } from './client-modal';
 
 export function ClientsView({
@@ -102,24 +101,6 @@ export function ClientsView({
 
   return (
     <>
-      <PageToolbar
-        actions={
-          canEdit ? (
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => {
-                setEditingClient(null);
-                setModalOpen(true);
-              }}
-            >
-              <Plus className="h-3.5 w-3.5" />
-              Харилцагч бүртгэх
-            </Button>
-          ) : null
-        }
-      />
-
       <Card>
         <FilterBar>
           <div className="relative min-w-[220px] flex-1">
@@ -144,6 +125,21 @@ export function ClientsView({
             <option value="active">Зөвхөн идэвхтэй</option>
             <option value="inactive">Зөвхөн идэвхгүй</option>
           </Select>
+          {canEdit ? (
+            <FilterActions>
+              <Button
+                variant="primary"
+                size="md"
+                onClick={() => {
+                  setEditingClient(null);
+                  setModalOpen(true);
+                }}
+              >
+                <Plus className="h-3.5 w-3.5" />
+                Харилцагч бүртгэх
+              </Button>
+            </FilterActions>
+          ) : null}
         </FilterBar>
 
         <TableWrap>

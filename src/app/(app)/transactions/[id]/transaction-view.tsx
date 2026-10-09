@@ -24,11 +24,11 @@ import {
   DataRow,
   Field,
   Input,
-  PageToolbar,
+  DetailHeader,
 } from '@/components/ui/primitives';
 import { ConfirmModal, Modal } from '@/components/ui/modal';
 import { TransactionStatusBadge } from '@/components/ui/status';
-import { StatCard } from '@/components/stat-card';
+import { StatCard, StatGrid } from '@/components/stat-card';
 import { STOP_REASON, mn } from '@/lib/mn';
 import { SessionPowerChart } from '@/components/charts/energy-chart';
 import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty } from '@/components/ui/table';
@@ -132,44 +132,47 @@ export function TransactionView({
         Бүх цэнэглэлт
       </Link>
 
-      <PageToolbar
-        leading={
-          <>
-            <span className="font-mono text-sm font-semibold text-[var(--color-fg)]">#{id}</span>
-            <TransactionStatusBadge status={tx.status} />
-            {tx.startedRemotely ? <Badge tone="info">Алсаас эхэлсэн</Badge> : null}
-            {tx.stoppedRemotely ? <Badge tone="info">Алсаас зогссон</Badge> : null}
-            <span className="inline-flex items-center gap-1 text-xs text-[var(--color-fg-muted)]">
-              <StationName id={tx.chargePointId} inline />
-              {` · ${tx.connectorId} холбогч · карт `}
-              <Link
-                href={`/id-tags?search=${encodeURIComponent(tx.idTag)}`}
-                className="font-mono hover:text-[var(--color-brand)] hover:underline"
-              >
-                {tx.idTag}
-              </Link>
-            </span>
-          </>
-        }
-        actions={
-          <>
-            {canOperate && isActive ? (
-              <>
-                <Button variant="primary" size="sm" onClick={() => setConfirmStop(true)}>
-                  <Square className="h-3.5 w-3.5" />
-                  Цэнэглэлт зогсоох
-                </Button>
-                <Button variant="secondary" size="sm" onClick={() => setForceClose(true)}>
-                  <XCircle className="h-3.5 w-3.5" />
-                  Албадан хаах
-                </Button>
-              </>
-            ) : null}
-          </>
-        }
-      />
+      <Card className="mb-4">
+        <DetailHeader
+          className="border-b-0"
+          leading={
+            <>
+              <span className="font-mono text-sm font-semibold text-[var(--color-fg)]">#{id}</span>
+              <TransactionStatusBadge status={tx.status} />
+              {tx.startedRemotely ? <Badge tone="info">Алсаас эхэлсэн</Badge> : null}
+              {tx.stoppedRemotely ? <Badge tone="info">Алсаас зогссон</Badge> : null}
+              <span className="inline-flex items-center gap-1 text-xs text-[var(--color-fg-muted)]">
+                <StationName id={tx.chargePointId} inline />
+                {` · ${tx.connectorId} холбогч · карт `}
+                <Link
+                  href={`/id-tags?search=${encodeURIComponent(tx.idTag)}`}
+                  className="font-mono hover:text-[var(--color-brand)] hover:underline"
+                >
+                  {tx.idTag}
+                </Link>
+              </span>
+            </>
+          }
+          actions={
+            <>
+              {canOperate && isActive ? (
+                <>
+                  <Button variant="primary" size="sm" onClick={() => setConfirmStop(true)}>
+                    <Square className="h-3.5 w-3.5" />
+                    Цэнэглэлт зогсоох
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={() => setForceClose(true)}>
+                    <XCircle className="h-3.5 w-3.5" />
+                    Албадан хаах
+                  </Button>
+                </>
+              ) : null}
+            </>
+          }
+        />
+      </Card>
 
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-5">
+      <StatGrid>
         <StatCard label="Эрчим хүч" value={formatWh(energyWh)} />
         <StatCard label="Үргэлжилсэн" value={formatDuration(tx.startTimestamp, tx.stopTimestamp)} />
         <StatCard
@@ -186,7 +189,7 @@ export function TransactionView({
           value={tx.cost != null ? formatMoney(tx.cost) : '—'}
           sub={tx.tariffPerKwh != null ? `${formatMoney(tx.tariffPerKwh)} / кВт·ц` : 'Тариф тохируулаагүй'}
         />
-      </div>
+      </StatGrid>
 
       <div className="mt-4 grid gap-4 xl:grid-cols-3">
         <Card className="xl:col-span-2">
@@ -237,7 +240,7 @@ export function TransactionView({
           title="Тоолуурын утгууд"
           description="Станцаас ирсэн түүхий хэмжилтийн утгууд."
         />
-        <TableWrap>
+        <TableWrap maxHeight="24rem">
           <Table>
             <THead>
               <tr>

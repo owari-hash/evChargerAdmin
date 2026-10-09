@@ -15,6 +15,7 @@ import {
 } from '@/lib/format';
 import { TRANSACTION_STATUSES, type Paginated, type Transaction } from '@/lib/types';
 import { Button, Card, Input, Select } from '@/components/ui/primitives';
+import { DateRangePicker } from '@/components/ui/date-picker';
 import { TransactionStatusBadge } from '@/components/ui/status';
 import { FilterBar, Pagination } from '@/components/ui/pagination';
 import { TRANSACTION_STATUS, mn } from '@/lib/mn';
@@ -107,25 +108,15 @@ export function TransactionsView({
             value={idTag}
             onChange={(e) => setIdTag(e.target.value)}
           />
-          <Input
-            className="w-auto"
-            type="date"
-            value={from}
-            onChange={(e) => {
-              setFrom(e.target.value);
+          <DateRangePicker
+            className="w-auto min-w-[15rem]"
+            value={{ from, to }}
+            onChange={(r) => {
+              setFrom(r.from);
+              setTo(r.to);
               setPage(1);
             }}
-            aria-label="Эхлэх огноо"
-          />
-          <Input
-            className="w-auto"
-            type="date"
-            value={to}
-            onChange={(e) => {
-              setTo(e.target.value);
-              setPage(1);
-            }}
-            aria-label="Дуусах огноо"
+            aria-label="Огнооны муж"
           />
           {status || chargePointId || idTag || from || to ? (
             <Button

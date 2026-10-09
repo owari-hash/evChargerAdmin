@@ -7,6 +7,7 @@ import { AUTHORIZATION_STATUSES, type IdTag } from '@/lib/types';
 import { Button, ErrorNote, Field, Input, Select, Textarea } from '@/components/ui/primitives';
 import { ID_TAG_STATUS, mn } from '@/lib/mn';
 import { Modal } from '@/components/ui/modal';
+import { DatePicker } from '@/components/ui/date-picker';
 
 /** Create or edit a single RFID tag. Mount with a `key` so state resets per tag. */
 export function IdTagModal({
@@ -31,7 +32,7 @@ export function IdTagModal({
     label: tag?.label ?? '',
     ownerName: tag?.ownerName ?? '',
     ownerEmail: tag?.ownerEmail ?? '',
-    // <input type="date"> wants YYYY-MM-DD.
+    // The DatePicker works in YYYY-MM-DD.
     expiryDate: tag?.expiryDate ? tag.expiryDate.slice(0, 10) : '',
     maxActiveTransactions: String(tag?.maxActiveTransactions ?? 1),
     allowedChargePointIds: (tag?.allowedChargePointIds ?? []).join(', '),
@@ -129,7 +130,12 @@ export function IdTagModal({
             </Select>
           </Field>
           <Field label="Дуусах огноо" hint="Хугацаагүй бол хоосон орхино уу.">
-            <Input type="date" value={form.expiryDate} onChange={set('expiryDate')} />
+            <DatePicker
+              value={form.expiryDate}
+              onChange={(expiryDate) => setForm((f) => ({ ...f, expiryDate }))}
+              placeholder="Хугацаагүй"
+              aria-label="Дуусах огноо"
+            />
           </Field>
         </div>
 

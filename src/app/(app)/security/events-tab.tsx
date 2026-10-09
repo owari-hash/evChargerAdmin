@@ -10,6 +10,7 @@ import { formatDateTime, formatNumber, formatRelative } from '@/lib/format';
 import type { Paginated, SecurityEvent } from '@/lib/types';
 import { Button, Card, EmptyState, Input, Select } from '@/components/ui/primitives';
 import { SecurityCriticality } from '@/components/ui/status';
+import { StatGrid } from '@/components/stat-card';
 import { FilterBar, Pagination } from '@/components/ui/pagination';
 import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty, TableLoading } from '@/components/ui/table';
 import { StationName } from '@/components/station-name';
@@ -72,7 +73,7 @@ export function SecurityEventsTab({ canOperate }: { canOperate: boolean }) {
   return (
     <>
       {summary?.byType?.length ? (
-        <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <StatGrid min="12rem" className="mb-4">
           {summary.byType.slice(0, 8).map((entry) => (
             <button
               key={entry._id}
@@ -81,20 +82,22 @@ export function SecurityEventsTab({ canOperate }: { canOperate: boolean }) {
                 setType(type === entry._id ? '' : entry._id);
                 setPage(1);
               }}
-              className={`rounded-xl border p-3 text-left transition ${
+              className={`min-w-0 rounded-xl border p-3 text-left transition ${
                 type === entry._id
                   ? 'border-[var(--color-brand)] bg-[var(--color-brand-soft)]'
                   : 'border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-border-strong)]'
               }`}
             >
-              <p className="truncate text-xs font-medium">{entry._id}</p>
+              <p className="truncate text-xs font-medium" title={entry._id}>
+                {entry._id}
+              </p>
               <p className="mt-1 text-lg font-semibold tnum">{formatNumber(entry.count)}</p>
-              <p className="text-[11px] text-[var(--color-fg-subtle)]">
-                last {formatRelative(entry.lastAt)}
+              <p className="truncate text-[11px] text-[var(--color-fg-subtle)]">
+                Сүүлд: {formatRelative(entry.lastAt)}
               </p>
             </button>
           ))}
-        </div>
+        </StatGrid>
       ) : null}
 
       <Card>

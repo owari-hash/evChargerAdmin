@@ -14,12 +14,11 @@ import {
   Card,
   EmptyState,
   Input,
-  PageToolbar,
   Select,
 } from '@/components/ui/primitives';
 import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty, TableLoading } from '@/components/ui/table';
 import { ConnectorStatusBadge, OnlineBadge, RegistrationBadge } from '@/components/ui/status';
-import { FilterBar, Pagination } from '@/components/ui/pagination';
+import { FilterActions, FilterBar, Pagination } from '@/components/ui/pagination';
 import { CreateChargePointModal } from './create-charge-point-modal';
 import { EditChargePointModal } from './edit-charge-point-modal';
 
@@ -72,17 +71,6 @@ export function ChargePointsView({
 
   return (
     <>
-      <PageToolbar
-        actions={
-          canEdit ? (
-            <Button variant="primary" size="sm" onClick={() => setCreating(true)}>
-              <Plus className="h-3.5 w-3.5" />
-              Станц бүртгэх
-            </Button>
-          ) : null
-        }
-      />
-
       <Card>
         <FilterBar>
           <div className="relative min-w-[220px] flex-1">
@@ -124,6 +112,14 @@ export function ChargePointsView({
             <option value="true">Зөвхөн онлайн</option>
             <option value="false">Зөвхөн офлайн</option>
           </Select>
+          {canEdit ? (
+            <FilterActions>
+              <Button variant="primary" size="md" onClick={() => setCreating(true)}>
+                <Plus className="h-3.5 w-3.5" />
+                Станц бүртгэх
+              </Button>
+            </FilterActions>
+          ) : null}
         </FilterBar>
 
         <TableWrap>

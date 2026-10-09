@@ -18,7 +18,7 @@ import type {
   Transaction,
 } from '@/lib/types';
 import { Badge, Card, CardHeader, EmptyState } from '@/components/ui/primitives';
-import { StatCard } from '@/components/stat-card';
+import { StatCard, StatGrid } from '@/components/stat-card';
 import { LiveFeed } from '@/components/live-feed';
 import { EnergySeriesChart, TopChargePointsChart } from '@/components/charts/energy-chart';
 import { ConnectorStatusBadge } from '@/components/ui/status';
@@ -51,7 +51,7 @@ export default async function OverviewPage() {
     <>
       {/* Re-renders this server page in place every few seconds while visible. */}
       <AutoRefresh />
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
+      <StatGrid>
         <StatCard
           label="Цэнэглэх станц"
           value={`${formatNumber(stats.chargePoints.online)} / ${formatNumber(stats.chargePoints.total)}`}
@@ -98,7 +98,7 @@ export default async function OverviewPage() {
           tone={stats.unacknowledgedCriticalSecurityEvents > 0 ? 'danger' : 'idle'}
           href="/security"
         />
-      </div>
+      </StatGrid>
 
       {faulted > 0 ? (
         <div className="mt-4 flex items-center gap-2.5 rounded-xl border border-[var(--color-danger)]/30 bg-[var(--color-danger-soft)] px-4 py-3 text-sm text-[var(--color-danger)]">
@@ -141,7 +141,7 @@ export default async function OverviewPage() {
               </Link>
             }
           />
-          <TableWrap>
+          <TableWrap maxHeight="24rem">
             <Table>
               <THead>
                 <tr>

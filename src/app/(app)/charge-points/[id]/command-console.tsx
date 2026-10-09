@@ -26,6 +26,7 @@ import {
   Select,
   Textarea,
 } from '@/components/ui/primitives';
+import { DatePicker } from '@/components/ui/date-picker';
 import { ConfirmModal } from '@/components/ui/modal';
 import { cn } from '@/lib/cn';
 import { COMMAND_GROUP, mn } from '@/lib/mn';
@@ -261,10 +262,18 @@ export function CommandConsole({
                             setValues((v) => ({ ...v, [field.name]: e.target.value }))
                           }
                         />
+                      ) : field.type === 'datetime' ? (
+                        <DatePicker
+                          id={id}
+                          withTime
+                          value={values[field.name] ?? ''}
+                          onChange={(v) => setValues((prev) => ({ ...prev, [field.name]: v }))}
+                          placeholder={field.placeholder ?? 'Огноо, цаг сонгох'}
+                        />
                       ) : (
                         <Input
                           id={id}
-                          type={field.type === 'datetime' ? 'datetime-local' : 'text'}
+                          type="text"
                           inputMode={field.type === 'number' ? 'numeric' : undefined}
                           placeholder={field.placeholder}
                           value={values[field.name] ?? ''}

@@ -14,9 +14,9 @@ import {
   Phone,
   Plug,
   Plus,
-  RefreshCw,
   Zap,
 } from 'lucide-react';
+import { REFRESH } from '@/lib/live-query';
 import { apiUrl, fetcher } from '@/lib/client';
 import { formatDateTime, formatMoney, formatNumber, formatRelative } from '@/lib/format';
 import type { ChargePoint, Client } from '@/lib/types';
@@ -27,7 +27,7 @@ import {
   CardHeader,
   DataRow,
   EmptyState,
-  PageHeader,
+  PageToolbar,
 } from '@/components/ui/primitives';
 import {
   Table,
@@ -60,7 +60,7 @@ export function ClientDetailView({
   const { data: client, error, isLoading, mutate } = useSWR<Client>(
     apiUrl(`clients/${encodeURIComponent(clientId)}`),
     fetcher,
-    { refreshInterval: 15_000 },
+    { refreshInterval: REFRESH.config },
   );
 
   if (isLoading && !client) {
@@ -104,26 +104,15 @@ export function ClientDetailView({
         </Link>
       </div>
 
-      <PageHeader
-        title={client.name}
-        description={
-          client.businessRegister
-            ? `Регистр: ${client.businessRegister} • Бүртгэсэн: ${formatDateTime(client.createdAt)}`
-            : `Бүртгэсэн: ${formatDateTime(client.createdAt)}`
-        }
+      <PageToolbar
+        leading={<span className="text-sm font-semibold text-[var(--color-fg)]">{client.name}</span>}
         actions={
-          <>
-            <Button variant="ghost" size="sm" onClick={() => void mutate()} aria-label="Шинэчлэх">
-              <RefreshCw className="h-3.5 w-3.5" />
-              Шинэчлэх
+          canEdit ? (
+            <Button variant="secondary" size="sm" onClick={() => setEditingClient(true)}>
+              <Edit2 className="h-3.5 w-3.5" />
+              Мэдээлэл засах
             </Button>
-            {canEdit ? (
-              <Button variant="secondary" size="sm" onClick={() => setEditingClient(true)}>
-                <Edit2 className="h-3.5 w-3.5" />
-                Мэдээлэл засах
-              </Button>
-            ) : null}
-          </>
+          ) : null
         }
       />
 
@@ -179,9 +168,9 @@ export function ClientDetailView({
                     <TH>Холбогч</TH>
                     <TH>Загвар</TH>
                     <TH>Тариф</TH>
-                    <TH align="right">Сүүлд холбогдсон</TH>
+                    <TH>Сүүлд холбогдсон</TH>
                     {canEdit ? (
-                      <TH align="right">
+                      <TH>
                         <span className="sr-only">Үйлдэл</span>
                       </TH>
                     ) : null}
@@ -199,20 +188,22 @@ export function ClientDetailView({
                         <TD>
                           <Link
                             href={`/charge-points/${encodeURIComponent(cp.id)}`}
-                            className="font-medium hover:text-[var(--color-brand)] hover:underline flex items-center gap-1.5"
+                            className="font-medium hover:text-[var(--color-brand)] hover:underline flex items-center gap-1.5 justify-center"
                           >
-                            <span>{cp.cpId}</span>
+                            <span className={cp.name?.trim() ? undefined : 'font-mono'}>
+                              {cp.name?.trim() || cp.cpId}
+                            </span>
                             <ExternalLink className="h-3 w-3 text-[var(--color-fg-subtle)]" />
                           </Link>
-                          {cp.name ? (
-                            <p className="text-xs text-[var(--color-fg-muted)]">{cp.name}</p>
+                          {cp.name?.trim() ? (
+                            <p className="font-mono text-[11px] text-[var(--color-fg-subtle)]">{cp.cpId}</p>
                           ) : null}
                         </TD>
                         <TD>
                           <OnlineBadge online={cp.isOnline} />
                         </TD>
                         <TD>
-                          <div className="flex flex-wrap gap-1">
+                          <div className="flex flex-wrap justify-center gap-1">
                             {(cp.connectors ?? [])
                               .filter((c) => c.connectorId > 0)
                               .map((c) => (
@@ -238,16 +229,16 @@ export function ClientDetailView({
                             ? `${formatMoney(cp.tariffPerKwh)} / kWh`
                             : 'Үнэгүй'}
                         </TD>
-                        <TD align="right" className="text-xs text-[var(--color-fg-muted)]">
+                        <TD className="text-xs text-[var(--color-fg-muted)]">
                           {formatRelative(cp.lastSeenAt)}
                         </TD>
                         {canEdit ? (
-                          <TD align="right">
+                          <TD>
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => setEditingStation(cp)}
-                              aria-label={`${cp.cpId} засах`}
+                              aria-label={`${cp.name?.trim() || cp.cpId} засах`}
                             >
                               <Pencil className="h-3.5 w-3.5" />
                             </Button>

@@ -4,6 +4,7 @@ import * as React from 'react';
 import useSWR from 'swr';
 import { Landmark, TriangleAlert } from 'lucide-react';
 import { toast } from 'sonner';
+import { REFRESH } from '@/lib/live-query';
 import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
 import { formatDateTime } from '@/lib/format';
 import { useNow } from '@/lib/use-now';
@@ -41,7 +42,9 @@ interface CaInfo {
  * have one.
  */
 export function CaTab({ canAdmin }: { canAdmin: boolean }) {
-  const { data, error, isLoading, mutate } = useSWR<CaInfo>(apiUrl('security/ca'), fetcher);
+  const { data, error, isLoading, mutate } = useSWR<CaInfo>(apiUrl('security/ca'), fetcher, {
+    refreshInterval: REFRESH.config,
+  });
   const [generating, setGenerating] = React.useState(false);
   const now = useNow();
 

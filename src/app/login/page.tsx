@@ -2,6 +2,7 @@ import Image from 'next/image';
 import { Suspense } from 'react';
 import type { Metadata } from 'next';
 import { brand } from '@/lib/config';
+import { withBasePath } from '@/lib/base-path';
 import { LoginForm } from './login-form';
 
 export const metadata: Metadata = { title: 'Нэвтрэх' };
@@ -17,16 +18,22 @@ export default function LoginPage() {
       <div className="relative w-full max-w-sm">
         <div className="mb-8 flex flex-col items-center text-center">
           <Image
-            src="/eplug-mark.png"
+            src={withBasePath('/eplug-mark.png')}
             alt=""
             aria-hidden
-            width={56}
-            height={56}
+            width={64}
+            height={64}
             priority
-            className="mb-4 size-14 rounded-2xl shadow-[0_8px_24px_-8px_rgb(31_138_86/0.45)]"
+            className="mb-5 size-16 rounded-[18px] object-contain shadow-[0_10px_30px_-10px_rgb(31_138_86/0.6)] ring-1 ring-black/5 dark:ring-white/10"
           />
-          <h1 className="text-lg font-semibold tracking-tight">{brand.name}</h1>
-          <p className="mt-1 text-sm text-[var(--color-fg-muted)]">
+          {/* Mirrors the printed lockup: hairline rules either side of a wide-set wordmark. */}
+          <div className="flex items-center gap-3 text-[var(--color-fg)]" aria-hidden>
+            <span className="h-px w-6 bg-[var(--color-brand)]" />
+            <span className="pl-[0.4em] text-sm font-light uppercase tracking-[0.4em]">eplug</span>
+            <span className="h-px w-6 bg-[var(--color-brand)]" />
+          </div>
+          <h1 className="sr-only">{brand.name}</h1>
+          <p className="mt-3 text-sm text-[var(--color-fg-muted)]">
             Цэнэглэх сүлжээний удирдлагын самбар
           </p>
         </div>

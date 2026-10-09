@@ -9,15 +9,15 @@ import {
   FileCode2,
   FileText,
   Plus,
-  RefreshCw,
   Server,
   ShieldCheck,
   Trash2,
   XCircle,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { REFRESH } from '@/lib/live-query';
 import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
-import { Badge, Button, Card, EmptyState, PageHeader } from '@/components/ui/primitives';
+import { Badge, Button, Card, EmptyState, PageToolbar } from '@/components/ui/primitives';
 import { ConfirmModal } from '@/components/ui/modal';
 import { Pagination } from '@/components/ui/pagination';
 import {
@@ -66,6 +66,7 @@ export function EbarimtMerchantsView({
   const { data, error, mutate, isValidating } = useSWR<MerchantListResponse>(
     apiUrl('ebarimt-merchants', { page, limit, search }),
     fetcher,
+    { refreshInterval: REFRESH.config },
   );
 
   const [modalOpen, setModalOpen] = React.useState(false);
@@ -122,28 +123,21 @@ export function EbarimtMerchantsView({
 
   return (
     <div className="space-y-6">
-      <PageHeader
-        title="И-Баримт Мерчант Тохиргоо"
-        description="ГААТ eBarimt REST 3.0 системийн ААН Регистр (TIN), дүүрэг, хорооны бүртгэл болон серверийн холболтын лог"
+      <PageToolbar
         actions={
-          <div className="flex items-center gap-2">
-            <Button variant="secondary" size="sm" onClick={() => void mutate()} loading={isValidating}>
-              <RefreshCw className="h-4 w-4" />
+          canEdit ? (
+            <Button
+              size="sm"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-sm"
+              onClick={() => {
+                setEditingMerchant(null);
+                setModalOpen(true);
+              }}
+            >
+              <Plus className="mr-1.5 h-4 w-4" />
+              И-Баримт тохиргоо нэмэх
             </Button>
-            {canEdit && (
-              <Button
-                size="sm"
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-sm"
-                onClick={() => {
-                  setEditingMerchant(null);
-                  setModalOpen(true);
-                }}
-              >
-                <Plus className="mr-1.5 h-4 w-4" />
-                И-Баримт тохиргоо нэмэх
-              </Button>
-            )}
-          </div>
+          ) : null
         }
       />
 
@@ -158,7 +152,7 @@ export function EbarimtMerchantsView({
                 <TH>Дүүрэг / Хороо</TH>
                 <TH>И-Баримт төлөв</TH>
                 <TH>Серверийн орчин</TH>
-                <TH align="right">Үйлдэл</TH>
+                <TH>Үйлдэл</TH>
               </TR>
             </THead>
             <TBody>
@@ -207,7 +201,7 @@ export function EbarimtMerchantsView({
                         {districtName}, {khorooName}
                       </TD>
                       <TD>
-                        <div className="flex flex-col gap-1">
+                        <div className="flex flex-col items-center gap-1">
                           <div className="flex items-center gap-1.5">
                             <Badge tone={item.enabled ? 'ok' : 'idle'}>
                               {item.enabled ? 'И-Баримт идэвхтэй' : 'Идэвхгүй'}
@@ -221,7 +215,7 @@ export function EbarimtMerchantsView({
                         </div>
                       </TD>
                       <TD>
-                        <div className="flex flex-col">
+                        <div className="flex flex-col items-center">
                           <span
                             className={`inline-flex w-max items-center rounded px-2 py-0.5 text-[11px] font-bold ${
                               isTest
@@ -236,8 +230,8 @@ export function EbarimtMerchantsView({
                           </span>
                         </div>
                       </TD>
-                      <TD align="right">
-                        <div className="flex items-center justify-end gap-1.5">
+                      <TD>
+                        <div className="flex items-center justify-center gap-1.5">
                           <Button
                             variant="secondary"
                             size="sm"

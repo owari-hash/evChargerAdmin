@@ -2,11 +2,11 @@
 
 import * as React from 'react';
 import useSWR from 'swr';
-import { RefreshCw } from 'lucide-react';
+import { REFRESH } from '@/lib/live-query';
 import { apiUrl, fetcher } from '@/lib/client';
 import { formatDateTime, formatJson } from '@/lib/format';
 import type { CommandLog, Paginated } from '@/lib/types';
-import { Button, Card, CardHeader, CodeBlock } from '@/components/ui/primitives';
+import { Card, CardHeader, CodeBlock } from '@/components/ui/primitives';
 import { CommandStatusBadge } from '@/components/ui/status';
 import { Pagination } from '@/components/ui/pagination';
 import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty, TableLoading } from '@/components/ui/table';
@@ -18,8 +18,8 @@ export function CommandLogTab({ chargePointId }: { chargePointId: string }) {
   const [expanded, setExpanded] = React.useState<string | null>(null);
 
   const key = apiUrl(`charge-points/${encodeURIComponent(chargePointId)}/commands`, { page, limit });
-  const { data, error, isLoading, mutate } = useSWR<Paginated<CommandLog>>(key, fetcher, {
-    refreshInterval: 10_000,
+  const { data, error, isLoading } = useSWR<Paginated<CommandLog>>(key, fetcher, {
+    refreshInterval: REFRESH.live,
     keepPreviousData: true,
   });
 
@@ -30,12 +30,6 @@ export function CommandLogTab({ chargePointId }: { chargePointId: string }) {
       <CardHeader
         title="Командын түүх"
         description="Энэ станц руу илгээсэн командууд, хариу болон илгээсэн хэрэглэгч."
-        actions={
-          <Button variant="ghost" size="sm" onClick={() => void mutate()}>
-            <RefreshCw className="h-3.5 w-3.5" />
-            Шинэчлэх
-          </Button>
-        }
       />
 
       <TableWrap>
@@ -47,7 +41,7 @@ export function CommandLogTab({ chargePointId }: { chargePointId: string }) {
               <TH>Төлөв</TH>
               <TH>Илгээсэн</TH>
               <TH>Алдаа</TH>
-              <TH align="right" />
+              <TH />
             </tr>
           </THead>
           <TBody>
@@ -74,7 +68,7 @@ export function CommandLogTab({ chargePointId }: { chargePointId: string }) {
                       <TD className="max-w-[240px] truncate text-xs text-[var(--color-danger)]">
                         {cmd.error ?? ''}
                       </TD>
-                      <TD align="right" className="text-xs text-[var(--color-brand)]">
+                      <TD className="text-xs text-[var(--color-brand)]">
                         {isOpen ? 'Хураах' : 'Дэлгэрэнгүй'}
                       </TD>
                     </TR>

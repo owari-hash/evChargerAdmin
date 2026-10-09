@@ -3,9 +3,10 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, RefreshCw, Square, XCircle } from 'lucide-react';
+import { ArrowLeft, Square, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, errorMessage } from '@/lib/client';
+import { REFRESH, useAutoRefresh } from '@/lib/live-query';
 import {
   formatDateTime,
   formatDuration,
@@ -23,7 +24,7 @@ import {
   DataRow,
   Field,
   Input,
-  PageHeader,
+  PageToolbar,
 } from '@/components/ui/primitives';
 import { ConfirmModal, Modal } from '@/components/ui/modal';
 import { TransactionStatusBadge } from '@/components/ui/status';
@@ -31,6 +32,7 @@ import { StatCard } from '@/components/stat-card';
 import { STOP_REASON, mn } from '@/lib/mn';
 import { SessionPowerChart } from '@/components/charts/energy-chart';
 import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty } from '@/components/ui/table';
+import { StationName } from '@/components/station-name';
 
 /** Pull one measurand out of a MeterValue sample set. */
 function sample(mv: MeterValue, measurand: string): number | null {
@@ -66,6 +68,9 @@ export function TransactionView({
 
   const id = tx.transactionId ?? tx.id;
   const isActive = tx.status === 'Active';
+  // Server-rendered detail: a running session updates every few seconds; a
+  // finished one only needs the occasional check.
+  useAutoRefresh(isActive ? REFRESH.live : REFRESH.config);
 
   const energyWh = isActive ? (tx.lastMeterWh ?? tx.meterStart) - tx.meterStart : tx.energyWh;
 
@@ -127,38 +132,27 @@ export function TransactionView({
         Бүх цэнэглэлт
       </Link>
 
-      <PageHeader
-        title={
-          <span className="flex flex-wrap items-center gap-2.5">
-            <span className="font-mono">#{id} цэнэглэлт</span>
+      <PageToolbar
+        leading={
+          <>
+            <span className="font-mono text-sm font-semibold text-[var(--color-fg)]">#{id}</span>
             <TransactionStatusBadge status={tx.status} />
             {tx.startedRemotely ? <Badge tone="info">Алсаас эхэлсэн</Badge> : null}
             {tx.stoppedRemotely ? <Badge tone="info">Алсаас зогссон</Badge> : null}
-          </span>
-        }
-        description={
-          <>
-            <Link
-              href={`/charge-points/${encodeURIComponent(tx.chargePointId)}`}
-              className="font-mono hover:text-[var(--color-brand)] hover:underline"
-            >
-              {tx.chargePointId}
-            </Link>
-            {` · ${tx.connectorId} холбогч · карт `}
-            <Link
-              href={`/id-tags?search=${encodeURIComponent(tx.idTag)}`}
-              className="font-mono hover:text-[var(--color-brand)] hover:underline"
-            >
-              {tx.idTag}
-            </Link>
+            <span className="inline-flex items-center gap-1 text-xs text-[var(--color-fg-muted)]">
+              <StationName id={tx.chargePointId} inline />
+              {` · ${tx.connectorId} холбогч · карт `}
+              <Link
+                href={`/id-tags?search=${encodeURIComponent(tx.idTag)}`}
+                className="font-mono hover:text-[var(--color-brand)] hover:underline"
+              >
+                {tx.idTag}
+              </Link>
+            </span>
           </>
         }
         actions={
           <>
-            <Button variant="ghost" size="sm" onClick={() => router.refresh()}>
-              <RefreshCw className="h-3.5 w-3.5" />
-              Шинэчлэх
-            </Button>
             {canOperate && isActive ? (
               <>
                 <Button variant="primary" size="sm" onClick={() => setConfirmStop(true)}>
@@ -249,7 +243,7 @@ export function TransactionView({
               <tr>
                 <TH>Хугацаа</TH>
                 <TH>Хэмжигдэхүүн</TH>
-                <TH align="right">Утга</TH>
+                <TH>Утга</TH>
                 <TH>Нэгж</TH>
                 <TH>Фаз</TH>
                 <TH>Нөхцөл</TH>
@@ -273,7 +267,7 @@ export function TransactionView({
                         <TD className="text-xs">
                           {sv.measurand ?? 'Energy.Active.Import.Register'}
                         </TD>
-                        <TD align="right" className="font-mono text-xs font-medium">
+                        <TD className="font-mono text-xs font-medium">
                           {sv.value}
                         </TD>
                         <TD className="text-xs text-[var(--color-fg-muted)]">{sv.unit ?? '—'}</TD>

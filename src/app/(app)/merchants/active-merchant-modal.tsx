@@ -5,22 +5,29 @@ import useSWR from 'swr';
 import { toast } from 'sonner';
 import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
 import type { QpayActiveMerchantConfig, QpayMerchant } from '@/lib/types';
-import { Badge, Button, ErrorNote, Field, Input, Select } from '@/components/ui/primitives';
+import { Badge, Button, ErrorNote, Field, Input, Select, type SelectOption } from '@/components/ui/primitives';
 import { CopyButton } from '@/components/ui/copy-button';
 import { Modal } from '@/components/ui/modal';
 
 const POPULAR_BANKS: { code: string; name: string }[] = [
-  { code: '050000', name: '050000 - Хаан банк (Khan Bank)' },
-  { code: '040000', name: '040000 - Голомт банк (Golomt Bank)' },
-  { code: '020000', name: '020000 - Худалдаа хөгжлийн банк (TDB)' },
-  { code: '150000', name: '150000 - Хас банк (XacBank)' },
-  { code: '340000', name: '340000 - Төрийн банк (State Bank)' },
-  { code: '380000', name: '380000 - Богд банк (Bogd Bank)' },
-  { code: '320000', name: '320000 - Капитрон банк (Capitron Bank)' },
-  { code: '360000', name: '360000 - Чингис хаан банк (Chinggis Khaan Bank)' },
-  { code: '290000', name: '290000 - Тээвэр хөгжлийн банк (TransBank)' },
-  { code: '300000', name: '300000 - Ариг банк (Arig Bank)' },
-  { code: 'custom', name: 'Өөр банкны код бичих…' },
+  { code: '050000', name: 'Хаан банк (Khan Bank)' },
+  { code: '040000', name: 'Голомт банк (Golomt Bank)' },
+  { code: '020000', name: 'Худалдаа хөгжлийн банк (TDB)' },
+  { code: '150000', name: 'Хас банк (XacBank)' },
+  { code: '340000', name: 'Төрийн банк (State Bank)' },
+  { code: '380000', name: 'Богд банк (Bogd Bank)' },
+  { code: '320000', name: 'Капитрон банк (Capitron Bank)' },
+  { code: '360000', name: 'Чингис хаан банк (Chinggis Khaan Bank)' },
+  { code: '290000', name: 'Тээвэр хөгжлийн банк (TransBank)' },
+  { code: '300000', name: 'Ариг банк (Arig Bank)' },
+];
+
+/** Sentinel option that swaps the dropdown for a free-text bank code field. */
+const CUSTOM_BANK = 'custom';
+
+const BANK_OPTIONS: SelectOption[] = [
+  ...POPULAR_BANKS.map((b) => ({ value: b.code, code: b.code, label: b.name })),
+  { value: CUSTOM_BANK, label: 'Өөр банкны код бичих…' },
 ];
 
 function getMerchantDisplayName(m: QpayMerchant): string {
@@ -73,51 +80,59 @@ export function ActiveMerchantModal({
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
-  // Sync state when opened
+  // Seed the form once per opening. The merchant list keeps revalidating in the
+  // background, and re-seeding on every refresh would wipe what is being typed;
+  // it is only re-run while the list is still empty (i.e. still loading).
+  const seededRef = React.useRef(false);
   React.useEffect(() => {
-    if (open) {
-      setError(null);
-      const targetId = initialData?.merchantId ?? 'cc1a2b2f-aa84-474a-953c-c55b575a9883';
-      const bCode = initialData?.bankCode ?? '050000';
-      const accNum = initialData?.accountNumber ?? '5475332224';
-      const accName = initialData?.accountName ?? 'ЗЭВ ТАБС ХХК';
+    if (!open) {
+      seededRef.current = false;
+      return;
+    }
+    if (seededRef.current) return;
+    if (allMerchants.length > 0) seededRef.current = true;
 
-      const matched = allMerchants.find((m) => m.merchant_id === targetId);
+    setError(null);
+    const targetId = initialData?.merchantId ?? 'cc1a2b2f-aa84-474a-953c-c55b575a9883';
+    const bCode = initialData?.bankCode ?? '050000';
+    const accNum = initialData?.accountNumber ?? '5475332224';
+    const accName = initialData?.accountName ?? 'ЗЭВ ТАБС ХХК';
 
-      if (matched && matched.merchant_id) {
-        setSelectedMerchantId(matched.merchant_id);
-        setIsManualInput(false);
-        setMerchantId(matched.merchant_id);
-        const name = getMerchantDisplayName(matched) || initialData?.merchantName || 'ЗЭВ ТАБС ХХК';
-        setMerchantName(name);
-        setMccCode(matched.mcc_code || initialData?.mccCode || '5311');
-        setAccountName(accName || name);
-      } else if (targetId) {
-        setSelectedMerchantId(targetId);
-        setIsManualInput(false);
-        setMerchantId(targetId);
-        setMerchantName(initialData?.merchantName ?? 'ЗЭВ ТАБС ХХК');
-        setMccCode(initialData?.mccCode ?? '5311');
-        setAccountName(accName);
-      } else {
-        setSelectedMerchantId('');
-        setIsManualInput(false);
-        setMerchantId('');
-        setMerchantName('');
-        setMccCode('5311');
-        setAccountName('');
-      }
+    const matched = allMerchants.find((m) => m.merchant_id === targetId);
 
-      setAccountNumber(accNum);
+    if (matched && matched.merchant_id) {
+      setSelectedMerchantId(matched.merchant_id);
+      setIsManualInput(false);
+      setMerchantId(matched.merchant_id);
+      const name = getMerchantDisplayName(matched) || initialData?.merchantName || 'ЗЭВ ТАБС ХХК';
+      setMerchantName(name);
+      setMccCode(matched.mcc_code || initialData?.mccCode || '5311');
+      setAccountName(accName || name);
+    } else if (targetId) {
+      setSelectedMerchantId(targetId);
+      setIsManualInput(false);
+      setMerchantId(targetId);
+      setMerchantName(initialData?.merchantName ?? 'ЗЭВ ТАБС ХХК');
+      setMccCode(initialData?.mccCode ?? '5311');
+      setAccountName(accName);
+    } else {
+      setSelectedMerchantId('');
+      setIsManualInput(false);
+      setMerchantId('');
+      setMerchantName('');
+      setMccCode('5311');
+      setAccountName('');
+    }
 
-      const known = POPULAR_BANKS.some((b) => b.code === bCode);
-      if (known) {
-        setSelectedBank(bCode);
-        setCustomBankCode('');
-      } else {
-        setSelectedBank('custom');
-        setCustomBankCode(bCode);
-      }
+    setAccountNumber(accNum);
+
+    const known = POPULAR_BANKS.some((b) => b.code === bCode);
+    if (known) {
+      setSelectedBank(bCode);
+      setCustomBankCode('');
+    } else {
+      setSelectedBank(CUSTOM_BANK);
+      setCustomBankCode(bCode);
     }
   }, [open, initialData, allMerchants]);
 
@@ -148,7 +163,7 @@ export function ActiveMerchantModal({
     return allMerchants.find((m) => m.merchant_id === merchantId) ?? null;
   }, [allMerchants, merchantId]);
 
-  const bankCode = selectedBank === 'custom' ? customBankCode.trim() : selectedBank;
+  const bankCode = selectedBank === CUSTOM_BANK ? customBankCode.trim() : selectedBank;
 
   async function handleSave(e?: React.FormEvent) {
     if (e) e.preventDefault();
@@ -349,16 +364,13 @@ export function ActiveMerchantModal({
                 <Select
                   value={selectedBank}
                   onChange={(e) => setSelectedBank(e.target.value)}
-                >
-                  {POPULAR_BANKS.map((b) => (
-                    <option key={b.code} value={b.code}>
-                      {b.name}
-                    </option>
-                  ))}
-                </Select>
+                  options={BANK_OPTIONS}
+                  searchPlaceholder="Банкны нэр эсвэл код…"
+                  required
+                />
               </Field>
 
-              {selectedBank === 'custom' && (
+              {selectedBank === CUSTOM_BANK && (
                 <Field label="Банкны код (6 орон) *">
                   <Input
                     value={customBankCode}

@@ -50,24 +50,26 @@ export function CardBody({ className, ...props }: React.ComponentProps<'div'>) {
   return <div className={cn('p-5', className)} {...props} />;
 }
 
-export function PageHeader({
-  title,
-  description,
+/**
+ * Toolbar row at the top of a page. Pages carry no heading/description block —
+ * the sidebar already says where you are — so this only holds the page's
+ * actions (right-aligned) and, on detail pages, a compact `leading` identity
+ * line. Renders nothing when both are empty, so no gap is left behind.
+ */
+export function PageToolbar({
+  leading,
   actions,
 }: {
-  title: React.ReactNode;
-  description?: React.ReactNode;
+  leading?: React.ReactNode;
   actions?: React.ReactNode;
 }) {
+  if (!leading && !actions) return null;
   return (
-    <div className="mb-6 flex flex-wrap items-end justify-between gap-4">
-      <div className="min-w-0">
-        <h1 className="text-xl font-semibold tracking-tight text-[var(--color-fg)]">{title}</h1>
-        {description ? (
-          <p className="mt-1 text-sm text-[var(--color-fg-muted)]">{description}</p>
-        ) : null}
-      </div>
-      {actions ? <div className="flex flex-wrap items-center gap-2">{actions}</div> : null}
+    <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+      {leading ? <div className="flex min-w-0 flex-wrap items-center gap-2">{leading}</div> : null}
+      {actions ? (
+        <div className="ml-auto flex flex-wrap items-center justify-end gap-2">{actions}</div>
+      ) : null}
     </div>
   );
 }
@@ -215,13 +217,8 @@ export function Textarea({ className, ...props }: React.ComponentProps<'textarea
   return <textarea className={cn(FIELD_BASE, 'py-2 font-mono text-xs', className)} {...props} />;
 }
 
-export function Select({ className, children, ...props }: React.ComponentProps<'select'>) {
-  return (
-    <select className={cn(FIELD_BASE, 'h-9 pr-8', className)} {...props}>
-      {children}
-    </select>
-  );
-}
+// Themed dropdown with a hidden native <select> underneath; see ./select.tsx.
+export { Select, type SelectOption, type SelectProps } from './select';
 
 export function Label({ className, ...props }: React.ComponentProps<'label'>) {
   return (

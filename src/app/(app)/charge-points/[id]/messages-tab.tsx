@@ -2,7 +2,8 @@
 
 import * as React from 'react';
 import useSWR from 'swr';
-import { ArrowDownLeft, ArrowUpRight, RefreshCw } from 'lucide-react';
+import { ArrowDownLeft, ArrowUpRight } from 'lucide-react';
+import { REFRESH } from '@/lib/live-query';
 import { apiUrl, fetcher } from '@/lib/client';
 import { formatDateTime, formatJson } from '@/lib/format';
 import type { OcppMessageLog, Paginated } from '@/lib/types';
@@ -36,8 +37,8 @@ export function MessagesTab({ chargePointId }: { chargePointId: string }) {
     page,
     limit,
   });
-  const { data, error, isLoading, mutate } = useSWR<Paginated<OcppMessageLog>>(key, fetcher, {
-    refreshInterval: autoRefresh ? 5_000 : 0,
+  const { data, error, isLoading } = useSWR<Paginated<OcppMessageLog>>(key, fetcher, {
+    refreshInterval: autoRefresh ? REFRESH.live : 0,
     keepPreviousData: true,
   });
 
@@ -56,9 +57,6 @@ export function MessagesTab({ chargePointId }: { chargePointId: string }) {
               onClick={() => setAutoRefresh((v) => !v)}
             >
               {autoRefresh ? 'Автомат шинэчлэлт асаалттай' : 'Автомат шинэчлэлт унтраалттай'}
-            </Button>
-            <Button variant="ghost" size="sm" onClick={() => void mutate()}>
-              <RefreshCw className="h-3.5 w-3.5" />
             </Button>
           </>
         }
@@ -95,7 +93,7 @@ export function MessagesTab({ chargePointId }: { chargePointId: string }) {
               <TH>Төрөл</TH>
               <TH>Үйлдэл</TH>
               <TH>Мессежийн дугаар</TH>
-              <TH align="right" />
+              <TH />
             </tr>
           </THead>
           <TBody>
@@ -145,7 +143,7 @@ export function MessagesTab({ chargePointId }: { chargePointId: string }) {
                       <TD className="max-w-[180px] truncate font-mono text-[11px] text-[var(--color-fg-subtle)]">
                         {msg.messageId}
                       </TD>
-                      <TD align="right" className="text-xs text-[var(--color-brand)]">
+                      <TD className="text-xs text-[var(--color-brand)]">
                         {isOpen ? 'Хураах' : 'Агуулга'}
                       </TD>
                     </TR>

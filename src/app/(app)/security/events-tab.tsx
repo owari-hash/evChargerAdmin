@@ -1,10 +1,10 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
 import useSWR from 'swr';
 import { Check, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
+import { REFRESH } from '@/lib/live-query';
 import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
 import { formatDateTime, formatNumber, formatRelative } from '@/lib/format';
 import type { Paginated, SecurityEvent } from '@/lib/types';
@@ -12,6 +12,7 @@ import { Button, Card, EmptyState, Input, Select } from '@/components/ui/primiti
 import { SecurityCriticality } from '@/components/ui/status';
 import { FilterBar, Pagination } from '@/components/ui/pagination';
 import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty, TableLoading } from '@/components/ui/table';
+import { StationName } from '@/components/station-name';
 
 interface Summary {
   byType: { _id: string; count: number; lastAt: string }[];
@@ -37,7 +38,7 @@ export function SecurityEventsTab({ canOperate }: { canOperate: boolean }) {
   }, [chargePointId]);
 
   const { data: summary } = useSWR<Summary>(apiUrl('security/events/summary'), fetcher, {
-    refreshInterval: 60_000,
+    refreshInterval: REFRESH.config,
   });
 
   const key = apiUrl('security/events', {
@@ -49,7 +50,7 @@ export function SecurityEventsTab({ canOperate }: { canOperate: boolean }) {
     limit,
   });
   const { data, error, isLoading, mutate } = useSWR<Paginated<SecurityEvent>>(key, fetcher, {
-    refreshInterval: 30_000,
+    refreshInterval: REFRESH.config,
     keepPreviousData: true,
   });
 
@@ -166,7 +167,7 @@ export function SecurityEventsTab({ canOperate }: { canOperate: boolean }) {
                 <TH>Цэнэглэх станц</TH>
                 <TH>Техникийн мэдээлэл</TH>
                 <TH>Хүлээн зөвшөөрсөн</TH>
-                <TH align="right" />
+                <TH />
               </tr>
             </THead>
             <TBody>
@@ -187,12 +188,7 @@ export function SecurityEventsTab({ canOperate }: { canOperate: boolean }) {
                       <SecurityCriticality critical={event.isCritical} />
                     </TD>
                     <TD>
-                      <Link
-                        href={`/charge-points/${encodeURIComponent(event.chargePointId)}`}
-                        className="text-xs hover:text-[var(--color-brand)] hover:underline"
-                      >
-                        {event.chargePointId}
-                      </Link>
+                      <StationName id={event.chargePointId} />
                     </TD>
                     <TD className="max-w-[280px] truncate font-mono text-[11px] text-[var(--color-fg-muted)]">
                       {event.techInfo ?? '—'}
@@ -206,7 +202,7 @@ export function SecurityEventsTab({ canOperate }: { canOperate: boolean }) {
                         '—'
                       )}
                     </TD>
-                    <TD align="right">
+                    <TD>
                       {canOperate && !event.acknowledged ? (
                         <Button
                           variant="ghost"

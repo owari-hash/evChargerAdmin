@@ -2,11 +2,12 @@
 
 import * as React from 'react';
 import useSWR from 'swr';
-import { Check, CheckCircle2, Plus, RefreshCw, Settings, Store, Trash2, TriangleAlert } from 'lucide-react';
+import { Check, CheckCircle2, Plus, Settings, Store, Trash2, TriangleAlert } from 'lucide-react';
 import { toast } from 'sonner';
+import { REFRESH } from '@/lib/live-query';
 import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
 import type { PaymentsConfig, QpayActiveMerchantConfig, QpayMerchant } from '@/lib/types';
-import { Badge, Button, Card, EmptyState, PageHeader } from '@/components/ui/primitives';
+import { Badge, Button, Card, EmptyState, PageToolbar } from '@/components/ui/primitives';
 import { CopyButton } from '@/components/ui/copy-button';
 import { ConfirmModal } from '@/components/ui/modal';
 import { Pagination } from '@/components/ui/pagination';
@@ -65,18 +66,21 @@ export function MerchantsView({
   const [busy, setBusy] = React.useState(false);
 
   // Whether QuickQR is configured at all decides between "empty" and "not set up".
-  const { data: config } = useSWR<PaymentsConfig>(apiUrl('payments/config'), fetcher);
+  const { data: config } = useSWR<PaymentsConfig>(apiUrl('payments/config'), fetcher, {
+    refreshInterval: REFRESH.config,
+  });
   const ready = config?.quickQrEnabled ?? true;
 
   const { data: activeMerchant, mutate: mutateActive } = useSWR<QpayActiveMerchantConfig>(
     ready ? apiUrl('qpay/active-merchant') : null,
     fetcher,
+    { refreshInterval: REFRESH.config },
   );
 
   const { data, error, isLoading, mutate } = useSWR<MerchantList | QpayMerchant[]>(
     ready ? apiUrl('qpay/merchants', { page, limit }) : null,
     fetcher,
-    { keepPreviousData: true },
+    { refreshInterval: REFRESH.config, keepPreviousData: true },
   );
 
   const rows = readRows(data);
@@ -99,23 +103,9 @@ export function MerchantsView({
 
   return (
     <>
-      <PageHeader
-        title="QPay мерчант"
-        description="QuickQR дээр төлбөр хүлээн авах мерчантуудын бүртгэл."
+      <PageToolbar
         actions={
           <>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                void mutate();
-                void mutateActive();
-              }}
-              disabled={!ready}
-            >
-              <RefreshCw className="h-3.5 w-3.5" />
-              Шинэчлэх
-            </Button>
             {canEdit ? (
               <Button
                 variant="primary"
@@ -217,7 +207,7 @@ export function MerchantsView({
                 <TH>MCC</TH>
                 <TH>Холбоо барих</TH>
                 <TH>Хаяг</TH>
-                <TH align="right" />
+                <TH />
               </tr>
             </THead>
             <TBody>
@@ -240,7 +230,7 @@ export function MerchantsView({
                   return (
                     <TR key={m.merchant_id ?? i}>
                       <TD className="text-xs font-medium">
-                        <div className="flex items-center gap-2">
+                        <div className="flex items-center justify-center gap-2">
                           <span>{merchantName(m)}</span>
                           {isActive && <Badge tone="ok">Идэвхтэй</Badge>}
                         </div>
@@ -273,8 +263,8 @@ export function MerchantsView({
                     <TD className="max-w-[220px] truncate text-xs text-[var(--color-fg-muted)]">
                       {m.address ?? '—'}
                     </TD>
-                      <TD align="right">
-                        <div className="flex items-center justify-end gap-1">
+                      <TD>
+                        <div className="flex items-center justify-center gap-1">
                           {!isActive && canEdit && m.merchant_id ? (
                             <Button
                               variant="ghost"

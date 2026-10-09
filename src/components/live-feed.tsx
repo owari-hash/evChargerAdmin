@@ -1,7 +1,6 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Pause, Play, Trash2 } from 'lucide-react';
 import { Badge, Button, Dot, type Tone } from '@/components/ui/primitives';
@@ -9,6 +8,7 @@ import { useLiveEvents } from '@/lib/use-live-events';
 import { formatPercent, formatPower, formatRelative, formatWh, humanizeEvent } from '@/lib/format';
 import { CONNECTOR_STATUS, EVENT, MEASURAND, STOP_REASON, mn } from '@/lib/mn';
 import type { CsmsEvent } from '@/lib/types';
+import { StationName } from '@/components/station-name';
 
 const EVENT_TONES: Record<string, Tone> = {
   'chargepoint.connected': 'ok',
@@ -171,12 +171,11 @@ export function LiveFeed({
               <div className="min-w-0 flex-1">
                 <p className="truncate text-[var(--color-fg)]">{describe(event)}</p>
                 {showChargePoint && event.chargePointId ? (
-                  <Link
-                    href={`/charge-points/${encodeURIComponent(event.chargePointId)}`}
-                    className="truncate font-mono text-[11px] text-[var(--color-fg-muted)] hover:text-[var(--color-brand)]"
-                  >
-                    {event.chargePointId}
-                  </Link>
+                  <StationName
+                    id={event.chargePointId}
+                    inline
+                    className="block truncate text-[11px] text-[var(--color-fg-muted)]"
+                  />
                 ) : null}
               </div>
 

@@ -3,8 +3,10 @@
 import * as React from 'react';
 import Link from 'next/link';
 import useSWR from 'swr';
-import { Building2, Pencil, Plus, RefreshCw, Search, Zap } from 'lucide-react';
+import { Building2, Pencil, Plus, Search, Zap } from 'lucide-react';
+import { REFRESH } from '@/lib/live-query';
 import { apiUrl, fetcher } from '@/lib/client';
+import { cn } from '@/lib/cn';
 import { formatNumber, formatRelative } from '@/lib/format';
 import type { ChargePoint, Client, Paginated } from '@/lib/types';
 import {
@@ -12,7 +14,7 @@ import {
   Card,
   EmptyState,
   Input,
-  PageHeader,
+  PageToolbar,
   Select,
 } from '@/components/ui/primitives';
 import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty, TableLoading } from '@/components/ui/table';
@@ -40,6 +42,7 @@ export function ChargePointsView({
   const { data: clientsData } = useSWR<Paginated<Client>>(
     apiUrl('clients', { limit: 100 }),
     fetcher,
+    { refreshInterval: REFRESH.config },
   );
   const clients = clientsData?.data ?? [];
 
@@ -60,7 +63,7 @@ export function ChargePointsView({
     limit,
   });
   const { data, error, isLoading, mutate } = useSWR<Paginated<ChargePoint>>(key, fetcher, {
-    refreshInterval: 15_000,
+    refreshInterval: REFRESH.live,
     keepPreviousData: true,
   });
 
@@ -69,22 +72,14 @@ export function ChargePointsView({
 
   return (
     <>
-      <PageHeader
-        title="Цэнэглэх станц"
-        description="CSMS-д бүртгэлтэй бүх цэнэглэх станц, тэдгээрийн холболтын байдал."
+      <PageToolbar
         actions={
-          <>
-            <Button variant="ghost" size="sm" onClick={() => void mutate()} aria-label="Шинэчлэх">
-              <RefreshCw className="h-3.5 w-3.5" />
-              Шинэчлэх
+          canEdit ? (
+            <Button variant="primary" size="sm" onClick={() => setCreating(true)}>
+              <Plus className="h-3.5 w-3.5" />
+              Станц бүртгэх
             </Button>
-            {canEdit ? (
-              <Button variant="primary" size="sm" onClick={() => setCreating(true)}>
-                <Plus className="h-3.5 w-3.5" />
-                Станц бүртгэх
-              </Button>
-            ) : null}
-          </>
+          ) : null
         }
       />
 
@@ -142,9 +137,9 @@ export function ChargePointsView({
                 <TH>Үйлдвэрлэгч / загвар</TH>
                 <TH>Программ</TH>
                 <TH>Бүртгэл</TH>
-                <TH align="right">Сүүлд холбогдсон</TH>
+                <TH>Сүүлд холбогдсон</TH>
                 {canEdit ? (
-                  <TH align="right">
+                  <TH>
                     <span className="sr-only">Үйлдэл</span>
                   </TH>
                 ) : null}
@@ -165,12 +160,16 @@ export function ChargePointsView({
                     <TD>
                       <Link
                         href={`/charge-points/${encodeURIComponent(cp.id)}`}
-                        className="font-medium hover:text-[var(--color-brand)] hover:underline"
+                        className={cn(
+                          'font-medium hover:text-[var(--color-brand)] hover:underline',
+                          !cp.name?.trim() && 'font-mono',
+                        )}
+                        title={cp.name?.trim() ? cp.cpId : undefined}
                       >
-                        {cp.cpId}
+                        {cp.name?.trim() || cp.cpId}
                       </Link>
-                      {cp.name ? (
-                        <p className="text-xs text-[var(--color-fg-muted)]">{cp.name}</p>
+                      {cp.name?.trim() ? (
+                        <p className="font-mono text-[11px] text-[var(--color-fg-subtle)]">{cp.cpId}</p>
                       ) : null}
                     </TD>
                     <TD className="text-xs">
@@ -190,7 +189,7 @@ export function ChargePointsView({
                       <OnlineBadge online={cp.isOnline} />
                     </TD>
                     <TD>
-                      <div className="flex flex-wrap gap-1">
+                      <div className="flex flex-wrap justify-center gap-1">
                         {(cp.connectors ?? [])
                           .filter((c) => c.connectorId > 0)
                           .map((c) => (
@@ -216,16 +215,16 @@ export function ChargePointsView({
                     <TD>
                       <RegistrationBadge status={cp.registrationStatus} />
                     </TD>
-                    <TD align="right" className="text-xs text-[var(--color-fg-muted)]">
+                    <TD className="text-xs text-[var(--color-fg-muted)]">
                       {formatRelative(cp.lastSeenAt)}
                     </TD>
                     {canEdit ? (
-                      <TD align="right">
+                      <TD>
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => setEditing(cp)}
-                          aria-label={`${cp.cpId} станцыг засах`}
+                          aria-label={`${cp.name?.trim() || cp.cpId} станцыг засах`}
                         >
                           <Pencil className="h-3.5 w-3.5" />
                           Засах

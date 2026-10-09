@@ -23,19 +23,17 @@ export function THead({ className, ...props }: React.ComponentProps<'thead'>) {
   );
 }
 
-export function TH({
-  className,
-  align = 'left',
-  ...props
-}: React.ComponentProps<'th'> & { align?: 'left' | 'right' | 'center' }) {
+/**
+ * Header cells are always centered across the console; body cells follow the
+ * same default so every column lines up under its header. `align` on TD stays
+ * available for the rare cell that genuinely needs it.
+ */
+export function TH({ className, ...props }: React.ComponentProps<'th'>) {
   return (
     <th
       scope="col"
       className={cn(
-        'whitespace-nowrap px-4 py-2.5 text-xs font-medium text-[var(--color-fg-muted)]',
-        align === 'right' && 'text-right',
-        align === 'center' && 'text-center',
-        align === 'left' && 'text-left',
+        'whitespace-nowrap px-4 py-2.5 text-center text-xs font-medium text-[var(--color-fg-muted)]',
         className,
       )}
       {...props}
@@ -66,7 +64,7 @@ export function TR({
 
 export function TD({
   className,
-  align = 'left',
+  align = 'center',
   ...props
 }: React.ComponentProps<'td'> & { align?: 'left' | 'right' | 'center' }) {
   return (
@@ -75,6 +73,7 @@ export function TD({
         'px-4 py-2.5 text-[var(--color-fg)]',
         align === 'right' && 'text-right',
         align === 'center' && 'text-center',
+        align === 'left' && 'text-left',
         className,
       )}
       {...props}

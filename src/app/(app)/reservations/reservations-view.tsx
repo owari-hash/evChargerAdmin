@@ -3,18 +3,20 @@
 import * as React from 'react';
 import Link from 'next/link';
 import useSWR from 'swr';
-import { CalendarClock, RefreshCw, XCircle } from 'lucide-react';
+import { CalendarClock, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { REFRESH } from '@/lib/live-query';
 import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
 import { formatDateTime, formatRelative } from '@/lib/format';
 import { useNow } from '@/lib/use-now';
 import { RESERVATION_STATES, type Paginated, type Reservation } from '@/lib/types';
-import { Button, Card, EmptyState, Input, PageHeader, Select } from '@/components/ui/primitives';
+import { Button, Card, EmptyState, Input, Select } from '@/components/ui/primitives';
 import { ReservationBadge } from '@/components/ui/status';
 import { ConfirmModal } from '@/components/ui/modal';
 import { FilterBar, Pagination } from '@/components/ui/pagination';
 import { RESERVATION_STATE, mn } from '@/lib/mn';
 import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty, TableLoading } from '@/components/ui/table';
+import { StationName } from '@/components/station-name';
 
 export function ReservationsView({ canOperate }: { canOperate: boolean }) {
   const now = useNow();
@@ -36,7 +38,7 @@ export function ReservationsView({ canOperate }: { canOperate: boolean }) {
 
   const key = apiUrl('reservations', { state, chargePointId: debouncedCp, page, limit });
   const { data, error, isLoading, mutate } = useSWR<Paginated<Reservation>>(key, fetcher, {
-    refreshInterval: 30_000,
+    refreshInterval: REFRESH.live,
     keepPreviousData: true,
   });
 
@@ -66,17 +68,6 @@ export function ReservationsView({ canOperate }: { canOperate: boolean }) {
 
   return (
     <>
-      <PageHeader
-        title="Захиалга"
-        description="ReserveNow командаар үүсгэсэн холбогчийн захиалга."
-        actions={
-          <Button variant="ghost" size="sm" onClick={() => void mutate()}>
-            <RefreshCw className="h-3.5 w-3.5" />
-            Шинэчлэх
-          </Button>
-        }
-      />
-
       <Card>
         <FilterBar>
           <Select
@@ -114,8 +105,8 @@ export function ReservationsView({ canOperate }: { canOperate: boolean }) {
                 <TH>Карт</TH>
                 <TH>Дуусах</TH>
                 <TH>Цэнэглэлт</TH>
-                <TH align="right">Үүсгэсэн</TH>
-                <TH align="right" />
+                <TH>Үүсгэсэн</TH>
+                <TH />
               </tr>
             </THead>
             <TBody>
@@ -136,12 +127,7 @@ export function ReservationsView({ canOperate }: { canOperate: boolean }) {
                         <ReservationBadge state={r.state} />
                       </TD>
                       <TD>
-                        <Link
-                          href={`/charge-points/${encodeURIComponent(r.chargePointId)}`}
-                          className="text-xs hover:text-[var(--color-brand)] hover:underline"
-                        >
-                          {r.chargePointId}
-                        </Link>
+                        <StationName id={r.chargePointId} />
                       </TD>
                       <TD className="font-mono text-xs">{r.connectorId}</TD>
                       <TD className="font-mono text-xs">{r.idTag}</TD>
@@ -168,10 +154,10 @@ export function ReservationsView({ canOperate }: { canOperate: boolean }) {
                           '—'
                         )}
                       </TD>
-                      <TD align="right" className="text-xs text-[var(--color-fg-muted)]">
+                      <TD className="text-xs text-[var(--color-fg-muted)]">
                         {formatRelative(r.createdAt)}
                       </TD>
-                      <TD align="right">
+                      <TD>
                         {canOperate && r.state === 'Active' ? (
                           <Button variant="ghost" size="sm" onClick={() => setCancelling(r)}>
                             <XCircle className="h-3.5 w-3.5" />
@@ -219,7 +205,10 @@ export function ReservationsView({ canOperate }: { canOperate: boolean }) {
         confirmLabel="CancelReservation илгээх"
         message={
           <>
-            <span className="font-mono font-medium">{cancelling?.chargePointId}</span> станцын{' '}
+            {cancelling ? (
+              <StationName id={cancelling.chargePointId} inline link={false} className="text-sm" />
+            ) : null}{' '}
+            станцын{' '}
             {cancelling?.connectorId} дугаар холбогчийн захиалгыг чөлөөлнө. Холбогч бүх жолоочид
             нээлттэй болно.
           </>

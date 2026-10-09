@@ -1,16 +1,17 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
 import useSWR from 'swr';
-import { RefreshCw, SlidersHorizontal } from 'lucide-react';
+import { SlidersHorizontal } from 'lucide-react';
+import { REFRESH } from '@/lib/live-query';
 import { apiUrl, fetcher } from '@/lib/client';
 import { formatDateTime, formatNumber, formatRelative } from '@/lib/format';
 import type { ChargingProfile, Paginated } from '@/lib/types';
-import { Badge, Button, Card, CodeBlock, EmptyState, Input, PageHeader } from '@/components/ui/primitives';
+import { Badge, Card, CodeBlock, EmptyState, Input } from '@/components/ui/primitives';
 import { FilterBar, Pagination } from '@/components/ui/pagination';
 import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty, TableLoading } from '@/components/ui/table';
 import { formatJson } from '@/lib/format';
+import { StationName } from '@/components/station-name';
 
 interface Schedule {
   chargingRateUnit?: string;
@@ -46,7 +47,8 @@ export function ChargingProfilesView() {
   }, [chargePointId]);
 
   const key = apiUrl('charging-profiles', { chargePointId: debouncedCp, page, limit });
-  const { data, error, isLoading, mutate } = useSWR<Paginated<ChargingProfile>>(key, fetcher, {
+  const { data, error, isLoading } = useSWR<Paginated<ChargingProfile>>(key, fetcher, {
+    refreshInterval: REFRESH.config,
     keepPreviousData: true,
   });
 
@@ -54,17 +56,6 @@ export function ChargingProfilesView() {
 
   return (
     <>
-      <PageHeader
-        title="Ухаалаг цэнэглэлтийн профайл"
-        description="CSMS-ээс станцууд дээр суулгасан цэнэглэлтийн хязгаарлалтууд."
-        actions={
-          <Button variant="ghost" size="sm" onClick={() => void mutate()}>
-            <RefreshCw className="h-3.5 w-3.5" />
-            Шинэчлэх
-          </Button>
-        }
-      />
-
       <Card>
         <FilterBar>
           <Input
@@ -89,11 +80,11 @@ export function ChargingProfilesView() {
                 <TH>Холбогч</TH>
                 <TH>Зориулалт</TH>
                 <TH>Төрөл</TH>
-                <TH align="right">Давхарга</TH>
+                <TH>Давхарга</TH>
                 <TH>Хуваарь</TH>
                 <TH>Хүчинтэй</TH>
-                <TH align="right">Үүсгэсэн</TH>
-                <TH align="right" />
+                <TH>Үүсгэсэн</TH>
+                <TH />
               </tr>
             </THead>
             <TBody>
@@ -111,13 +102,7 @@ export function ChargingProfilesView() {
                       <TR interactive onClick={() => setExpanded(isOpen ? null : p._id)}>
                         <TD className="font-mono text-xs font-medium">#{p.chargingProfileId}</TD>
                         <TD>
-                          <Link
-                            href={`/charge-points/${encodeURIComponent(p.chargePointId)}`}
-                            className="text-xs hover:text-[var(--color-brand)] hover:underline"
-                            onClick={(e) => e.stopPropagation()}
-                          >
-                            {p.chargePointId}
-                          </Link>
+                          <StationName id={p.chargePointId} />
                         </TD>
                         <TD className="font-mono text-xs">{p.connectorId}</TD>
                         <TD className="text-xs">
@@ -131,7 +116,7 @@ export function ChargingProfilesView() {
                           {p.chargingProfileKind ?? '—'}
                           {p.recurrencyKind ? ` · ${p.recurrencyKind}` : ''}
                         </TD>
-                        <TD align="right" className="text-xs">
+                        <TD className="text-xs">
                           {p.stackLevel ?? 0}
                         </TD>
                         <TD className="text-xs">{summarise(p.chargingSchedule)}</TD>
@@ -140,10 +125,10 @@ export function ChargingProfilesView() {
                             ? `${p.validFrom ? formatDateTime(p.validFrom) : '—'} → ${p.validTo ? formatDateTime(p.validTo) : '—'}`
                             : 'Байнга'}
                         </TD>
-                        <TD align="right" className="text-xs text-[var(--color-fg-muted)]">
+                        <TD className="text-xs text-[var(--color-fg-muted)]">
                           {formatRelative(p.createdAt)}
                         </TD>
-                        <TD align="right" className="text-xs text-[var(--color-brand)]">
+                        <TD className="text-xs text-[var(--color-brand)]">
                           {isOpen ? 'Хураах' : 'Хуваарь'}
                         </TD>
                       </TR>

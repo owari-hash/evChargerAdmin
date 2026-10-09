@@ -1,10 +1,12 @@
 'use client';
 
+import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { X } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { brand } from '@/lib/config';
+import { withBasePath } from '@/lib/base-path';
 import { visibleSections } from './nav-items';
 import { ROLE } from '@/lib/mn';
 import type { SessionUser } from '@/lib/types';
@@ -41,11 +43,17 @@ export function Sidebar({
         )}
       >
         <div className="flex h-14 shrink-0 items-center justify-between gap-2 border-b border-[var(--color-border)] px-4">
-          <Link href="/" className="flex items-center gap-2.5 overflow-hidden">
+          <Link
+            href="/"
+            className="group flex min-w-0 items-center gap-3 rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-brand)]"
+            aria-label={`${brand.name} — нүүр хуудас`}
+          >
             <Logo />
-            <div className="min-w-0 leading-tight">
-              <div className="truncate text-sm font-semibold">{brand.name}</div>
-              <div className="truncate text-[10px] text-[var(--color-fg-subtle)]">
+            <div className="min-w-0">
+              <div className="truncate text-[15px] font-semibold leading-5 tracking-tight text-[var(--color-fg)]">
+                {brand.name}
+              </div>
+              <div className="truncate text-[11px] font-medium leading-4 tracking-wide text-[var(--color-fg-subtle)]">
                 OCPP 1.6J удирдлага
               </div>
             </div>
@@ -102,15 +110,17 @@ export function Sidebar({
   );
 }
 
+/** The eplug mark: the app icon artwork, rounded like an app tile. */
 function Logo() {
   return (
-    <span
-      className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-[var(--color-brand)]"
-      aria-hidden="true"
-    >
-      <svg viewBox="0 0 24 24" className="h-4.5 w-4.5" fill="var(--color-brand-fg)">
-        <path d="M13.5 2 5 13.2h5.2L9.4 22 19 10.4h-5.4L13.5 2Z" />
-      </svg>
-    </span>
+    <Image
+      src={withBasePath('/eplug-mark.png')}
+      alt=""
+      aria-hidden
+      width={36}
+      height={36}
+      priority
+      className="size-9 shrink-0 rounded-[10px] object-contain shadow-[0_4px_14px_-6px_rgb(16_185_129/0.55)] ring-1 ring-black/5 dark:ring-white/10"
+    />
   );
 }

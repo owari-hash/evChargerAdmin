@@ -17,13 +17,15 @@ import type {
   TopChargePoint,
   Transaction,
 } from '@/lib/types';
-import { Badge, Card, CardHeader, EmptyState, PageHeader } from '@/components/ui/primitives';
+import { Badge, Card, CardHeader, EmptyState } from '@/components/ui/primitives';
 import { StatCard } from '@/components/stat-card';
 import { LiveFeed } from '@/components/live-feed';
 import { EnergySeriesChart, TopChargePointsChart } from '@/components/charts/energy-chart';
 import { ConnectorStatusBadge } from '@/components/ui/status';
 import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty } from '@/components/ui/table';
 import { BackendDown } from '@/components/backend-down';
+import { StationName } from '@/components/station-name';
+import { AutoRefresh } from '@/components/auto-refresh';
 
 export const dynamic = 'force-dynamic';
 
@@ -47,11 +49,8 @@ export default async function OverviewPage() {
 
   return (
     <>
-      <PageHeader
-        title="Ерөнхий тойм"
-        description="Цэнэглэх сүлжээний сүүлийн 24 цагийн байдал."
-      />
-
+      {/* Re-renders this server page in place every few seconds while visible. */}
+      <AutoRefresh />
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-3 xl:grid-cols-6">
         <StatCard
           label="Цэнэглэх станц"
@@ -149,10 +148,10 @@ export default async function OverviewPage() {
                   <TH>Цэнэглэлт</TH>
                   <TH>Цэнэглэх станц</TH>
                   <TH>Карт</TH>
-                  <TH align="right">Эрчим хүч</TH>
-                  <TH align="right">Чадал</TH>
-                  <TH align="right">Цэнэг</TH>
-                  <TH align="right">Эхэлсэн</TH>
+                  <TH>Эрчим хүч</TH>
+                  <TH>Чадал</TH>
+                  <TH>Цэнэг</TH>
+                  <TH>Эхэлсэн</TH>
                 </tr>
               </THead>
               <TBody>
@@ -170,27 +169,22 @@ export default async function OverviewPage() {
                         </Link>
                       </TD>
                       <TD>
-                        <Link
-                          href={`/charge-points/${encodeURIComponent(tx.chargePointId)}`}
-                          className="text-xs hover:text-[var(--color-brand)] hover:underline"
-                        >
-                          {tx.chargePointId}
-                        </Link>
+                        <StationName id={tx.chargePointId} />
                         <span className="ml-1 text-xs text-[var(--color-fg-subtle)]">
                           #{tx.connectorId}
                         </span>
                       </TD>
                       <TD className="font-mono text-xs">{tx.idTag}</TD>
-                      <TD align="right" className="text-xs">
+                      <TD className="text-xs">
                         {formatWh((tx.lastMeterWh ?? tx.meterStart) - tx.meterStart)}
                       </TD>
-                      <TD align="right" className="text-xs">
+                      <TD className="text-xs">
                         {tx.lastPowerW ? `${(tx.lastPowerW / 1000).toFixed(1)} kW` : '—'}
                       </TD>
-                      <TD align="right" className="text-xs">
+                      <TD className="text-xs">
                         {tx.lastSocPercent != null ? `${tx.lastSocPercent}%` : '—'}
                       </TD>
-                      <TD align="right" className="text-xs text-[var(--color-fg-muted)]">
+                      <TD className="text-xs text-[var(--color-fg-muted)]">
                         {formatRelative(tx.startTimestamp)}
                       </TD>
                     </TR>
@@ -251,8 +245,10 @@ export default async function OverviewPage() {
                         {event.isCritical ? 'ноцтой' : 'мэдээлэл'}
                       </Badge>
                     </div>
-                    <p className="mt-0.5 truncate font-mono text-[11px] text-[var(--color-fg-muted)]">
-                      {event.chargePointId} · {formatRelative(event.timestamp)}
+                    <p className="mt-0.5 truncate text-[11px] text-[var(--color-fg-muted)]">
+                      <StationName id={event.chargePointId} inline link={false} className="text-[11px]" />
+                      {' · '}
+                      {formatRelative(event.timestamp)}
                     </p>
                   </li>
                 ))}

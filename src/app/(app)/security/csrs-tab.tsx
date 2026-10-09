@@ -1,10 +1,10 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
 import useSWR from 'swr';
 import { Check, FileKey, X } from 'lucide-react';
 import { toast } from 'sonner';
+import { REFRESH } from '@/lib/live-query';
 import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
 import { formatDateTime, formatRelative } from '@/lib/format';
 import type { CsrRequest, Paginated } from '@/lib/types';
@@ -14,6 +14,7 @@ import { CSR_STATUS, mn } from '@/lib/mn';
 import { Modal } from '@/components/ui/modal';
 import { FilterBar, Pagination } from '@/components/ui/pagination';
 import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty, TableLoading } from '@/components/ui/table';
+import { StationName, useStationLabel } from '@/components/station-name';
 
 /**
  * Certificate signing requests raised by charge points via SignCertificate.req.
@@ -21,6 +22,7 @@ import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty, TableLoading } 
  * CertificateSigned.req (white paper use cases A02/A03).
  */
 export function CsrsTab({ canOperate }: { canOperate: boolean }) {
+  const stationLabel = useStationLabel();
   const [status, setStatus] = React.useState('Pending');
   const [chargePointId, setChargePointId] = React.useState('');
   const [debouncedCp, setDebouncedCp] = React.useState('');
@@ -40,7 +42,7 @@ export function CsrsTab({ canOperate }: { canOperate: boolean }) {
 
   const key = apiUrl('security/csrs', { status, chargePointId: debouncedCp, page, limit });
   const { data, error, isLoading, mutate } = useSWR<Paginated<CsrRequest>>(key, fetcher, {
-    refreshInterval: 30_000,
+    refreshInterval: REFRESH.config,
     keepPreviousData: true,
   });
 
@@ -50,7 +52,7 @@ export function CsrsTab({ canOperate }: { canOperate: boolean }) {
     setBusy(true);
     try {
       await api.post(`security/csrs/${encodeURIComponent(csr._id)}/sign`);
-      toast.success(`Гэрчилгээг баталгаажуулж ${csr.chargePointId} руу илгээлээ`);
+      toast.success(`Гэрчилгээг баталгаажуулж ${stationLabel(csr.chargePointId)} руу илгээлээ`);
       setViewing(null);
       void mutate();
     } catch (err) {
@@ -96,8 +98,8 @@ export function CsrsTab({ canOperate }: { canOperate: boolean }) {
                 <TH>Төлөв</TH>
                 <TH>Баталгаажуулсан</TH>
                 <TH>Шалтгаан</TH>
-                <TH align="right">Хүлээн авсан</TH>
-                <TH align="right" />
+                <TH>Хүлээн авсан</TH>
+                <TH />
               </tr>
             </THead>
             <TBody>
@@ -111,12 +113,7 @@ export function CsrsTab({ canOperate }: { canOperate: boolean }) {
                 rows.map((csr) => (
                   <TR key={csr._id}>
                     <TD>
-                      <Link
-                        href={`/charge-points/${encodeURIComponent(csr.chargePointId)}`}
-                        className="text-xs font-medium hover:text-[var(--color-brand)] hover:underline"
-                      >
-                        {csr.chargePointId}
-                      </Link>
+                      <StationName id={csr.chargePointId} />
                     </TD>
                     <TD>
                       <CsrStatusBadge status={csr.status} />
@@ -131,11 +128,11 @@ export function CsrsTab({ canOperate }: { canOperate: boolean }) {
                     <TD className="max-w-[220px] truncate text-xs text-[var(--color-fg-muted)]">
                       {csr.rejectedReason ?? csr.error ?? '—'}
                     </TD>
-                    <TD align="right" className="text-xs text-[var(--color-fg-muted)]">
+                    <TD className="text-xs text-[var(--color-fg-muted)]">
                       {formatRelative(csr.createdAt)}
                     </TD>
-                    <TD align="right">
-                      <div className="flex justify-end gap-1">
+                    <TD>
+                      <div className="flex justify-center gap-1">
                         <Button variant="ghost" size="sm" onClick={() => setViewing(csr)}>
                           Шалгах
                         </Button>
@@ -191,7 +188,7 @@ export function CsrsTab({ canOperate }: { canOperate: boolean }) {
         open={viewing !== null}
         onClose={() => setViewing(null)}
         title="Гэрчилгээний хүсэлт"
-        description={viewing?.chargePointId}
+        description={stationLabel(viewing?.chargePointId)}
         size="lg"
         footer={
           <>
@@ -248,6 +245,7 @@ function RejectModal({
   onClose: () => void;
   onRejected: () => void;
 }) {
+  const stationLabel = useStationLabel();
   const [reason, setReason] = React.useState('');
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -275,7 +273,7 @@ function RejectModal({
       open={csr !== null}
       onClose={onClose}
       title="Хүсэлтээс татгалзах"
-      description={csr?.chargePointId}
+      description={stationLabel(csr?.chargePointId)}
       size="sm"
       footer={
         <>

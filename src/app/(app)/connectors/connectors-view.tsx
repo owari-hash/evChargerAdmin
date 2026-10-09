@@ -3,16 +3,18 @@
 import * as React from 'react';
 import Link from 'next/link';
 import useSWR from 'swr';
-import { Pencil, RefreshCw } from 'lucide-react';
+import { Pencil } from 'lucide-react';
+import { REFRESH } from '@/lib/live-query';
 import { apiUrl, fetcher } from '@/lib/client';
 import { formatNumber, formatPower, formatRelative, formatWh } from '@/lib/format';
 import { CONNECTOR_STATUSES, type Connector, type Paginated } from '@/lib/types';
-import { Badge, Button, Card, Input, PageHeader, Select } from '@/components/ui/primitives';
+import { Badge, Button, Card, Input, Select } from '@/components/ui/primitives';
 import { ConnectorStatusBadge, ErrorCodeBadge, connectorTone } from '@/components/ui/status';
 import { CONNECTOR_STATUS, mn } from '@/lib/mn';
 import { FilterBar, Pagination } from '@/components/ui/pagination';
 import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty, TableLoading } from '@/components/ui/table';
 import { EditConnectorModal } from './edit-connector-modal';
+import { StationName } from '@/components/station-name';
 
 /**
  * Network-wide connector view. Connector 0 is hidden by default because it
@@ -45,7 +47,7 @@ export function ConnectorsView({
 
   const key = apiUrl('connectors', { status, chargePointId: debouncedCp, page, limit });
   const { data, error, isLoading, mutate } = useSWR<Paginated<Connector>>(key, fetcher, {
-    refreshInterval: 10_000,
+    refreshInterval: REFRESH.live,
     keepPreviousData: true,
   });
 
@@ -61,17 +63,6 @@ export function ConnectorsView({
 
   return (
     <>
-      <PageHeader
-        title="Холбогч"
-        description="Сүлжээн дэх бүх холбогчийн шууд төлөв."
-        actions={
-          <Button variant="ghost" size="sm" onClick={() => void mutate()}>
-            <RefreshCw className="h-3.5 w-3.5" />
-            Шинэчлэх
-          </Button>
-        }
-      />
-
       {counts.length > 0 ? (
         <div className="mb-4 flex flex-wrap gap-2">
           {counts.map(([s, n]) => (
@@ -142,12 +133,12 @@ export function ConnectorsView({
                 <TH>Алдаа</TH>
                 <TH>Ашиглалт</TH>
                 <TH>Цэнэглэлт</TH>
-                <TH align="right">Тоолуур</TH>
-                <TH align="right">Чадал</TH>
-                <TH align="right">Цэнэг</TH>
-                <TH align="right">Шинэчлэгдсэн</TH>
+                <TH>Тоолуур</TH>
+                <TH>Чадал</TH>
+                <TH>Цэнэг</TH>
+                <TH>Шинэчлэгдсэн</TH>
                 {canOperate ? (
-                  <TH align="right">
+                  <TH>
                     <span className="sr-only">Үйлдэл</span>
                   </TH>
                 ) : null}
@@ -164,12 +155,7 @@ export function ConnectorsView({
                 rows.map((c) => (
                   <TR key={`${c.chargePointId}-${c.connectorId}`}>
                     <TD>
-                      <Link
-                        href={`/charge-points/${encodeURIComponent(c.chargePointId)}`}
-                        className="text-xs font-medium hover:text-[var(--color-brand)] hover:underline"
-                      >
-                        {c.chargePointId}
-                      </Link>
+                      <StationName id={c.chargePointId} />
                     </TD>
                     <TD className="font-mono text-xs">{c.connectorId}</TD>
                     <TD>
@@ -193,20 +179,20 @@ export function ConnectorsView({
                         '—'
                       )}
                     </TD>
-                    <TD align="right" className="text-xs">
+                    <TD className="text-xs">
                       {formatWh(c.lastMeterWh)}
                     </TD>
-                    <TD align="right" className="text-xs">
+                    <TD className="text-xs">
                       {formatPower(c.lastPowerW)}
                     </TD>
-                    <TD align="right" className="text-xs">
+                    <TD className="text-xs">
                       {c.lastSocPercent != null ? `${c.lastSocPercent}%` : '—'}
                     </TD>
-                    <TD align="right" className="text-xs text-[var(--color-fg-muted)]">
+                    <TD className="text-xs text-[var(--color-fg-muted)]">
                       {formatRelative(c.statusTimestamp ?? c.updatedAt)}
                     </TD>
                     {canOperate ? (
-                      <TD align="right">
+                      <TD>
                         <Button
                           variant="ghost"
                           size="sm"

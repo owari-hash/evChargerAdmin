@@ -9,6 +9,7 @@ import { Button, DataRow, ErrorNote, Field, Select } from '@/components/ui/primi
 import { Modal } from '@/components/ui/modal';
 import { ConnectorStatusBadge, ErrorCodeBadge } from '@/components/ui/status';
 import type { Connector } from '@/lib/types';
+import { useStationLabel } from '@/components/station-name';
 
 type Availability = 'Operative' | 'Inoperative';
 
@@ -29,6 +30,7 @@ export function EditConnectorModal({
   onClose: () => void;
   onSaved?: () => void;
 }) {
+  const stationLabel = useStationLabel();
   const [availability, setAvailability] = React.useState<Availability>(
     connector.availability === 'Inoperative' ? 'Inoperative' : 'Operative',
   );
@@ -89,7 +91,7 @@ export function EditConnectorModal({
       open
       onClose={onClose}
       title="Холбогч удирдах"
-      description={`${connector.chargePointId} · ${connector.connectorId} дугаар холбогч`}
+      description={`${stationLabel(connector.chargePointId)} · ${connector.connectorId} дугаар холбогч`}
       footer={
         <>
           <Button variant="ghost" onClick={onClose} disabled={saving || unlocking}>

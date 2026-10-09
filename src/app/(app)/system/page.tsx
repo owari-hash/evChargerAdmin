@@ -1,11 +1,12 @@
 import type { Metadata } from 'next';
 import { Activity, Database, Globe, Radio, ShieldCheck, Zap } from 'lucide-react';
 import { csmsSafe } from '@/lib/server-api';
+import { AutoRefresh } from '@/components/auto-refresh';
 import { serverConfig, brand } from '@/lib/config';
 import { getSessionUser } from '@/lib/session';
 import { formatDateTime, formatNumber, formatUptime } from '@/lib/format';
 import type { ApiDiscovery, HealthResponse } from '@/lib/types';
-import { Badge, Card, CardHeader, DataRow, PageHeader } from '@/components/ui/primitives';
+import { Badge, Card, CardHeader, DataRow } from '@/components/ui/primitives';
 import { RoleBadge } from '@/components/ui/status';
 import { StatCard } from '@/components/stat-card';
 import { BackendDown } from '@/components/backend-down';
@@ -35,11 +36,8 @@ export default async function SystemPage() {
 
   return (
     <>
-      <PageHeader
-        title="Систем"
-        description="CSMS серверийн эрүүл мэнд, энэ самбар түүнтэй хэрхэн холбогдсон тухай."
-      />
-
+      {/* Health/uptime are server-rendered; re-render in place every 30s while visible. */}
+      <AutoRefresh interval={30_000} />
       <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
         <StatCard
           label="Сервер"

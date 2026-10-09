@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import useSWR from 'swr';
-import { RefreshCw } from 'lucide-react';
+import { REFRESH } from '@/lib/live-query';
 import { apiUrl, fetcher } from '@/lib/client';
 import {
   formatDateTime,
@@ -14,11 +14,12 @@ import {
   formatWh,
 } from '@/lib/format';
 import { TRANSACTION_STATUSES, type Paginated, type Transaction } from '@/lib/types';
-import { Button, Card, Input, PageHeader, Select } from '@/components/ui/primitives';
+import { Button, Card, Input, Select } from '@/components/ui/primitives';
 import { TransactionStatusBadge } from '@/components/ui/status';
 import { FilterBar, Pagination } from '@/components/ui/pagination';
 import { TRANSACTION_STATUS, mn } from '@/lib/mn';
 import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty, TableLoading } from '@/components/ui/table';
+import { StationName } from '@/components/station-name';
 
 export function TransactionsView({
   canOperate,
@@ -58,9 +59,9 @@ export function TransactionsView({
     limit,
   });
 
-  const { data, error, isLoading, mutate } = useSWR<Paginated<Transaction>>(key, fetcher, {
-    // Active sessions change constantly; completed ones do not.
-    refreshInterval: status === 'Completed' ? 0 : 15_000,
+  const { data, error, isLoading } = useSWR<Paginated<Transaction>>(key, fetcher, {
+    // Active sessions change constantly; completed ones rarely do.
+    refreshInterval: status === 'Completed' ? REFRESH.config : REFRESH.live,
     keepPreviousData: true,
   });
 
@@ -76,17 +77,6 @@ export function TransactionsView({
 
   return (
     <>
-      <PageHeader
-        title="Цэнэглэлтүүд"
-        description="CSMS-д бүртгэгдсэн бүх цэнэглэлт, шинэ нь эхэндээ."
-        actions={
-          <Button variant="ghost" size="sm" onClick={() => void mutate()}>
-            <RefreshCw className="h-3.5 w-3.5" />
-            Шинэчлэх
-          </Button>
-        }
-      />
-
       <Card>
         <FilterBar>
           <Select
@@ -164,10 +154,10 @@ export function TransactionsView({
                 <TH>Цэнэглэх станц</TH>
                 <TH>Карт</TH>
                 <TH>Эхэлсэн</TH>
-                <TH align="right">Үргэлжилсэн</TH>
-                <TH align="right">Эрчим хүч</TH>
-                <TH align="right">Чадал</TH>
-                <TH align="right">Төлбөр</TH>
+                <TH>Үргэлжилсэн</TH>
+                <TH>Эрчим хүч</TH>
+                <TH>Чадал</TH>
+                <TH>Төлбөр</TH>
                 <TH>Зогссон шалтгаан</TH>
               </tr>
             </THead>
@@ -199,12 +189,7 @@ export function TransactionsView({
                         <TransactionStatusBadge status={tx.status} />
                       </TD>
                       <TD>
-                        <Link
-                          href={`/charge-points/${encodeURIComponent(tx.chargePointId)}`}
-                          className="text-xs hover:text-[var(--color-brand)] hover:underline"
-                        >
-                          {tx.chargePointId}
-                        </Link>
+                        <StationName id={tx.chargePointId} />
                         <span className="ml-1 text-xs text-[var(--color-fg-subtle)]">
                           #{tx.connectorId}
                         </span>
@@ -213,16 +198,16 @@ export function TransactionsView({
                       <TD className="whitespace-nowrap text-xs text-[var(--color-fg-muted)]">
                         {formatDateTime(tx.startTimestamp)}
                       </TD>
-                      <TD align="right" className="text-xs">
+                      <TD className="text-xs">
                         {formatDuration(tx.startTimestamp, tx.stopTimestamp)}
                       </TD>
-                      <TD align="right" className="text-xs font-medium">
+                      <TD className="text-xs font-medium">
                         {formatWh(energyWh)}
                       </TD>
-                      <TD align="right" className="text-xs">
+                      <TD className="text-xs">
                         {tx.status === 'Active' ? formatPower(tx.lastPowerW) : '—'}
                       </TD>
-                      <TD align="right" className="text-xs">
+                      <TD className="text-xs">
                         {tx.cost != null ? formatMoney(tx.cost) : '—'}
                       </TD>
                       <TD className="text-xs text-[var(--color-fg-muted)]">{tx.stopReason ?? '—'}</TD>

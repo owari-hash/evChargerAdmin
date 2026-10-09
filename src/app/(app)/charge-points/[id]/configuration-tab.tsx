@@ -64,7 +64,7 @@ export function ConfigurationTab({
       <Card>
         <CardHeader
           title="Тохиргооны түлхүүр"
-          description="Станцаас хадгалсан хуулбар. Шинэчлэхийн тулд дахин уншина уу."
+          description="Станцаас хадгалсан хуулбар — автоматаар шинэчлэгдэнэ. Станцаас шинээр татахын тулд GetConfiguration илгээнэ үү."
           actions={
             canOperate ? (
               <Button
@@ -73,10 +73,14 @@ export function ConfigurationTab({
                 onClick={() => void refetchAll()}
                 loading={refreshing}
                 disabled={!isOnline}
-                title={isOnline ? undefined : 'Станц офлайн байна'}
+                title={
+                  isOnline
+                    ? 'Станц руу GetConfiguration команд илгээж бүх түлхүүрийг татна'
+                    : 'Станц офлайн байна'
+                }
               >
                 <Download className="h-3.5 w-3.5" />
-                Бүх түлхүүрийг унших
+                Цэнэглэгчээс татах
               </Button>
             ) : null
           }
@@ -112,7 +116,7 @@ export function ConfigurationTab({
               canOperate ? (
                 <Button variant="primary" size="sm" onClick={() => void refetchAll()} disabled={!isOnline}>
                   <Download className="h-3.5 w-3.5" />
-                  Бүх түлхүүрийг унших
+                  Цэнэглэгчээс татах
                 </Button>
               ) : null
             }
@@ -125,8 +129,8 @@ export function ConfigurationTab({
                   <TH>Түлхүүр</TH>
                   <TH>Утга</TH>
                   <TH>Хандалт</TH>
-                  <TH align="right">Шинэчлэгдсэн</TH>
-                  <TH align="right" />
+                  <TH>Шинэчлэгдсэн</TH>
+                  <TH />
                 </tr>
               </THead>
               <TBody>
@@ -151,10 +155,10 @@ export function ConfigurationTab({
                           <Badge tone="info">writable</Badge>
                         )}
                       </TD>
-                      <TD align="right" className="text-xs text-[var(--color-fg-muted)]">
+                      <TD className="text-xs text-[var(--color-fg-muted)]">
                         {formatRelative(k.updatedAt)}
                       </TD>
-                      <TD align="right">
+                      <TD>
                         {canOperate && !k.readonly ? (
                           <Button
                             variant="ghost"

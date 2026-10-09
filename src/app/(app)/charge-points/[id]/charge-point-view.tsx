@@ -10,12 +10,12 @@ import {
   MapPin,
   Pencil,
   PlugZap,
-  RefreshCw,
   Trash2,
   Unplug,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, errorMessage } from '@/lib/client';
+import { REFRESH, useAutoRefresh } from '@/lib/live-query';
 import {
   formatDateTime,
   formatDuration,
@@ -33,7 +33,7 @@ import {
   CardHeader,
   DataRow,
   EmptyState,
-  PageHeader,
+  PageToolbar,
 } from '@/components/ui/primitives';
 import { Tabs, TabCount, type TabItem } from '@/components/ui/tabs';
 import { ConfirmModal, Modal } from '@/components/ui/modal';
@@ -59,6 +59,9 @@ export function ChargePointView({
   canAdmin: boolean;
 }) {
   const router = useRouter();
+  // Server-rendered detail: re-fetch in place so status, connectors and
+  // sessions stay live without a refresh button.
+  useAutoRefresh(REFRESH.live);
   const [tab, setTab] = React.useState<TabKey>('overview');
   const [busy, setBusy] = React.useState(false);
   const [confirmDelete, setConfirmDelete] = React.useState(false);
@@ -114,7 +117,7 @@ export function ChargePointView({
     setBusy(true);
     try {
       await api.del(`charge-points/${encodeURIComponent(detail.id)}`);
-      toast.success(`${detail.cpId} устгагдлаа`);
+      toast.success(`${detail.name?.trim() || detail.cpId} устгагдлаа`);
       router.replace('/charge-points');
     } catch (err) {
       toast.error(errorMessage(err));
@@ -132,33 +135,31 @@ export function ChargePointView({
         Бүх цэнэглэх станц
       </Link>
 
-      <PageHeader
-        title={
-          <span className="flex flex-wrap items-center gap-2.5">
-            <span className="font-mono">{detail.cpId}</span>
+      <PageToolbar
+        leading={
+          <>
+            <span className="text-sm font-semibold text-[var(--color-fg)]">
+              {detail.name?.trim() || <span className="font-mono">{detail.cpId}</span>}
+            </span>
+            {detail.name?.trim() ? (
+              <span className="font-mono text-xs text-[var(--color-fg-subtle)]">{detail.cpId}</span>
+            ) : null}
             <OnlineBadge online={detail.isOnline} />
             <RegistrationBadge status={detail.registrationStatus} />
             <Badge tone="idle">{detail.securityProfile}-р профайл</Badge>
-          </span>
-        }
-        description={
-          <span className="flex flex-wrap items-center gap-x-3 gap-y-1">
-            {detail.name ? <span>{detail.name}</span> : null}
             {detail.address ? (
-              <span className="inline-flex items-center gap-1">
+              <span className="inline-flex items-center gap-1 text-xs text-[var(--color-fg-muted)]">
                 <MapPin className="h-3 w-3" />
                 {detail.address}
               </span>
             ) : null}
-            <span>Сүүлд холбогдсон {formatRelative(detail.lastSeenAt)}</span>
-          </span>
+            <span className="text-xs text-[var(--color-fg-muted)]">
+              Сүүлд холбогдсон {formatRelative(detail.lastSeenAt)}
+            </span>
+          </>
         }
         actions={
           <>
-            <Button variant="ghost" size="sm" onClick={() => router.refresh()}>
-              <RefreshCw className="h-3.5 w-3.5" />
-              Шинэчлэх
-            </Button>
             {canOperate ? (
               <Button variant="secondary" size="sm" onClick={() => setEditing(true)}>
                 <Pencil className="h-3.5 w-3.5" />
@@ -204,7 +205,7 @@ export function ChargePointView({
       {tab === 'commands' ? (
         <CommandConsole
           chargePointId={detail.id}
-          cpLabel={detail.cpId}
+          cpLabel={detail.name?.trim() || detail.cpId}
           isOnline={detail.isOnline}
           canOperate={canOperate}
         />
@@ -244,7 +245,12 @@ export function ChargePointView({
         message={
           <>
             <span className="block">
-              Энэ үйлдэл <span className="font-mono font-medium">{detail.cpId}</span> станц, түүний
+              Энэ үйлдэл{' '}
+              <span className="font-medium">{detail.name?.trim() || detail.cpId}</span>
+              {detail.name?.trim() ? (
+                <span className="font-mono text-xs text-[var(--color-fg-muted)]"> ({detail.cpId})</span>
+              ) : null}{' '}
+              станц, түүний
               холбогч болон хадгалагдсан тохиргоог устгаж, WebSocket холболтыг хаана.
             </span>
             <span className="mt-2 block">
@@ -317,10 +323,10 @@ function OverviewTab({ detail }: { detail: ChargePointDetail }) {
                   <TH>Цэнэглэлт</TH>
                   <TH>Холбогч</TH>
                   <TH>Карт</TH>
-                  <TH align="right">Эрчим хүч</TH>
-                  <TH align="right">Чадал</TH>
-                  <TH align="right">Цэнэг</TH>
-                  <TH align="right">Үргэлжилсэн</TH>
+                  <TH>Эрчим хүч</TH>
+                  <TH>Чадал</TH>
+                  <TH>Цэнэг</TH>
+                  <TH>Үргэлжилсэн</TH>
                 </tr>
               </THead>
               <TBody>
@@ -339,16 +345,16 @@ function OverviewTab({ detail }: { detail: ChargePointDetail }) {
                       </TD>
                       <TD className="text-xs">#{tx.connectorId}</TD>
                       <TD className="font-mono text-xs">{tx.idTag}</TD>
-                      <TD align="right" className="text-xs">
+                      <TD className="text-xs">
                         {formatWh((tx.lastMeterWh ?? tx.meterStart) - tx.meterStart)}
                       </TD>
-                      <TD align="right" className="text-xs">
+                      <TD className="text-xs">
                         {formatPower(tx.lastPowerW)}
                       </TD>
-                      <TD align="right" className="text-xs">
+                      <TD className="text-xs">
                         {tx.lastSocPercent != null ? `${tx.lastSocPercent}%` : '—'}
                       </TD>
-                      <TD align="right" className="text-xs text-[var(--color-fg-muted)]">
+                      <TD className="text-xs text-[var(--color-fg-muted)]">
                         {formatDuration(tx.startTimestamp)}
                       </TD>
                     </TR>
@@ -537,9 +543,9 @@ function ConnectorsTab({ detail }: { detail: ChargePointDetail }) {
                 <TH>Алдаа</TH>
                 <TH>Ашиглалт</TH>
                 <TH>Цэнэглэлт</TH>
-                <TH align="right">Тоолуур</TH>
-                <TH align="right">Чадал</TH>
-                <TH align="right">Шинэчлэгдсэн</TH>
+                <TH>Тоолуур</TH>
+                <TH>Чадал</TH>
+                <TH>Шинэчлэгдсэн</TH>
               </tr>
             </THead>
             <TBody>
@@ -567,13 +573,13 @@ function ConnectorsTab({ detail }: { detail: ChargePointDetail }) {
                       '—'
                     )}
                   </TD>
-                  <TD align="right" className="text-xs">
+                  <TD className="text-xs">
                     {formatWh(c.lastMeterWh)}
                   </TD>
-                  <TD align="right" className="text-xs">
+                  <TD className="text-xs">
                     {formatPower(c.lastPowerW)}
                   </TD>
-                  <TD align="right" className="text-xs text-[var(--color-fg-muted)]">
+                  <TD className="text-xs text-[var(--color-fg-muted)]">
                     {formatRelative(c.statusTimestamp ?? c.updatedAt)}
                   </TD>
                 </TR>

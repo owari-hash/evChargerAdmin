@@ -1,9 +1,9 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
 import useSWR from 'swr';
 import { FileSearch, ScrollText } from 'lucide-react';
+import { REFRESH } from '@/lib/live-query';
 import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
 import { formatDate, formatDateTime } from '@/lib/format';
 import { useNow } from '@/lib/use-now';
@@ -13,8 +13,10 @@ import { Modal } from '@/components/ui/modal';
 import { CopyButton } from '@/components/ui/copy-button';
 import { FilterBar, Pagination } from '@/components/ui/pagination';
 import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty, TableLoading } from '@/components/ui/table';
+import { StationName, useStationLabel } from '@/components/station-name';
 
 export function CertificatesTab() {
+  const stationLabel = useStationLabel();
   const now = useNow();
   const [type, setType] = React.useState('');
   const [chargePointId, setChargePointId] = React.useState('');
@@ -34,6 +36,7 @@ export function CertificatesTab() {
 
   const key = apiUrl('security/certificates', { type, chargePointId: debouncedCp, page, limit });
   const { data, error, isLoading } = useSWR<Paginated<CertificateRecord>>(key, fetcher, {
+    refreshInterval: REFRESH.config,
     keepPreviousData: true,
   });
 
@@ -81,7 +84,7 @@ export function CertificatesTab() {
                 <TH>Олгогч</TH>
                 <TH>Сериал</TH>
                 <TH>Хүчинтэй хугацаа</TH>
-                <TH align="right" />
+                <TH />
               </tr>
             </THead>
             <TBody>
@@ -105,12 +108,7 @@ export function CertificatesTab() {
                       </TD>
                       <TD className="text-xs">
                         {cert.chargePointId ? (
-                          <Link
-                            href={`/charge-points/${encodeURIComponent(cert.chargePointId)}`}
-                            className="hover:text-[var(--color-brand)] hover:underline"
-                          >
-                            {cert.chargePointId}
-                          </Link>
+                          <StationName id={cert.chargePointId} />
                         ) : (
                           '—'
                         )}
@@ -127,7 +125,7 @@ export function CertificatesTab() {
                           {expired ? ' (expired)' : ''}
                         </span>
                       </TD>
-                      <TD align="right">
+                      <TD>
                         <Button variant="ghost" size="sm" onClick={() => setViewing(cert)}>
                           Дэлгэрэнгүй
                         </Button>
@@ -182,7 +180,7 @@ export function CertificatesTab() {
           <div className="space-y-4">
             <dl className="grid grid-cols-1 gap-x-6 gap-y-1 sm:grid-cols-2">
               <Detail label="Төрөл" value={viewing.type} />
-              <Detail label="Цэнэглэх станц" value={viewing.chargePointId ?? '—'} />
+              <Detail label="Цэнэглэх станц" value={viewing.chargePointId ? stationLabel(viewing.chargePointId) : '—'} />
               <Detail label="Эзэмшигч" value={viewing.subject ?? '—'} />
               <Detail label="Олгогч" value={viewing.issuer ?? '—'} />
               <Detail label="Сериал дугаар" value={viewing.serialNumber ?? '—'} mono />

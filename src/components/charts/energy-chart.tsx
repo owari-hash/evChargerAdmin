@@ -17,6 +17,7 @@ import {
 } from 'recharts';
 import type { EnergySeriesPoint } from '@/lib/types';
 import { formatKwh, formatMoney, formatNumber } from '@/lib/format';
+import { useStationLabel } from '@/components/station-name';
 
 /**
  * CSS custom properties resolve inside SVG paint attributes, so the charts
@@ -163,9 +164,10 @@ export function TopChargePointsChart({
 }: {
   data: { chargePointId: string; energyKwh: number }[];
 }) {
+  const stationLabel = useStationLabel();
   if (!data.length) return <ChartEmpty message="Энэ хугацаанд эрчим хүч түгээгээгүй байна." />;
 
-  const top = data.slice(0, 8);
+  const top = data.slice(0, 8).map((d) => ({ ...d, label: stationLabel(d.chargePointId) }));
 
   return (
     <ResponsiveContainer width="100%" height={Math.max(180, top.length * 34 + 30)}>
@@ -174,7 +176,7 @@ export function TopChargePointsChart({
         <XAxis type="number" {...AXIS_PROPS} tickFormatter={(v: number) => formatNumber(v, 0)} />
         <YAxis
           type="category"
-          dataKey="chargePointId"
+          dataKey="label"
           {...AXIS_PROPS}
           width={120}
           tick={{ fill: AXIS, fontSize: 11 }}

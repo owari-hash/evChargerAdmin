@@ -2,19 +2,22 @@
 
 import * as React from 'react';
 import useSWR from 'swr';
-import { Pencil, Plus, RefreshCw, Trash2 } from 'lucide-react';
+import { Pencil, Plus, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { REFRESH } from '@/lib/live-query';
 import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
 import { formatDateTime, formatRelative } from '@/lib/format';
 import { USER_ROLES, type User, type UserRole } from '@/lib/types';
-import { Badge, Button, Card, ErrorNote, Field, Input, PageHeader, Select } from '@/components/ui/primitives';
+import { Badge, Button, Card, ErrorNote, Field, Input, PageToolbar, Select } from '@/components/ui/primitives';
 import { RoleBadge } from '@/components/ui/status';
 import { ROLE, mn } from '@/lib/mn';
 import { ConfirmModal, Modal } from '@/components/ui/modal';
 import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty, TableLoading } from '@/components/ui/table';
 
 export function UsersView({ currentUserId }: { currentUserId: string }) {
-  const { data, error, isLoading, mutate } = useSWR<User[]>(apiUrl('auth/users'), fetcher);
+  const { data, error, isLoading, mutate } = useSWR<User[]>(apiUrl('auth/users'), fetcher, {
+    refreshInterval: REFRESH.config,
+  });
   const [creating, setCreating] = React.useState(false);
   const [editing, setEditing] = React.useState<User | null>(null);
   const [deleting, setDeleting] = React.useState<User | null>(null);
@@ -39,15 +42,9 @@ export function UsersView({ currentUserId }: { currentUserId: string }) {
 
   return (
     <>
-      <PageHeader
-        title="Хэрэглэгчид"
-        description="Удирдлагын самбарын бүртгэлүүд. Эрхийг CSMS хүсэлт бүр дээр шалгана."
+      <PageToolbar
         actions={
           <>
-            <Button variant="ghost" size="sm" onClick={() => void mutate()}>
-              <RefreshCw className="h-3.5 w-3.5" />
-              Шинэчлэх
-            </Button>
             <Button variant="primary" size="sm" onClick={() => setCreating(true)}>
               <Plus className="h-3.5 w-3.5" />
               Шинэ хэрэглэгч
@@ -66,8 +63,8 @@ export function UsersView({ currentUserId }: { currentUserId: string }) {
                 <TH>Эрх</TH>
                 <TH>Төлөв</TH>
                 <TH>Сүүлд нэвтэрсэн</TH>
-                <TH align="right">Үүсгэсэн</TH>
-                <TH align="right" />
+                <TH>Үүсгэсэн</TH>
+                <TH />
               </tr>
             </THead>
             <TBody>
@@ -102,11 +99,11 @@ export function UsersView({ currentUserId }: { currentUserId: string }) {
                       <TD className="whitespace-nowrap text-xs text-[var(--color-fg-muted)]">
                         {user.lastLoginAt ? formatRelative(user.lastLoginAt) : 'Хэзээ ч үгүй'}
                       </TD>
-                      <TD align="right" className="text-xs text-[var(--color-fg-muted)]">
+                      <TD className="text-xs text-[var(--color-fg-muted)]">
                         {formatDateTime(user.createdAt)}
                       </TD>
-                      <TD align="right">
-                        <div className="flex justify-end gap-1">
+                      <TD>
+                        <div className="flex justify-center gap-1">
                           <Button
                             variant="ghost"
                             size="icon"

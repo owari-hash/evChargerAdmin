@@ -9,12 +9,12 @@ import {
   Mail,
   Phone,
   Plus,
-  RefreshCw,
   Search,
   Trash2,
   Zap,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import { REFRESH } from '@/lib/live-query';
 import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
 import { formatNumber, formatRelative } from '@/lib/format';
 import type { Client, Paginated } from '@/lib/types';
@@ -24,7 +24,7 @@ import {
   Card,
   EmptyState,
   Input,
-  PageHeader,
+  PageToolbar,
   Select,
 } from '@/components/ui/primitives';
 import {
@@ -76,7 +76,7 @@ export function ClientsView({
   });
 
   const { data, error, isLoading, mutate } = useSWR<Paginated<Client>>(key, fetcher, {
-    refreshInterval: 30_000,
+    refreshInterval: REFRESH.config,
     keepPreviousData: true,
   });
 
@@ -102,29 +102,21 @@ export function ClientsView({
 
   return (
     <>
-      <PageHeader
-        title="Харилцагч"
-        description="Цэнэглэх станцуудыг эзэмшигч харилцагч, байгууллагуудын удирдлага."
+      <PageToolbar
         actions={
-          <>
-            <Button variant="ghost" size="sm" onClick={() => void mutate()} aria-label="Шинэчлэх">
-              <RefreshCw className="h-3.5 w-3.5" />
-              Шинэчлэх
+          canEdit ? (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => {
+                setEditingClient(null);
+                setModalOpen(true);
+              }}
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Харилцагч бүртгэх
             </Button>
-            {canEdit ? (
-              <Button
-                variant="primary"
-                size="sm"
-                onClick={() => {
-                  setEditingClient(null);
-                  setModalOpen(true);
-                }}
-              >
-                <Plus className="h-3.5 w-3.5" />
-                Харилцагч бүртгэх
-              </Button>
-            ) : null}
-          </>
+          ) : null
         }
       />
 
@@ -165,7 +157,7 @@ export function ClientsView({
                 <TH>Хаяг</TH>
                 <TH>Төлөв</TH>
                 {canEdit || canDelete ? (
-                  <TH align="right">
+                  <TH>
                     <span className="sr-only">Үйлдэл</span>
                   </TH>
                 ) : null}
@@ -188,7 +180,7 @@ export function ClientsView({
                     <TD>
                       <Link
                         href={`/clients/${encodeURIComponent(c.id)}`}
-                        className="font-medium hover:text-[var(--color-brand)] hover:underline flex items-center gap-2"
+                        className="font-medium hover:text-[var(--color-brand)] hover:underline flex items-center gap-2 justify-center"
                       >
                         <Building2 className="h-4 w-4 text-[var(--color-fg-muted)] shrink-0" />
                         <span>{c.name}</span>
@@ -214,7 +206,7 @@ export function ClientsView({
                     <TD className="text-xs">
                       <div className="space-y-0.5">
                         {c.phone ? (
-                          <div className="flex items-center gap-1 text-[var(--color-fg-muted)]">
+                          <div className="flex items-center justify-center gap-1 text-[var(--color-fg-muted)]">
                             <Phone className="h-3 w-3 shrink-0" />
                             <span>{c.phone}</span>
                           </div>
@@ -239,8 +231,8 @@ export function ClientsView({
                       )}
                     </TD>
                     {canEdit || canDelete ? (
-                      <TD align="right">
-                        <div className="flex items-center justify-end gap-1">
+                      <TD>
+                        <div className="flex items-center justify-center gap-1">
                           {canEdit ? (
                             <Button
                               variant="ghost"

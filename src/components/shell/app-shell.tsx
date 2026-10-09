@@ -1,9 +1,11 @@
 'use client';
 
 import * as React from 'react';
+import { SWRConfig } from 'swr';
 import { Sidebar } from './sidebar';
 import { Topbar } from './topbar';
 import type { SessionUser } from '@/lib/types';
+import { SWR_DEFAULTS } from '@/lib/live-query';
 
 export function AppShell({
   user,
@@ -15,14 +17,16 @@ export function AppShell({
   const [menuOpen, setMenuOpen] = React.useState(false);
 
   return (
-    <div className="min-h-dvh">
-      <Sidebar user={user} open={menuOpen} onClose={() => setMenuOpen(false)} />
-      <div className="flex min-h-dvh flex-col lg:pl-64">
-        <Topbar user={user} onMenu={() => setMenuOpen(true)} />
-        <main className="flex-1 px-4 py-6 sm:px-6">
-          <div className="mx-auto w-full max-w-[1400px]">{children}</div>
-        </main>
+    <SWRConfig value={SWR_DEFAULTS}>
+      <div className="min-h-dvh">
+        <Sidebar user={user} open={menuOpen} onClose={() => setMenuOpen(false)} />
+        <div className="flex min-h-dvh flex-col lg:pl-64">
+          <Topbar user={user} onMenu={() => setMenuOpen(true)} />
+          <main className="flex-1 px-4 py-6 sm:px-6">
+            <div className="mx-auto w-full max-w-[1400px]">{children}</div>
+          </main>
+        </div>
       </div>
-    </div>
+    </SWRConfig>
   );
 }

@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { Input, Card, CardHeader, PageHeader, Button } from '@/components/ui/primitives';
+import { Input, Card, CardHeader, Button } from '@/components/ui/primitives';
 import { LiveFeed } from '@/components/live-feed';
 import { LIVE_EVENT_NAMES } from '@/lib/types';
 import { humanizeEvent } from '@/lib/format';
@@ -28,12 +28,7 @@ export function LiveView() {
 
   return (
     <>
-      <PageHeader
-        title="Шууд урсгал"
-        description="CSMS-ээс гарах бүх үйл явдал шууд дамжина."
-      />
-
-      <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
+            <div className="grid gap-4 lg:grid-cols-[280px_1fr]">
         <div className="space-y-4">
           <Card>
             <CardHeader title="Шүүлтүүр" />

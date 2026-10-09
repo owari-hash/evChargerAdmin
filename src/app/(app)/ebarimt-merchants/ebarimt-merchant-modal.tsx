@@ -3,7 +3,7 @@
 import * as React from 'react';
 import { toast } from 'sonner';
 import { api, errorMessage } from '@/lib/client';
-import { Button, Field, Input } from '@/components/ui/primitives';
+import { Button, Field, Input, Select } from '@/components/ui/primitives';
 import { Modal } from '@/components/ui/modal';
 
 export interface EbarimtCheckResult {
@@ -158,29 +158,26 @@ export function EbarimtMerchantModal({
         {/* Дүүрэг & Хороо Selects */}
         <div className="grid grid-cols-2 gap-3">
           <Field label="Дүүрэг" htmlFor="districtCode">
-            <select
+            <Select
               id="districtCode"
               value={districtCode}
               onChange={(e) => setDistrictCode(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-            >
-              {DISTRICT_OPTIONS.map((d) => (
-                <option key={d.code} value={d.code}>
-                  {d.name} ({d.code})
-                </option>
-              ))}
-              {!DISTRICT_OPTIONS.some((d) => d.code === districtCode) && (
-                <option value={districtCode}>Бусад ({districtCode})</option>
-              )}
-            </select>
+              options={[
+                ...DISTRICT_OPTIONS.map((d) => ({ value: d.code, code: d.code, label: d.name })),
+                ...(DISTRICT_OPTIONS.some((d) => d.code === districtCode)
+                  ? []
+                  : [{ value: districtCode, code: districtCode, label: 'Бусад' }]),
+              ]}
+              searchPlaceholder="Дүүрэг эсвэл код…"
+            />
           </Field>
 
           <Field label="Хороо" htmlFor="khorooCode">
-            <select
+            <Select
               id="khorooCode"
               value={khorooCode}
               onChange={(e) => setKhorooCode(e.target.value)}
-              className="w-full rounded-lg border border-slate-300 dark:border-slate-700 bg-white dark:bg-slate-900 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              searchPlaceholder="Хорооны дугаар…"
             >
               {Array.from({ length: 35 }, (_, i) => String(i + 1)).map((k) => (
                 <option key={k} value={k}>
@@ -190,7 +187,7 @@ export function EbarimtMerchantModal({
               {isNaN(Number(khorooCode)) && (
                 <option value={khorooCode}>{khorooCode}</option>
               )}
-            </select>
+            </Select>
           </Field>
         </div>
 

@@ -5,6 +5,7 @@ import { LogOut, Menu, Moon, Sun } from 'lucide-react';
 import { Button, Dot } from '@/components/ui/primitives';
 import { logout } from '@/lib/client';
 import { useLiveEvents } from '@/lib/use-live-events';
+import { useLiveRevalidation } from '@/lib/live-query';
 import { formatRelative } from '@/lib/format';
 import type { SessionUser } from '@/lib/types';
 
@@ -34,9 +35,14 @@ export function Topbar({ user, onMenu }: { user: SessionUser; onMenu: () => void
   );
 }
 
-/** Shows whether the SSE stream to the CSMS is currently connected. */
+/**
+ * Shows whether the SSE stream to the CSMS is currently connected, and uses
+ * that same (single, app-wide) stream to revalidate whichever lists an event
+ * affects — this is what makes the tables update without a refresh button.
+ */
 function LiveIndicator() {
-  const { status, lastEventAt } = useLiveEvents({ buffer: 1 });
+  const onEvent = useLiveRevalidation();
+  const { status, lastEventAt } = useLiveEvents({ buffer: 1, onEvent });
 
   const tone = status === 'live' ? 'ok' : status === 'connecting' ? 'warn' : 'danger';
   const text =

@@ -2,13 +2,14 @@
 
 import * as React from 'react';
 import useSWR from 'swr';
-import { CreditCard, Pencil, Plus, RefreshCw, Search, ShieldQuestion, Trash2, Upload } from 'lucide-react';
+import { CreditCard, Pencil, Plus, Search, ShieldQuestion, Trash2, Upload } from 'lucide-react';
 import { toast } from 'sonner';
+import { REFRESH } from '@/lib/live-query';
 import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
 import { formatDate, formatNumber, formatRelative } from '@/lib/format';
 import { useNow } from '@/lib/use-now';
 import { AUTHORIZATION_STATUSES, type IdTag, type Paginated } from '@/lib/types';
-import { Badge, Button, Card, EmptyState, Input, PageHeader, Select } from '@/components/ui/primitives';
+import { Badge, Button, Card, EmptyState, Input, PageToolbar, Select } from '@/components/ui/primitives';
 import { AuthStatusBadge } from '@/components/ui/status';
 import { ConfirmModal } from '@/components/ui/modal';
 import { FilterBar, Pagination } from '@/components/ui/pagination';
@@ -49,6 +50,7 @@ export function IdTagsView({
 
   const key = apiUrl('id-tags', { search: debounced, status, page, limit });
   const { data, error, isLoading, mutate } = useSWR<Paginated<IdTag>>(key, fetcher, {
+    refreshInterval: REFRESH.config,
     keepPreviousData: true,
   });
 
@@ -71,15 +73,9 @@ export function IdTagsView({
 
   return (
     <>
-      <PageHeader
-        title="RFID карт"
-        description="Жолооч нар станц дээр уншуулдаг зөвшөөрлийн картууд."
+      <PageToolbar
         actions={
           <>
-            <Button variant="ghost" size="sm" onClick={() => void mutate()}>
-              <RefreshCw className="h-3.5 w-3.5" />
-              Шинэчлэх
-            </Button>
             {canEdit ? (
               <>
                 <Button variant="secondary" size="sm" onClick={() => setImporting(true)}>
@@ -134,10 +130,10 @@ export function IdTagsView({
                 <TH>Нэр / эзэмшигч</TH>
                 <TH>Эцэг карт</TH>
                 <TH>Дуусах</TH>
-                <TH align="right">Дээд зэрэг</TH>
+                <TH>Дээд зэрэг</TH>
                 <TH>Хязгаарласан станц</TH>
-                <TH align="right">Шинэчлэгдсэн</TH>
-                <TH align="right" />
+                <TH>Шинэчлэгдсэн</TH>
+                <TH />
               </tr>
             </THead>
             <TBody>
@@ -177,7 +173,7 @@ export function IdTagsView({
                           <span className="text-[var(--color-fg-subtle)]">Хугацаагүй</span>
                         )}
                       </TD>
-                      <TD align="right" className="text-xs">
+                      <TD className="text-xs">
                         {tag.maxActiveTransactions === 0 ? '∞' : tag.maxActiveTransactions}
                       </TD>
                       <TD className="text-xs">
@@ -189,11 +185,11 @@ export function IdTagsView({
                           <span className="text-[var(--color-fg-subtle)]">Бүгд</span>
                         )}
                       </TD>
-                      <TD align="right" className="text-xs text-[var(--color-fg-muted)]">
+                      <TD className="text-xs text-[var(--color-fg-muted)]">
                         {formatRelative(tag.updatedAt)}
                       </TD>
-                      <TD align="right">
-                        <div className="flex justify-end gap-1">
+                      <TD>
+                        <div className="flex justify-center gap-1">
                           <Button
                             variant="ghost"
                             size="icon"

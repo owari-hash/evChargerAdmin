@@ -1,17 +1,18 @@
 'use client';
 
 import * as React from 'react';
-import Link from 'next/link';
 import useSWR from 'swr';
-import { Cpu, RefreshCw } from 'lucide-react';
+import { Cpu } from 'lucide-react';
+import { REFRESH } from '@/lib/live-query';
 import { apiUrl, fetcher } from '@/lib/client';
 import { formatDateTime, formatNumber, formatRelative } from '@/lib/format';
 import type { Job, Paginated } from '@/lib/types';
-import { Badge, Button, Card, EmptyState, Input, PageHeader, type Tone } from '@/components/ui/primitives';
+import { Badge, Card, EmptyState, Input, type Tone } from '@/components/ui/primitives';
 import { Tabs, TabCount } from '@/components/ui/tabs';
 import { FilterBar, Pagination } from '@/components/ui/pagination';
 import { DIAGNOSTICS_STATUS, FIRMWARE_STATUS, mn } from '@/lib/mn';
 import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty, TableLoading } from '@/components/ui/table';
+import { StationName } from '@/components/station-name';
 
 /**
  * Firmware and diagnostics jobs. Statuses come straight from the charge point's
@@ -75,30 +76,23 @@ export function JobsView() {
   };
 
   const key = apiUrl(`jobs/${tab}`, { chargePointId: debouncedCp, page, limit });
-  const { data, error, isLoading, mutate } = useSWR<Paginated<Job>>(key, fetcher, {
-    refreshInterval: 20_000,
+  const { data, error, isLoading } = useSWR<Paginated<Job>>(key, fetcher, {
+    refreshInterval: REFRESH.live,
     keepPreviousData: true,
   });
 
   // Counts for the tab badges, fetched cheaply.
-  const { data: firmwareCount } = useSWR<Paginated<Job>>(apiUrl('jobs/firmware', { limit: 1 }), fetcher);
-  const { data: diagCount } = useSWR<Paginated<Job>>(apiUrl('jobs/diagnostics', { limit: 1 }), fetcher);
+  const { data: firmwareCount } = useSWR<Paginated<Job>>(apiUrl('jobs/firmware', { limit: 1 }), fetcher, {
+    refreshInterval: REFRESH.config,
+  });
+  const { data: diagCount } = useSWR<Paginated<Job>>(apiUrl('jobs/diagnostics', { limit: 1 }), fetcher, {
+    refreshInterval: REFRESH.config,
+  });
 
   const rows = data?.data ?? [];
 
   return (
     <>
-      <PageHeader
-        title="Программ хангамж ба лог"
-        description="Программын шинэчлэлт, оношилгооны илгээлт, аюулгүй байдлын логийн хүсэлтүүд."
-        actions={
-          <Button variant="ghost" size="sm" onClick={() => void mutate()}>
-            <RefreshCw className="h-3.5 w-3.5" />
-            Шинэчлэх
-          </Button>
-        }
-      />
-
       <Card className="mb-4 overflow-hidden">
         <Tabs
           items={[
@@ -137,10 +131,10 @@ export function JobsView() {
                 <TH>Төлөв</TH>
                 <TH>Байршил</TH>
                 <TH>Файл</TH>
-                <TH align="right">Хүсэлтийн дугаар</TH>
+                <TH>Хүсэлтийн дугаар</TH>
                 <TH>Товлосон</TH>
                 <TH>Алдаа</TH>
-                <TH align="right">Үүсгэсэн</TH>
+                <TH>Үүсгэсэн</TH>
               </tr>
             </THead>
             <TBody>
@@ -156,12 +150,7 @@ export function JobsView() {
                 rows.map((job) => (
                   <TR key={job._id}>
                     <TD>
-                      <Link
-                        href={`/charge-points/${encodeURIComponent(job.chargePointId)}`}
-                        className="text-xs hover:text-[var(--color-brand)] hover:underline"
-                      >
-                        {job.chargePointId}
-                      </Link>
+                      <StationName id={job.chargePointId} />
                     </TD>
                     <TD className="text-xs font-medium">{job.kind}</TD>
                     <TD>
@@ -173,7 +162,7 @@ export function JobsView() {
                     <TD className="max-w-[160px] truncate font-mono text-[11px] text-[var(--color-fg-muted)]">
                       {job.fileName ?? '—'}
                     </TD>
-                    <TD align="right" className="font-mono text-xs">
+                    <TD className="font-mono text-xs">
                       {job.requestId ?? '—'}
                     </TD>
                     <TD className="whitespace-nowrap text-xs text-[var(--color-fg-muted)]">
@@ -182,7 +171,7 @@ export function JobsView() {
                     <TD className="max-w-[200px] truncate text-xs text-[var(--color-danger)]">
                       {job.error ?? ''}
                     </TD>
-                    <TD align="right" className="text-xs text-[var(--color-fg-muted)]">
+                    <TD className="text-xs text-[var(--color-fg-muted)]">
                       {formatRelative(job.createdAt)}
                     </TD>
                   </TR>

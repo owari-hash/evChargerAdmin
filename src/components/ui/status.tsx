@@ -52,6 +52,7 @@ const TRANSACTION_TONES: Record<TransactionStatus, Tone> = {
   Active: 'brand',
   Completed: 'idle',
   Rejected: 'danger',
+  Refunded: 'warn',
 };
 
 export function TransactionStatusBadge({ status }: { status: TransactionStatus | string }) {

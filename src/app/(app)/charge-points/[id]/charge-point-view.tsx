@@ -14,7 +14,8 @@ import {
   Unplug,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { api, errorMessage } from '@/lib/client';
+import useSWR from 'swr';
+import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
 import { REFRESH, useAutoRefresh } from '@/lib/live-query';
 import {
   formatDateTime,
@@ -25,7 +26,8 @@ import {
   formatRelative,
   formatWh,
 } from '@/lib/format';
-import type { ChargePointDetail } from '@/lib/types';
+import type { ChargePointDetail, Client } from '@/lib/types';
+import { EbarimtMerchantName, NetworkDefaultFee } from '@/components/ebarimt-merchant-select';
 import {
   Badge,
   Button,
@@ -437,6 +439,15 @@ function OverviewTab({ detail }: { detail: ChargePointDetail }) {
             <DataRow label="Тариф">
               {detail.tariffPerKwh != null ? `${formatMoney(detail.tariffPerKwh)} / kWh` : 'Free'}
             </DataRow>
+            <DataRow label="Үйлчилгээний хураамж">
+              <EffectiveFee feePercent={detail.feePercent} clientId={detail.client?.id} />
+            </DataRow>
+            <DataRow label="Е-баримт мерчант">
+              <EbarimtMerchantName
+                id={detail.ebarimtMerchantId}
+                fallback={detail.client ? 'Харилцагчийнхаас' : 'Сүлжээний үндсэн'}
+              />
+            </DataRow>
             <DataRow label="Шошго">
               {detail.tags?.length ? (
                 <span className="flex flex-wrap justify-end gap-1">
@@ -588,5 +599,33 @@ function ConnectorsTab({ detail }: { detail: ChargePointDetail }) {
         </TableWrap>
       </Card>
     </>
+  );
+}
+
+/**
+ * The fee a session here is charged: the station's own override, else its
+ * client's, else the network default (which the API does not expose).
+ */
+function EffectiveFee({
+  feePercent,
+  clientId,
+}: {
+  feePercent?: number | null;
+  clientId?: string;
+}) {
+  const own = feePercent != null;
+  const { data: client, error } = useSWR<Client>(
+    !own && clientId ? apiUrl(`clients/${encodeURIComponent(clientId)}`) : null,
+    fetcher,
+  );
+
+  if (own) return <>{`${feePercent}% · станцын`}</>;
+  if (!clientId) return <NetworkDefaultFee />;
+  if (error) return <>Харилцагчийнхаас</>;
+  if (!client) return <>…</>;
+  return client.feePercent != null ? (
+    <>{`${client.feePercent}% · харилцагчийн`}</>
+  ) : (
+    <NetworkDefaultFee />
   );
 }

@@ -41,6 +41,7 @@ import {
 } from '@/components/ui/table';
 import { ConnectorStatusBadge, OnlineBadge } from '@/components/ui/status';
 import { StatGrid } from '@/components/stat-card';
+import { EbarimtMerchantName, NetworkDefaultFee } from '@/components/ebarimt-merchant-select';
 import { ClientModal } from '../client-modal';
 import { EditChargePointModal } from '../../charge-points/edit-charge-point-modal';
 
@@ -275,6 +276,29 @@ export function ClientDetailView({
               </DataRow>
               <DataRow label="Тэмдэглэл">{client.description ?? '—'}</DataRow>
               <DataRow label="Бүртгэсэн">{formatDateTime(client.createdAt)}</DataRow>
+            </dl>
+          </Card>
+
+          <Card>
+            <CardHeader title="Тооцоо ба данс" description="Үйлчилгээний хураамж, е-баримт, төлбөр шилжүүлэх данс" />
+            <dl className="divide-y divide-[var(--color-border)] px-5 py-2">
+              <DataRow label="Үйлчилгээний хураамж">
+                {client.feePercent != null ? `${client.feePercent}%` : <NetworkDefaultFee />}
+              </DataRow>
+              <DataRow label="Е-баримт мерчант">
+                <EbarimtMerchantName id={client.ebarimtMerchantId} fallback="Сүлжээний үндсэн" />
+              </DataRow>
+              <DataRow label="Банк">
+                {client.payoutAccount?.bankName || client.payoutAccount?.bankCode
+                  ? [client.payoutAccount.bankName, client.payoutAccount.bankCode]
+                      .filter(Boolean)
+                      .join(' · ')
+                  : '—'}
+              </DataRow>
+              <DataRow label="Дансны дугаар" mono>
+                {client.payoutAccount?.accountNumber || '—'}
+              </DataRow>
+              <DataRow label="Данс эзэмшигч">{client.payoutAccount?.accountName || '—'}</DataRow>
             </dl>
           </Card>
         </div>

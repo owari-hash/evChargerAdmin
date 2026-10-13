@@ -60,8 +60,8 @@ export const AUTHORIZATION_STATUSES: AuthorizationStatus[] = [
   'ConcurrentTx',
 ];
 
-export type TransactionStatus = 'Active' | 'Completed' | 'Rejected';
-export const TRANSACTION_STATUSES: TransactionStatus[] = ['Active', 'Completed', 'Rejected'];
+export type TransactionStatus = 'Active' | 'Completed' | 'Rejected' | 'Refunded';
+export const TRANSACTION_STATUSES: TransactionStatus[] = ['Active', 'Completed', 'Rejected', 'Refunded'];
 
 export type ReservationState = 'Active' | 'Used' | 'Cancelled' | 'Expired' | 'Rejected';
 export const RESERVATION_STATES: ReservationState[] = [
@@ -172,6 +172,10 @@ export interface ChargePoint {
   tags: string[];
   clientId?: string | null;
   client?: { id: string; name: string; businessRegister?: string } | null;
+  /** Eplug service fee override (0–100). Unset = the client's, then the network default. */
+  feePercent?: number | null;
+  /** E-barimt merchant override. Unset = the client's, then the network default. */
+  ebarimtMerchantId?: string | null;
   createdAt: string;
   updatedAt: string;
   connectors?: Connector[];
@@ -216,7 +220,34 @@ export interface Transaction {
   lastSocPercent?: number;
   lastMeterValueAt?: string;
   tariffPerKwh?: number;
+  /** Total the driver pays: energyCost + feeAmount. */
   cost?: number;
+  /** Energy part of the cost. Missing on sessions from before the service fee. */
+  energyCost?: number;
+  /** Eplug's service fee, energyCost × feePercent / 100. */
+  feeAmount?: number;
+  feePercent?: number;
+  /** The client that owned the station when the session ran. */
+  clientId?: string | null;
+  /** Closed by the CSMS; a late StopTransaction from the station re-settles it. */
+  closedByCsms?: boolean;
+  ebarimt?: {
+    receiptId?: string;
+    type?: 'B2C_RECEIPT' | 'B2B_RECEIPT';
+    totalAmount?: number;
+    status?: 'SUCCESS' | 'FAILED' | 'PENDING' | 'REFUNDED';
+    issuedAt?: string;
+    returnedAt?: string;
+  };
+  /** Буцаалт. */
+  refund?: {
+    state?: 'PENDING' | 'DONE';
+    amount?: number;
+    reason?: string;
+    refundedBy?: string;
+    refundedAt?: string;
+    ebarimtReturned?: boolean;
+  };
 }
 
 export interface SampledValue {
@@ -550,10 +581,23 @@ export interface Client {
   address?: string | null;
   description?: string | null;
   isActive: boolean;
+  /** Eplug service fee (0–100) on this client's stations. Unset = network default. */
+  feePercent?: number | null;
+  /** Receipts for this client's stations are issued under this merchant. Unset = network default. */
+  ebarimtMerchantId?: string | null;
+  payoutAccount?: PayoutAccount | null;
   stationCount?: number;
   stations?: ChargePoint[];
   createdAt: string;
   updatedAt: string;
+}
+
+/** Bank account Eplug pays a client's earnings into. */
+export interface PayoutAccount {
+  bankCode?: string;
+  bankName?: string;
+  accountNumber?: string;
+  accountName?: string;
 }
 
 export interface ClientInput {
@@ -565,5 +609,74 @@ export interface ClientInput {
   address?: string | null;
   description?: string | null;
   isActive?: boolean;
+  feePercent?: number | null;
+  ebarimtMerchantId?: string | null;
+  payoutAccount?: PayoutAccount | null;
+}
+
+// ---------------------------------------------------------------------------
+// Тооцоо (Settlements) (backend: /api/settlements/*)
+// ---------------------------------------------------------------------------
+
+/** One client's row in GET /api/settlements/summary. */
+export interface SettlementSummaryRow {
+  client: {
+    id: string;
+    name: string;
+    businessRegister?: string;
+    feePercent?: number;
+    payoutAccount?: PayoutAccount;
+    isActive: boolean;
+  };
+  /** Completed sessions stopped inside the requested range. */
+  period: {
+    sessions: number;
+    energyWh: number;
+    /** What drivers paid. */
+    gross: number;
+    /** Eplug's service fee. */
+    fee: number;
+    /** What the client earned: gross − fee. */
+    net: number;
+  };
+  /** All-time net earnings. */
+  earnedTotal: number;
+  /** All-time payouts. */
+  paidTotal: number;
+  /** earnedTotal − paidTotal. Negative after a refund of an already-paid session. */
+  outstanding: number;
+  lastPaidAt: string | null;
+}
+
+export interface SettlementSummary {
+  from: string | null;
+  to: string | null;
+  data: SettlementSummaryRow[];
+  totals: { sessions: number; gross: number; fee: number; net: number; outstanding: number };
+}
+
+/** A payout from Eplug to a client. */
+export interface Settlement {
+  id: string;
+  _id?: string;
+  clientId: string;
+  amount: number;
+  periodFrom?: string;
+  periodTo?: string;
+  reference?: string;
+  note?: string;
+  paidAt: string;
+  createdBy?: string;
+  createdAt?: string;
+}
+
+export interface SettlementInput {
+  clientId: string;
+  amount: number;
+  periodFrom?: string;
+  periodTo?: string;
+  reference?: string;
+  note?: string;
+  paidAt?: string;
 }
 

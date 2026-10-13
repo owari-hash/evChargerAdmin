@@ -45,6 +45,7 @@ export default async function TransactionPage({
       meterValues={meterValues?.data ?? []}
       meterValueTotal={meterValues?.total ?? 0}
       canOperate={hasRole(user, 'OPERATOR')}
+      canRefund={hasRole(user, 'ADMIN')}
     />
   );
 }

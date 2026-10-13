@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Square, XCircle } from 'lucide-react';
+import { ArrowLeft, Square, Undo2, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, errorMessage } from '@/lib/client';
 import { REFRESH, useAutoRefresh } from '@/lib/live-query';
@@ -54,20 +54,26 @@ export function TransactionView({
   meterValues,
   meterValueTotal,
   canOperate,
+  canRefund,
 }: {
   tx: Transaction;
   meterValues: MeterValue[];
   meterValueTotal: number;
   canOperate: boolean;
+  canRefund: boolean;
 }) {
   const router = useRouter();
   const [busy, setBusy] = React.useState(false);
   const [confirmStop, setConfirmStop] = React.useState(false);
   const [forceClose, setForceClose] = React.useState(false);
   const [meterStop, setMeterStop] = React.useState('');
+  const [refundOpen, setRefundOpen] = React.useState(false);
+  const [refundReason, setRefundReason] = React.useState('');
 
   const id = tx.transactionId ?? tx.id;
   const isActive = tx.status === 'Active';
+  const refundable = tx.status === 'Completed' && (tx.cost ?? 0) > 0 && tx.refund?.state !== 'PENDING';
+  const hasReceipt = tx.ebarimt?.status === 'SUCCESS';
   // Server-rendered detail: a running session updates every few seconds; a
   // finished one only needs the occasional check.
   useAutoRefresh(isActive ? REFRESH.live : REFRESH.config);
@@ -122,6 +128,23 @@ export function TransactionView({
     }
   }
 
+  async function refund() {
+    setBusy(true);
+    try {
+      const res = await api.post<Transaction>(`transactions/${id}/refund`, { reason: refundReason.trim() });
+      toast.success(
+        `${formatMoney(res.refund?.amount ?? 0)} хэтэвчинд буцаалаа${res.refund?.ebarimtReturned ? ', е-баримт буцаагдсан' : ''}.`,
+      );
+      setRefundOpen(false);
+      setRefundReason('');
+      router.refresh();
+    } catch (err) {
+      toast.error(errorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
   return (
     <>
       <Link
@@ -166,6 +189,12 @@ export function TransactionView({
                     Албадан хаах
                   </Button>
                 </>
+              ) : null}
+              {canRefund && refundable ? (
+                <Button variant="danger" size="sm" onClick={() => setRefundOpen(true)}>
+                  <Undo2 className="h-3.5 w-3.5" />
+                  Буцаалт
+                </Button>
               ) : null}
             </>
           }
@@ -231,6 +260,36 @@ export function TransactionView({
               {tx.reservationId != null ? `#${tx.reservationId}` : '—'}
             </DataRow>
             <DataRow label="Сүүлийн хэмжилт">{formatDateTime(tx.lastMeterValueAt)}</DataRow>
+            {tx.energyCost != null ? (
+              <>
+                <DataRow label="Эрчим хүчний төлбөр">{formatMoney(tx.energyCost)}</DataRow>
+                <DataRow label="Үйлчилгээний хураамж">
+                  {`${formatMoney(tx.feeAmount ?? 0)}${tx.feePercent != null ? ` (${tx.feePercent}%)` : ''}`}
+                </DataRow>
+                <DataRow label="Нийт">
+                  <span className="font-semibold">{formatMoney(tx.cost)}</span>
+                </DataRow>
+              </>
+            ) : (
+              // Sessions from before the service fee only carry the total.
+              <DataRow label="Нийт">{formatMoney(tx.cost)}</DataRow>
+            )}
+            <DataRow label="Е-баримт">
+              {tx.ebarimt?.status === 'REFUNDED'
+                ? 'Буцаагдсан'
+                : tx.ebarimt?.status === 'SUCCESS'
+                  ? `Олгосон · ${tx.ebarimt.receiptId ?? ''}`
+                  : '—'}
+            </DataRow>
+            {tx.refund?.state === 'DONE' ? (
+              <>
+                <DataRow label="Буцаасан дүн">{formatMoney(tx.refund.amount ?? 0)}</DataRow>
+                <DataRow label="Буцаалтын шалтгаан">{tx.refund.reason ?? '—'}</DataRow>
+                <DataRow label="Буцаасан">
+                  {`${formatDateTime(tx.refund.refundedAt)} · ${tx.refund.refundedBy ?? '—'}`}
+                </DataRow>
+              </>
+            ) : null}
           </dl>
         </Card>
       </div>
@@ -317,7 +376,7 @@ export function TransactionView({
         <div className="space-y-4">
           <p className="text-sm text-[var(--color-fg-muted)]">
             Энэ нь станцтай холбогдолгүйгээр цэнэглэлтийг CSMS дээр хаана. Хожим станц уг
-            цэнэглэлтийг мэдээлбэл заалтууд зөрж болзошгүй.
+            цэнэглэлтийн жинхэнэ эцсийн заалтыг мэдээлбэл төлбөр автоматаар залруулагдана.
           </p>
           <Field
             label="Эцсийн тоолуурын заалт (Вт·ц)"
@@ -328,6 +387,48 @@ export function TransactionView({
               onChange={(e) => setMeterStop(e.target.value)}
               inputMode="numeric"
               placeholder={String(tx.lastMeterWh ?? tx.meterStart)}
+            />
+          </Field>
+        </div>
+      </Modal>
+
+      <Modal
+        open={refundOpen}
+        onClose={() => setRefundOpen(false)}
+        title="Буцаалт хийх уу?"
+        description={`Цэнэглэлт #${id} · ${formatMoney(tx.cost ?? 0)}`}
+        size="sm"
+        footer={
+          <>
+            <Button variant="ghost" onClick={() => setRefundOpen(false)} disabled={busy}>
+              Цуцлах
+            </Button>
+            <Button
+              variant="danger"
+              onClick={() => void refund()}
+              loading={busy}
+              disabled={!refundReason.trim()}
+            >
+              Буцаалт хийх
+            </Button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <p className="text-sm text-[var(--color-fg-muted)]">
+            Энэ цэнэглэлтэд хэтэвчнээс хассан мөнгийг жолоочийн хэтэвчинд буцааж, цэнэглэлтийн
+            төлөвийг «Буцаагдсан» болгоно.
+            {hasReceipt
+              ? ' Олгосон е-баримтыг эхлээд PosAPI-д буцаана; амжилтгүй бол мөнгө буцаахгүй.'
+              : ''}{' '}
+            Энэ үйлдлийг буцаах боломжгүй.
+          </p>
+          <Field label="Шалтгаан" hint="Хэтэвчийн хуулга болон аудитад хадгалагдана.">
+            <Input
+              value={refundReason}
+              onChange={(e) => setRefundReason(e.target.value)}
+              placeholder="Жишээ: станцын алдаагаар цэнэглэгдээгүй"
+              maxLength={255}
             />
           </Field>
         </div>

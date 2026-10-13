@@ -7,6 +7,7 @@ import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
 import { TriangleAlert } from 'lucide-react';
 import { Button, ErrorNote, Field, Input, Select, Textarea } from '@/components/ui/primitives';
 import { Modal } from '@/components/ui/modal';
+import { EbarimtMerchantSelect } from '@/components/ebarimt-merchant-select';
 import { REGISTRATION_STATUS as REGISTRATION_STATUS_MN, mn } from '@/lib/mn';
 import { REGISTRATION_STATUSES, type ChargePoint, type Client, type Paginated } from '@/lib/types';
 
@@ -60,6 +61,8 @@ export function EditChargePointModal({
     securityProfile: String(chargePoint.securityProfile ?? 1),
     heartbeatInterval: String(chargePoint.heartbeatInterval ?? 300),
     tariffPerKwh: chargePoint.tariffPerKwh?.toString() ?? '',
+    feePercent: chargePoint.feePercent?.toString() ?? '',
+    ebarimtMerchantId: chargePoint.ebarimtMerchantId ?? '',
     tags: (chargePoint.tags ?? []).join(', '),
   }));
 
@@ -85,6 +88,7 @@ export function EditChargePointModal({
     const latitude = optionalNumber(form.latitude);
     const longitude = optionalNumber(form.longitude);
     const tariffPerKwh = optionalNumber(form.tariffPerKwh);
+    const feePercent = optionalNumber(form.feePercent);
     const heartbeatInterval = Number(form.heartbeatInterval);
 
     if (latitude === INVALID || (typeof latitude === 'number' && Math.abs(latitude) > 90)) {
@@ -95,6 +99,12 @@ export function EditChargePointModal({
     }
     if (tariffPerKwh === INVALID || (typeof tariffPerKwh === 'number' && tariffPerKwh < 0)) {
       errors.tariffPerKwh = 'Сөрөг бус тоо оруулна уу.';
+    }
+    if (
+      feePercent === INVALID ||
+      (typeof feePercent === 'number' && (feePercent < 0 || feePercent > 100))
+    ) {
+      errors.feePercent = '0-100 хооронд тоо оруулна уу.';
     }
     if (!Number.isInteger(heartbeatInterval) || heartbeatInterval < 10) {
       errors.heartbeatInterval = 'Хамгийн багадаа 10 секунд.';
@@ -109,7 +119,14 @@ export function EditChargePointModal({
     setFieldErrors(errors);
     // Comparing against INVALID here, rather than only through `errors`, is what
     // narrows these to `number | null` for the request body below.
-    if (latitude === INVALID || longitude === INVALID || tariffPerKwh === INVALID) return;
+    if (
+      latitude === INVALID ||
+      longitude === INVALID ||
+      tariffPerKwh === INVALID ||
+      feePercent === INVALID
+    ) {
+      return;
+    }
     if (Object.keys(errors).length) return;
 
     setSaving(true);
@@ -127,6 +144,9 @@ export function EditChargePointModal({
           latitude,
           longitude,
           tariffPerKwh,
+          // null = inherit from the client again.
+          feePercent,
+          ebarimtMerchantId: form.ebarimtMerchantId || null,
           registrationStatus: form.registrationStatus,
           securityProfile: Number(form.securityProfile),
           heartbeatInterval,
@@ -297,6 +317,28 @@ export function EditChargePointModal({
             inputMode="decimal"
           />
         </Field>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field
+            label="Үйлчилгээний хураамж (%)"
+            error={fieldErrors.feePercent}
+            hint="Хоосон бол харилцагчийнхаас, түүнд ч байхгүй бол сүлжээний үндсэн хувь."
+          >
+            <Input
+              value={form.feePercent}
+              onChange={set('feePercent')}
+              placeholder="Харилцагчийнхаас"
+              inputMode="decimal"
+            />
+          </Field>
+          <Field label="Е-баримт мерчант" hint="Хоосон бол харилцагчийн мерчант ашиглагдана.">
+            <EbarimtMerchantSelect
+              value={form.ebarimtMerchantId}
+              onChange={(v) => setForm((f) => ({ ...f, ebarimtMerchantId: v }))}
+              blankLabel="(Харилцагчийнхаас)"
+            />
+          </Field>
+        </div>
 
         <Field
           label="Шошго"

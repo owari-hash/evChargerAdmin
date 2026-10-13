@@ -32,6 +32,7 @@ export const TRANSACTION_STATUS: Record<string, string> = {
   Active: 'Идэвхтэй',
   Completed: 'Дууссан',
   Rejected: 'Татгалзсан',
+  Refunded: 'Буцаагдсан',
 };
 
 export const AUTH_STATUS: Record<string, string> = {

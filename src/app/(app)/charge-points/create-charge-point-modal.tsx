@@ -9,6 +9,7 @@ import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
 import { Button, ErrorNote, Field, Input, Select } from '@/components/ui/primitives';
 import { Modal } from '@/components/ui/modal';
 import { CopyButton } from '@/components/ui/copy-button';
+import { EbarimtMerchantSelect, parseFeePercent } from '@/components/ebarimt-merchant-select';
 import { REGISTRATION_STATUS as REGISTRATION_STATUS_MN, mn } from '@/lib/mn';
 import { REGISTRATION_STATUSES, type Client, type Paginated } from '@/lib/types';
 
@@ -45,6 +46,8 @@ export function CreateChargePointModal({
     registrationStatus: 'Accepted',
     heartbeatInterval: '300',
     tariffPerKwh: '',
+    feePercent: '',
+    ebarimtMerchantId: '',
     securityProfile: '1',
     latitude: '',
     longitude: '',
@@ -62,6 +65,8 @@ export function CreateChargePointModal({
       registrationStatus: 'Accepted',
       heartbeatInterval: '300',
       tariffPerKwh: '',
+      feePercent: '',
+      ebarimtMerchantId: '',
       securityProfile: '1',
       latitude: '',
       longitude: '',
@@ -77,6 +82,11 @@ export function CreateChargePointModal({
   }
 
   async function submit() {
+    const feePercent = parseFeePercent(form.feePercent);
+    if (feePercent === undefined) {
+      setError('Үйлчилгээний хураамж 0-100 хооронд тоо байх ёстой.');
+      return;
+    }
     setSaving(true);
     setError(null);
     try {
@@ -92,6 +102,9 @@ export function CreateChargePointModal({
       if (form.tariffPerKwh) body.tariffPerKwh = Number(form.tariffPerKwh);
       if (form.latitude) body.latitude = Number(form.latitude);
       if (form.longitude) body.longitude = Number(form.longitude);
+      // Left out = inherit from the client, then the network default.
+      if (feePercent !== null) body.feePercent = feePercent;
+      if (form.ebarimtMerchantId) body.ebarimtMerchantId = form.ebarimtMerchantId;
 
       const res = await api.post<CreatedResponse>('charge-points', body);
       setCreated(res);
@@ -243,6 +256,27 @@ export function CreateChargePointModal({
         <Field label="1 кВт·ц тариф (₮)" hint="Дууссан цэнэглэлтийн төлбөрийг тооцоход ашиглана. Үнэгүй бол хоосон орхино уу.">
           <Input value={form.tariffPerKwh} onChange={set('tariffPerKwh')} placeholder="450" inputMode="decimal" />
         </Field>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <Field
+            label="Үйлчилгээний хураамж (%)"
+            hint="Хоосон бол харилцагчийнхаас, түүнд ч байхгүй бол сүлжээний үндсэн хувь."
+          >
+            <Input
+              value={form.feePercent}
+              onChange={set('feePercent')}
+              placeholder="Харилцагчийнхаас"
+              inputMode="decimal"
+            />
+          </Field>
+          <Field label="Е-баримт мерчант" hint="Хоосон бол харилцагчийн мерчант ашиглагдана.">
+            <EbarimtMerchantSelect
+              value={form.ebarimtMerchantId}
+              onChange={(v) => setForm((f) => ({ ...f, ebarimtMerchantId: v }))}
+              blankLabel="(Харилцагчийнхаас)"
+            />
+          </Field>
+        </div>
       </div>
     </Modal>
   );

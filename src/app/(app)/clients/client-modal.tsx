@@ -5,7 +5,8 @@ import { toast } from 'sonner';
 import { api, errorMessage } from '@/lib/client';
 import { Button, ErrorNote, Field, Input, Select, Textarea } from '@/components/ui/primitives';
 import { Modal } from '@/components/ui/modal';
-import type { Client, ClientInput } from '@/lib/types';
+import { EbarimtMerchantSelect, parseFeePercent } from '@/components/ebarimt-merchant-select';
+import type { Client, ClientInput, PayoutAccount } from '@/lib/types';
 
 export function ClientModal({
   client,
@@ -30,6 +31,18 @@ export function ClientModal({
     description: client?.description ?? '',
     isActive: client?.isActive ?? true,
   });
+  const [feePercent, setFeePercent] = React.useState(client?.feePercent?.toString() ?? '');
+  const [ebarimtMerchantId, setEbarimtMerchantId] = React.useState(client?.ebarimtMerchantId ?? '');
+  const [payout, setPayout] = React.useState<Required<PayoutAccount>>({
+    bankName: client?.payoutAccount?.bankName ?? '',
+    bankCode: client?.payoutAccount?.bankCode ?? '',
+    accountNumber: client?.payoutAccount?.accountNumber ?? '',
+    accountName: client?.payoutAccount?.accountName ?? '',
+  });
+
+  const setPayoutField =
+    (key: keyof PayoutAccount) => (e: React.ChangeEvent<HTMLInputElement>) =>
+      setPayout((p) => ({ ...p, [key]: e.target.value }));
 
   const set =
     (key: keyof ClientInput) =>
@@ -44,6 +57,18 @@ export function ClientModal({
       setError('Харилцагчийн нэрийг оруулна уу.');
       return;
     }
+    const fee = parseFeePercent(feePercent);
+    if (fee === undefined) {
+      setError('Үйлчилгээний хураамж 0-100 хооронд тоо байх ёстой.');
+      return;
+    }
+
+    // Only the filled-in parts are sent; an all-blank account clears it.
+    const account: PayoutAccount = {};
+    for (const key of Object.keys(payout) as (keyof PayoutAccount)[]) {
+      const v = payout[key].trim();
+      if (v) account[key] = v;
+    }
 
     setSaving(true);
     setError(null);
@@ -57,6 +82,10 @@ export function ClientModal({
       address: form.address?.trim() || null,
       description: form.description?.trim() || null,
       isActive: form.isActive ?? true,
+      // null = network default; the API turns it into an $unset on edit.
+      feePercent: fee,
+      ebarimtMerchantId: ebarimtMerchantId || null,
+      payoutAccount: Object.keys(account).length ? account : null,
     };
 
     try {
@@ -170,6 +199,70 @@ export function ClientModal({
             placeholder="Гэрээний нөхцөл, онцлог эсвэл бусад нэмэлт мэдээлэл..."
           />
         </Field>
+
+        <div className="border-t border-[var(--color-border)] pt-3">
+          <p className="mb-3 text-xs font-semibold text-[var(--color-fg)]">Тооцоо ба е-баримт</p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field
+              label="Үйлчилгээний хураамж (%)"
+              hint="Эрчим хүчний төлбөр дээр нэмэгдэнэ. Хоосон бол сүлжээний үндсэн хувь."
+            >
+              <Input
+                value={feePercent}
+                onChange={(e) => setFeePercent(e.target.value)}
+                placeholder="Сүлжээний үндсэн"
+                inputMode="decimal"
+              />
+            </Field>
+            <Field
+              label="Е-баримт мерчант"
+              hint="Энэ харилцагчийн станцуудын баримт энэ мерчантаар гарна."
+            >
+              <EbarimtMerchantSelect
+                value={ebarimtMerchantId}
+                onChange={setEbarimtMerchantId}
+                blankLabel="(Сүлжээний үндсэн мерчант)"
+              />
+            </Field>
+          </div>
+        </div>
+
+        <div className="border-t border-[var(--color-border)] pt-3">
+          <p className="mb-3 text-xs font-semibold text-[var(--color-fg)]">Төлбөр шилжүүлэх данс</p>
+          <div className="grid gap-4 sm:grid-cols-2">
+            <Field label="Банкны нэр">
+              <Input
+                value={payout.bankName}
+                onChange={setPayoutField('bankName')}
+                placeholder="Жнь: Хаан банк"
+              />
+            </Field>
+            <Field label="Банкны код">
+              <Input
+                value={payout.bankCode}
+                onChange={setPayoutField('bankCode')}
+                placeholder="Жнь: 050000"
+                className="font-mono"
+              />
+            </Field>
+            <Field label="Дансны дугаар">
+              <Input
+                value={payout.accountNumber}
+                onChange={setPayoutField('accountNumber')}
+                placeholder="5000000000"
+                inputMode="numeric"
+                className="font-mono"
+              />
+            </Field>
+            <Field label="Данс эзэмшигчийн нэр">
+              <Input
+                value={payout.accountName}
+                onChange={setPayoutField('accountName')}
+                placeholder="Байгууллагын нэр"
+              />
+            </Field>
+          </div>
+        </div>
       </form>
     </Modal>
   );

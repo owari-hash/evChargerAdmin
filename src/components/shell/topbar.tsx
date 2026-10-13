@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { LogOut, Menu, Moon, Sun } from 'lucide-react';
 import { Button, Dot } from '@/components/ui/primitives';
+import { GlobalSearch } from './global-search';
 import { logout } from '@/lib/client';
 import { useLiveEvents } from '@/lib/use-live-events';
 import { useLiveRevalidation } from '@/lib/live-query';
@@ -15,6 +16,8 @@ export function Topbar({ user, onMenu }: { user: SessionUser; onMenu: () => void
       <Button variant="ghost" size="icon" className="lg:hidden" onClick={onMenu} aria-label="Цэс нээх">
         <Menu className="h-4 w-4" />
       </Button>
+
+      <GlobalSearch role={user.role} />
 
       <div className="flex-1" />
 

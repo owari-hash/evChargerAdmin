@@ -680,3 +680,47 @@ export interface SettlementInput {
   paidAt?: string;
 }
 
+
+// ---------------------------------------------------------------------------
+// Апп хувилбар (backend: /api/app-releases)
+// ---------------------------------------------------------------------------
+
+export type AppPlatform = 'android' | 'ios';
+export const APP_PLATFORMS: AppPlatform[] = ['android', 'ios'];
+
+/** One store's release settings. `configured: false` means no row exists yet. */
+export interface AppRelease {
+  id?: string;
+  platform: AppPlatform;
+  configured?: false;
+  /** Newest build in the store. Below it, the driver is offered an update. */
+  latestVersion?: string;
+  latestBuild?: number | null;
+  /** Oldest build still allowed to run. Below it, the update is forced. */
+  minSupportedVersion?: string | null;
+  minSupportedBuild?: number | null;
+  storeUrl?: string;
+  releaseNotesMn?: string | null;
+  releaseNotesEn?: string | null;
+  isActive?: boolean;
+  updatedBy?: string;
+  updatedAt?: string;
+}
+
+export interface AppReleaseInput {
+  latestVersion: string;
+  latestBuild?: number | null;
+  minSupportedVersion?: string | null;
+  minSupportedBuild?: number | null;
+  storeUrl: string;
+  releaseNotesMn?: string | null;
+  releaseNotesEn?: string | null;
+  isActive: boolean;
+}
+
+/** What a driver on a given build would be shown. */
+export interface AppReleasePreview {
+  configured: boolean;
+  updateAvailable: boolean;
+  forceUpdate: boolean;
+}

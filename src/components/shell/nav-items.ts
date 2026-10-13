@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   Plug,
   Settings,
+  Smartphone,
   ShieldCheck,
   SlidersHorizontal,
   Store,
@@ -67,6 +68,7 @@ export const NAV_SECTIONS: NavSection[] = [
     title: 'Системийн удирдлага',
     items: [
       { href: '/users', label: 'Хэрэглэгчид', icon: Users, minRole: 'ADMIN' },
+      { href: '/app-versions', label: 'Апп хувилбар', icon: Smartphone, minRole: 'OPERATOR' },
       { href: '/system', label: 'Систем', icon: Settings },
     ],
   },

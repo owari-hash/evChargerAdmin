@@ -15,6 +15,7 @@ import {
   Settings,
   ShieldCheck,
   SlidersHorizontal,
+  Smartphone,
   Store,
   Terminal,
   Users,
@@ -175,6 +176,10 @@ const MENU_KEYWORDS: Record<string, string[]> = {
   ],
   '/security': ['аюулгүй', 'гэрчилгээ', 'сертификат', 'security', 'certificate', 'ayuulgui'],
   '/users': ['хэрэглэгч', 'эрх', 'админ', 'бүртгэл', 'user', 'role', 'admin', 'hereglegch'],
+  '/app-versions': [
+    'апп', 'хувилбар', 'шинэчлэл', 'версон', 'андройд', 'айфон', 'дэлгүүр',
+    'app', 'version', 'update', 'android', 'ios', 'store', 'build', 'release', 'app version',
+  ],
   '/system': ['систем', 'тохиргоо', 'орчин', 'system', 'settings', 'config', 'tohirgoo'],
 };
 
@@ -622,6 +627,50 @@ const FUNCTION_ENTRIES: SearchEntry[] = [
     icon: Cpu,
     section: 'Программ хангамж ба лог',
     keywords: ['лог', 'диагностик', 'татах', 'log', 'diagnostics', 'download', 'debug'],
+    minRole: 'OPERATOR',
+  },
+
+  // ---- Апп хувилбар ----
+  {
+    id: 'fn:app-release-latest',
+    kind: 'function',
+    label: 'Аппын сүүлийн хувилбар, билд тохируулах',
+    href: '/app-versions',
+    icon: Smartphone,
+    section: 'Апп хувилбар',
+    hint: 'Android, iOS тус бүр тусдаа',
+    keywords: [
+      'хувилбар', 'билд', 'шинэчлэл', 'апп', 'version', 'build', 'update', 'release',
+      'versioncode', 'cfbundleversion',
+    ],
+    minRole: 'OPERATOR',
+  },
+  {
+    id: 'fn:app-release-force',
+    kind: 'function',
+    label: 'Заавал шинэчлэх босго тохируулах',
+    href: '/app-versions',
+    icon: Smartphone,
+    section: 'Апп хувилбар',
+    hint: 'Энэ билдээс доош апп нээгдэхгүй',
+    keywords: [
+      'заавал', 'албадах', 'босго', 'хаах', 'force', 'mandatory', 'required', 'minimum',
+      'zaavaal', 'albadah',
+    ],
+    minRole: 'OPERATOR',
+  },
+  {
+    id: 'fn:app-release-store-url',
+    kind: 'function',
+    label: 'Play Store / App Store татах холбоос',
+    href: '/app-versions',
+    icon: Smartphone,
+    section: 'Апп хувилбар',
+    hint: 'Платформ бүр өөрийн холбоостой',
+    keywords: [
+      'дэлгүүр', 'холбоос', 'татах', 'линк', 'play', 'appstore', 'playstore', 'store', 'url',
+      'link', 'download', 'delguur', 'holboos',
+    ],
     minRole: 'OPERATOR',
   },
 

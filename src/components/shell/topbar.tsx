@@ -12,16 +12,24 @@ import type { SessionUser } from '@/lib/types';
 
 export function Topbar({ user, onMenu }: { user: SessionUser; onMenu: () => void }) {
   return (
-    <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center justify-between gap-3 border-b border-[var(--color-border)] bg-[var(--color-surface)]/90 px-4 backdrop-blur">
-      <Button variant="ghost" size="icon" className="lg:hidden" onClick={onMenu} aria-label="Цэс нээх">
-        <Menu className="h-4 w-4" />
-      </Button>
+    // 1fr / auto / 1fr keeps the search centred on the header itself rather than
+    // on whatever is left over once the side controls have taken their space.
+    <header className="sticky top-0 z-20 grid h-14 shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-3 border-b border-[var(--color-border)] bg-[var(--color-surface)]/90 px-4 backdrop-blur">
+      <div className="flex min-w-0 items-center justify-start">
+        <Button
+          variant="ghost"
+          size="icon"
+          className="lg:hidden"
+          onClick={onMenu}
+          aria-label="Цэс нээх"
+        >
+          <Menu className="h-4 w-4" />
+        </Button>
+      </div>
 
-      <GlobalSearch role={user.role} />
+      <GlobalSearch role={user.role} className="w-44 sm:w-72 md:w-96" />
 
-      <div className="flex-1" />
-
-      <div className="flex items-center gap-2">
+      <div className="flex min-w-0 items-center justify-end gap-2">
         <LiveIndicator />
         <ThemeToggle />
         <Button

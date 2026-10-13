@@ -20,87 +20,18 @@ const GROUP_LABELS: Record<SearchKind, string> = {
 /** Keeps the list short enough to scan; the ranking puts the best first anyway. */
 const LIMIT_PER_GROUP = 8;
 
-export function GlobalSearch({ role }: { role: UserRole }) {
-  const [open, setOpen] = React.useState(false);
-
-  // ⌘K / Ctrl+K anywhere, and "/" when the operator is not already typing.
-  React.useEffect(() => {
-    function onKey(event: KeyboardEvent) {
-      const key = event.key.toLowerCase();
-      const target = event.target as HTMLElement | null;
-      const typing =
-        target?.tagName === 'INPUT' ||
-        target?.tagName === 'TEXTAREA' ||
-        target?.isContentEditable === true;
-
-      if (key === 'k' && (event.metaKey || event.ctrlKey)) {
-        event.preventDefault();
-        setOpen((v) => !v);
-      } else if (key === '/' && !typing && !event.metaKey && !event.ctrlKey) {
-        event.preventDefault();
-        setOpen(true);
-      }
-    }
-
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, []);
-
-  return (
-    <>
-      <SearchTrigger onClick={() => setOpen(true)} />
-      <SearchDialog role={role} open={open} onClose={() => setOpen(false)} />
-    </>
-  );
-}
-
-function SearchTrigger({ onClick }: { onClick: () => void }) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        'flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)]',
-        'px-2.5 py-1.5 text-sm text-[var(--color-fg-muted)] transition-colors',
-        'hover:border-[var(--color-brand)]/40 hover:text-[var(--color-fg)]',
-        'sm:w-64 md:w-80',
-      )}
-      aria-label="Хайх"
-    >
-      <Search className="h-4 w-4 shrink-0" />
-      <span className="hidden flex-1 text-left sm:inline">Цэс, үйлдэл хайх…</span>
-      <Kbd className="hidden sm:inline-flex">⌘K</Kbd>
-    </button>
-  );
-}
-
-function Kbd({ children, className }: { children: React.ReactNode; className?: string }) {
-  return (
-    <kbd
-      className={cn(
-        'items-center rounded border border-[var(--color-border)] bg-[var(--color-surface)]',
-        'px-1.5 py-0.5 font-sans text-[10px] font-semibold text-[var(--color-fg-muted)]',
-        className,
-      )}
-    >
-      {children}
-    </kbd>
-  );
-}
-
-function SearchDialog({
-  role,
-  open,
-  onClose,
-}: {
-  role: UserRole;
-  open: boolean;
-  onClose: () => void;
-}) {
+/**
+ * Top-bar search. The results hang off the field as a dropdown rather than
+ * taking over the screen, so the console stays visible behind them.
+ */
+export function GlobalSearch({ role, className }: { role: UserRole; className?: string }) {
   const router = useRouter();
-  const ref = React.useRef<HTMLDialogElement>(null);
+  const rootRef = React.useRef<HTMLDivElement>(null);
+  const inputRef = React.useRef<HTMLInputElement>(null);
   const listRef = React.useRef<HTMLDivElement>(null);
+
   const [query, setQuery] = React.useState('');
+  const [open, setOpen] = React.useState(false);
   const [active, setActive] = React.useState(0);
 
   const groups = React.useMemo(() => {
@@ -123,15 +54,37 @@ function SearchDialog({
   // One flat list underneath the grouping, so ↑/↓ crosses the group boundary.
   const flat = React.useMemo(() => groups.flatMap((g) => g.entries), [groups]);
 
+  // ⌘K / Ctrl+K anywhere, and "/" when the operator is not already typing.
   React.useEffect(() => {
-    const dialog = ref.current;
-    if (!dialog) return;
-    if (open && !dialog.open) {
-      dialog.showModal();
-      setQuery('');
-      setActive(0);
+    function onKey(event: KeyboardEvent) {
+      const key = event.key.toLowerCase();
+      const target = event.target as HTMLElement | null;
+      const typing =
+        target?.tagName === 'INPUT' ||
+        target?.tagName === 'TEXTAREA' ||
+        target?.isContentEditable === true;
+
+      if ((key === 'k' && (event.metaKey || event.ctrlKey)) || (key === '/' && !typing)) {
+        event.preventDefault();
+        inputRef.current?.focus();
+        inputRef.current?.select();
+      }
     }
-    if (!open && dialog.open) dialog.close();
+
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  // Dismiss when the next click lands anywhere outside the field and its list.
+  React.useEffect(() => {
+    if (!open) return;
+
+    function onPointerDown(event: PointerEvent) {
+      if (!rootRef.current?.contains(event.target as Node)) setOpen(false);
+    }
+
+    document.addEventListener('pointerdown', onPointerDown);
+    return () => document.removeEventListener('pointerdown', onPointerDown);
   }, [open]);
 
   // Keep the highlighted row visible while arrowing through a long list.
@@ -141,69 +94,100 @@ function SearchDialog({
 
   function go(entry: SearchEntry | undefined) {
     if (!entry) return;
-    onClose();
+    setOpen(false);
+    setQuery('');
+    inputRef.current?.blur();
     router.push(entry.href);
   }
 
-  function onKeyDown(event: React.KeyboardEvent) {
-    if (event.key === 'ArrowDown') {
+  function onKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key === 'Escape') {
+      setOpen(false);
+      inputRef.current?.blur();
+      return;
+    }
+
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
       event.preventDefault();
-      setActive((i) => (flat.length ? (i + 1) % flat.length : 0));
-    } else if (event.key === 'ArrowUp') {
-      event.preventDefault();
-      setActive((i) => (flat.length ? (i - 1 + flat.length) % flat.length : 0));
-    } else if (event.key === 'Enter') {
+      if (!open) {
+        setOpen(true);
+        setActive(0);
+        return;
+      }
+      if (!flat.length) return;
+      const step = event.key === 'ArrowDown' ? 1 : -1;
+      setActive((i) => (i + step + flat.length) % flat.length);
+      return;
+    }
+
+    if (event.key === 'Enter' && open) {
       event.preventDefault();
       go(flat[active]);
     }
   }
 
-  return (
-    <dialog
-      ref={ref}
-      onCancel={(e) => {
-        e.preventDefault();
-        onClose();
-      }}
-      onClick={(e) => {
-        if (e.target === ref.current) onClose();
-      }}
-      className={cn(
-        'mx-auto mt-[12vh] mb-auto w-[calc(100vw-2rem)] max-w-xl rounded-xl p-0',
-        'border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)]',
-        'shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm open:animate-in-fade',
-      )}
-      aria-label="Цэс, үйлдэл хайх"
-    >
-      {open ? (
-        <div className="flex max-h-[70vh] flex-col" onKeyDown={onKeyDown}>
-          <div className="flex items-center gap-2.5 border-b border-[var(--color-border)] px-4">
-            <Search className="h-4 w-4 shrink-0 text-[var(--color-fg-muted)]" />
-            <input
-              autoFocus
-              value={query}
-              onChange={(e) => {
-                setQuery(e.target.value);
-                // The result list is rebuilt, so the old highlight is meaningless.
-                setActive(0);
-              }}
-              placeholder="данс, тариф, буцаалт, станц…"
-              aria-label="Хайх"
-              role="combobox"
-              aria-expanded
-              aria-controls="global-search-results"
-              className="h-12 flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--color-fg-muted)]"
-            />
-            <Kbd className="inline-flex">ESC</Kbd>
-          </div>
+  const activeId = flat[active] ? `gs-${flat[active]!.id}` : undefined;
 
-          <div id="global-search-results" ref={listRef} role="listbox" className="overflow-y-auto p-2">
-            {flat.length === 0 ? (
-              <p className="px-3 py-8 text-center text-sm text-[var(--color-fg-muted)]">
-                «{query}» -тай тохирох цэс, үйлдэл олдсонгүй.
-              </p>
-            ) : (
-              groups.map((group) => (
+  return (
+    <div ref={rootRef} className={cn('relative', className)}>
+      <div
+        className={cn(
+          'flex items-center gap-2 rounded-lg border bg-[var(--color-surface-2)] px-2.5',
+          'transition-colors',
+          open
+            ? 'border-[var(--color-brand)]/50'
+            : 'border-[var(--color-border)] hover:border-[var(--color-brand)]/40',
+        )}
+      >
+        <Search className="h-4 w-4 shrink-0 text-[var(--color-fg-muted)]" />
+        <input
+          ref={inputRef}
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            // The result list is rebuilt, so the old highlight is meaningless.
+            setActive(0);
+            setOpen(true);
+          }}
+          onFocus={() => setOpen(true)}
+          onKeyDown={onKeyDown}
+          placeholder="Цэс, үйлдэл хайх…"
+          aria-label="Цэс, үйлдэл хайх"
+          role="combobox"
+          aria-expanded={open}
+          aria-controls="global-search-results"
+          aria-activedescendant={activeId}
+          autoComplete="off"
+          className="h-9 min-w-0 flex-1 bg-transparent text-sm outline-none placeholder:text-[var(--color-fg-muted)]"
+        />
+        {!open && !query ? <Kbd className="hidden sm:inline-flex">⌘K</Kbd> : null}
+      </div>
+
+      {open ? (
+        <div
+          className={cn(
+            'absolute top-full z-40 mt-2 flex max-h-[min(70vh,28rem)] flex-col overflow-hidden',
+            'rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl',
+            // Narrow fields get a dropdown wider than themselves, centred under
+            // the input; from sm up it simply matches the field.
+            'left-1/2 w-[min(88vw,26rem)] -translate-x-1/2',
+            'sm:left-0 sm:right-0 sm:w-auto sm:translate-x-0',
+          )}
+        >
+          {flat.length === 0 ? (
+            <p className="px-3 py-6 text-center text-sm text-[var(--color-fg-muted)]">
+              «{query}» -тай тохирох цэс, үйлдэл олдсонгүй.
+            </p>
+          ) : (
+            <>
+              {/* Only the results scroll, so the key hints below stay put. */}
+              <div
+                id="global-search-results"
+                ref={listRef}
+                role="listbox"
+                className="min-h-0 flex-1 overflow-y-auto p-2"
+              >
+              {groups.map((group) => (
                 <section key={group.kind} className="mb-1 last:mb-0">
                   <h2 className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-[var(--color-fg-muted)]">
                     {query.trim() ? GROUP_LABELS[group.kind] : 'Түгээмэл'}
@@ -222,26 +206,45 @@ function SearchDialog({
                     );
                   })}
                 </section>
-              ))
-            )}
-          </div>
+              ))}
+              </div>
 
-          <footer className="flex items-center gap-3 border-t border-[var(--color-border)] px-4 py-2 text-[11px] text-[var(--color-fg-muted)]">
-            <span className="flex items-center gap-1">
-              <Kbd className="inline-flex">↑</Kbd>
-              <Kbd className="inline-flex">↓</Kbd>
-              шилжих
-            </span>
-            <span className="flex items-center gap-1">
-              <Kbd className="inline-flex">
-                <CornerDownLeft className="h-2.5 w-2.5" />
-              </Kbd>
-              нээх
-            </span>
-          </footer>
+              <footer className="flex shrink-0 items-center gap-3 border-t border-[var(--color-border)] bg-[var(--color-surface)] px-4 py-2 text-[11px] text-[var(--color-fg-muted)]">
+                <span className="flex items-center gap-1">
+                  <Kbd className="inline-flex">↑</Kbd>
+                  <Kbd className="inline-flex">↓</Kbd>
+                  шилжих
+                </span>
+                <span className="flex items-center gap-1">
+                  <Kbd className="inline-flex">
+                    <CornerDownLeft className="h-2.5 w-2.5" />
+                  </Kbd>
+                  нээх
+                </span>
+                <span className="ml-auto flex items-center gap-1">
+                  <Kbd className="inline-flex">ESC</Kbd>
+                  хаах
+                </span>
+              </footer>
+            </>
+          )}
         </div>
       ) : null}
-    </dialog>
+    </div>
+  );
+}
+
+function Kbd({ children, className }: { children: React.ReactNode; className?: string }) {
+  return (
+    <kbd
+      className={cn(
+        'items-center rounded border border-[var(--color-border)] bg-[var(--color-surface)]',
+        'px-1.5 py-0.5 font-sans text-[10px] font-semibold text-[var(--color-fg-muted)]',
+        className,
+      )}
+    >
+      {children}
+    </kbd>
   );
 }
 
@@ -261,6 +264,7 @@ function ResultRow({
   return (
     <button
       type="button"
+      id={`gs-${entry.id}`}
       role="option"
       aria-selected={active}
       data-active={active}

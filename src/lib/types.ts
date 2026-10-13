@@ -134,6 +134,29 @@ export interface Connector {
   lastPowerW?: number;
   lastSocPercent?: number;
   updatedAt: string;
+
+  /**
+   * Short permanent code behind this gun's printed QR sticker. Minted once and
+   * never reissued — the sticker is already on the charger. Absent on
+   * connectorId 0, which is the station as a whole rather than a gun.
+   */
+  code?: string | null;
+  /** Ready-made sticker URL, e.g. https://eplug.mn/c/K7M4Q2. */
+  qrUrl?: string | null;
+  /** Operator-set; OCPP 1.6 reports neither. */
+  connectorType?: ConnectorType | null;
+  powerKw?: number | null;
+  label?: string | null;
+}
+
+export const CONNECTOR_TYPES = ['Type2', 'CCS2', 'CHAdeMO', 'GBT', 'Type1', 'Schuko'] as const;
+export type ConnectorType = (typeof CONNECTOR_TYPES)[number];
+
+export interface ConnectorInput {
+  connectorId: number;
+  connectorType?: ConnectorType | null;
+  powerKw?: number | null;
+  label?: string | null;
 }
 
 export interface ChargePoint {

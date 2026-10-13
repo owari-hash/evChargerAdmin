@@ -9,7 +9,9 @@ import {
   KeyRound,
   MapPin,
   Pencil,
+  Plus,
   PlugZap,
+  Printer,
   Trash2,
   Unplug,
 } from 'lucide-react';
@@ -26,7 +28,8 @@ import {
   formatRelative,
   formatWh,
 } from '@/lib/format';
-import type { ChargePointDetail, Client } from '@/lib/types';
+import type { ChargePointDetail, Client, Connector } from '@/lib/types';
+import { withBasePath } from '@/lib/base-path';
 import { EbarimtMerchantName, NetworkDefaultFee } from '@/components/ebarimt-merchant-select';
 import {
   Badge,
@@ -42,6 +45,7 @@ import { ConfirmModal, Modal } from '@/components/ui/modal';
 import { CopyButton } from '@/components/ui/copy-button';
 import { ConnectorStatusBadge, ErrorCodeBadge, OnlineBadge, RegistrationBadge } from '@/components/ui/status';
 import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty } from '@/components/ui/table';
+import { ConnectorModal } from './connector-modal';
 import { CommandConsole } from './command-console';
 import { MessagesTab } from './messages-tab';
 import { CommandLogTab } from './command-log-tab';
@@ -194,7 +198,7 @@ export function ChargePointView({
       </Card>
 
       {tab === 'overview' ? <OverviewTab detail={detail} /> : null}
-      {tab === 'connectors' ? <ConnectorsTab detail={detail} /> : null}
+      {tab === 'connectors' ? <ConnectorsTab detail={detail} canOperate={canOperate} /> : null}
       {tab === 'configuration' ? (
         <ConfigurationTab
           chargePointId={detail.id}
@@ -479,65 +483,246 @@ function OverviewTab({ detail }: { detail: ChargePointDetail }) {
   );
 }
 
-function ConnectorsTab({ detail }: { detail: ChargePointDetail }) {
-  const connectors = (detail.connectors ?? []).slice().sort((a, b) => a.connectorId - b.connectorId);
+/**
+ * Whether a connector changed state in the last 45 seconds.
+ *
+ * This is the only reliable way to learn which physical gun is `connectorId: 1`
+ * — OCPP never says. An installer plugs a cable into one gun, the pile sends
+ * StatusNotification, and whichever card lights up here is that gun.
+ *
+ * Derived from the station's own `statusTimestamp` rather than diffing on the
+ * client, so it survives a page reload mid-commissioning.
+ */
+const IDENTIFY_WINDOW_MS = 45_000;
 
-  if (connectors.length === 0) {
-    return (
-      <Card>
-        <EmptyState
-          icon={<PlugZap className="h-8 w-8" />}
-          title="Холбогч мэдээлээгүй байна"
-          description="Станц эхний StatusNotification илгээмэгц холбогчид харагдана."
-        />
-      </Card>
-    );
+function changedRecently(connector: Connector): boolean {
+  const raw = connector.statusTimestamp ?? connector.updatedAt;
+  if (!raw) return false;
+  const at = Date.parse(raw);
+  return Number.isFinite(at) && Date.now() - at < IDENTIFY_WINDOW_MS;
+}
+
+function ConnectorsTab({
+  detail,
+  canOperate,
+}: {
+  detail: ChargePointDetail;
+  canOperate: boolean;
+}) {
+  const router = useRouter();
+  const connectors = (detail.connectors ?? []).slice().sort((a, b) => a.connectorId - b.connectorId);
+  // connectorId 0 is the station as a whole, not a gun, so it gets no sticker.
+  const guns = connectors.filter((c) => c.connectorId > 0);
+
+  const [modalOpen, setModalOpen] = React.useState(false);
+  const [editingConnector, setEditingConnector] = React.useState<Connector | null>(null);
+  const [deleting, setDeleting] = React.useState<Connector | null>(null);
+  const [busy, setBusy] = React.useState(false);
+
+  function add() {
+    setEditingConnector(null);
+    setModalOpen(true);
+  }
+
+  function edit(connector: Connector) {
+    setEditingConnector(connector);
+    setModalOpen(true);
+  }
+
+  async function remove() {
+    if (!deleting) return;
+    setBusy(true);
+    try {
+      await api.del(`connectors/${deleting.id}`);
+      toast.success(`Холбогч №${deleting.connectorId} устгагдлаа`);
+      setDeleting(null);
+      router.refresh();
+    } catch (err) {
+      toast.error(errorMessage(err));
+    } finally {
+      setBusy(false);
+    }
   }
 
   return (
     <>
+      <Card className="mb-4">
+        <CardHeader
+          title="Холбогч ба QR наалт"
+          description="Гарц бүр өөрийн байнгын QR кодтой. Станц холбогдоогүй байсан ч урьдчилан бүртгэж, наалтаа хэвлүүлж болно."
+          actions={
+            <div className="flex items-center gap-2">
+              {guns.some((c) => c.code) ? (
+                <Link
+                  href={`/charge-points/${detail.id}/stickers`}
+                  className="inline-flex h-8 items-center gap-1.5 rounded-lg border border-[var(--color-border)] px-3 text-xs font-medium hover:bg-[var(--color-surface-2)]"
+                >
+                  <Printer className="h-3.5 w-3.5" />
+                  Наалт хэвлэх
+                </Link>
+              ) : null}
+              {canOperate ? (
+                <Button variant="primary" size="sm" onClick={add}>
+                  <Plus className="h-3.5 w-3.5" />
+                  Холбогч нэмэх
+                </Button>
+              ) : null}
+            </div>
+          }
+        />
+        {guns.length === 0 ? (
+          <EmptyState
+            icon={<PlugZap className="h-8 w-8" />}
+            title="Холбогч бүртгэгдээгүй байна"
+            description="Станц эхний StatusNotification илгээмэгц өөрөө нэмэгдэнэ. Эсвэл одоо гараар бүртгээд QR кодоо авч болно."
+            action={
+              canOperate ? (
+                <Button variant="primary" size="sm" onClick={add}>
+                  <Plus className="h-3.5 w-3.5" />
+                  Холбогч нэмэх
+                </Button>
+              ) : undefined
+            }
+          />
+        ) : null}
+      </Card>
+
+      {guns.length > 0 ? (
+        <div className="mb-4 rounded-lg border border-[var(--color-info)]/30 bg-[var(--color-info-soft)]/40 px-4 py-3 text-xs text-[var(--color-fg-muted)]">
+          <p className="font-semibold text-[var(--color-fg)]">Аль гарц нь хэд дэх холбогч вэ?</p>
+          <p className="mt-1">
+            OCPP протокол үүнийг хэлж өгдөггүй — үйлдвэр нь өөрөө дугаарладаг. Гарц руу кабель
+            залгахад тухайн холбогчийн карт энд гэрэлтэнэ. Тэрийг нь тэмдэглээд нэр өгч, QR
+            наалтаа хэвлээрэй. Наалтыг гарц тодорхой болсны дараа наах нь зүйтэй.
+          </p>
+        </div>
+      ) : null}
+
       <div className="mb-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {connectors
-          .filter((c) => c.connectorId > 0)
-          .map((c) => (
-            <Card key={c.connectorId} className="p-4">
-              <div className="flex items-start justify-between gap-2">
-                <div>
-                  <p className="text-sm font-semibold">{c.connectorId} дугаар холбогч</p>
-                  <p className="mt-0.5 text-xs text-[var(--color-fg-muted)]">
-                    {c.availability === 'Operative' ? 'Ажиллагаатай' : 'Ажиллагаагүй'}
-                    {c.info ? ` · ${c.info}` : ''}
-                  </p>
-                </div>
+        {guns.map((c) => (
+          <Card
+            key={c.connectorId}
+            className={
+              changedRecently(c)
+                ? 'p-4 ring-2 ring-[var(--color-brand)] ring-offset-2 ring-offset-[var(--color-bg)]'
+                : 'p-4'
+            }
+          >
+            <div className="flex items-start justify-between gap-2">
+              <div className="min-w-0">
+                <p className="text-sm font-semibold">
+                  {c.connectorId} дугаар холбогч
+                  {c.label ? (
+                    <span className="ml-1.5 font-normal text-[var(--color-fg-muted)]">
+                      · {c.label}
+                    </span>
+                  ) : null}
+                </p>
+                <p className="mt-0.5 text-xs text-[var(--color-fg-muted)]">
+                  {[
+                    c.connectorType ?? null,
+                    c.powerKw != null ? `${c.powerKw} кВт` : null,
+                    c.availability === 'Operative' ? 'Ажиллагаатай' : 'Ажиллагаагүй',
+                  ]
+                    .filter(Boolean)
+                    .join(' · ')}
+                </p>
+              </div>
+              <div className="flex shrink-0 items-center gap-1.5">
+                {changedRecently(c) ? <Badge tone="brand">Дөнгөж өөрчлөгдлөө</Badge> : null}
                 <ConnectorStatusBadge status={c.status} />
               </div>
+            </div>
 
-              <dl className="mt-3 space-y-0 border-t border-[var(--color-border)] pt-2">
-                <DataRow label="Алдаа">
-                  <ErrorCodeBadge code={c.errorCode} />
-                </DataRow>
-                <DataRow label="Цэнэглэлт">
-                  {c.currentTransactionId ? (
-                    <Link
-                      href={`/transactions/${c.currentTransactionId}`}
-                      className="font-mono text-[var(--color-brand)] hover:underline"
-                    >
-                      #{c.currentTransactionId}
-                    </Link>
-                  ) : (
-                    '—'
-                  )}
-                </DataRow>
-                <DataRow label="Тоолуур">{formatWh(c.lastMeterWh)}</DataRow>
-                <DataRow label="Чадал">{formatPower(c.lastPowerW)}</DataRow>
-                <DataRow label="Цэнэг">
-                  {c.lastSocPercent != null ? `${c.lastSocPercent}%` : '—'}
-                </DataRow>
-                <DataRow label="Шинэчлэгдсэн">{formatRelative(c.statusTimestamp ?? c.updatedAt)}</DataRow>
-              </dl>
-            </Card>
-          ))}
+            {c.code ? (
+              <div className="mt-3 flex items-center gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] p-2.5">
+                {/* Drawn by the console's own /console-api/qr, so these cards
+                    cost the client bundle no QR library. */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={withBasePath(`/console-api/qr?data=${encodeURIComponent(c.qrUrl ?? '')}`)}
+                  alt={`Холбогч ${c.connectorId}-ийн QR код`}
+                  className="h-20 w-20 shrink-0 rounded bg-white p-1"
+                />
+                <div className="min-w-0">
+                  <p className="font-mono text-base font-bold tracking-widest">{c.code}</p>
+                  <p className="mt-0.5 truncate font-mono text-[11px] text-[var(--color-fg-muted)]">
+                    {c.qrUrl}
+                  </p>
+                  <div className="mt-1.5">
+                    <CopyButton value={c.qrUrl ?? ''} />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <p className="mt-3 rounded-lg border border-dashed border-[var(--color-border)] px-3 py-2 text-xs text-[var(--color-fg-muted)]">
+                QR код алга. Станц дараагийн удаа холбогдоход автоматаар үүснэ.
+              </p>
+            )}
+
+            <dl className="mt-3 space-y-0 border-t border-[var(--color-border)] pt-2">
+              <DataRow label="Алдаа">
+                <ErrorCodeBadge code={c.errorCode} />
+              </DataRow>
+              <DataRow label="Цэнэглэлт">
+                {c.currentTransactionId ? (
+                  <Link
+                    href={`/transactions/${c.currentTransactionId}`}
+                    className="font-mono text-[var(--color-brand)] hover:underline"
+                  >
+                    #{c.currentTransactionId}
+                  </Link>
+                ) : (
+                  '—'
+                )}
+              </DataRow>
+              <DataRow label="Тоолуур">{formatWh(c.lastMeterWh)}</DataRow>
+              <DataRow label="Чадал">{formatPower(c.lastPowerW)}</DataRow>
+              <DataRow label="Шинэчлэгдсэн">
+                {formatRelative(c.statusTimestamp ?? c.updatedAt)}
+              </DataRow>
+            </dl>
+
+            {canOperate ? (
+              <div className="mt-3 flex items-center gap-2 border-t border-[var(--color-border)] pt-3">
+                <Button variant="ghost" size="sm" onClick={() => edit(c)}>
+                  <Pencil className="h-3.5 w-3.5" />
+                  Засах
+                </Button>
+                <Button variant="ghost" size="sm" onClick={() => setDeleting(c)}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                  Устгах
+                </Button>
+              </div>
+            ) : null}
+          </Card>
+        ))}
       </div>
+
+      {/* Keyed and mounted per open, so the form seeds itself from props and
+          needs no effect to reset between an add and an edit. */}
+      {modalOpen ? (
+        <ConnectorModal
+          key={editingConnector?.id ?? 'new'}
+          open
+          onClose={() => setModalOpen(false)}
+          chargePointId={detail.id}
+          connector={editingConnector}
+          takenIds={guns.map((c) => c.connectorId)}
+          onSaved={() => router.refresh()}
+        />
+      ) : null}
+
+      <ConfirmModal
+        open={deleting !== null}
+        onClose={() => setDeleting(null)}
+        onConfirm={remove}
+        loading={busy}
+        tone="danger"
+        title={`Холбогч №${deleting?.connectorId ?? ''} устгах уу?`}
+        confirmLabel="Устгах"
+        message="Энэ гарцын QR код хүчингүй болно. Наалт нь станц дээрээ байвал дахин хэвлэх шаардлагатай."
+      />
 
       <Card>
         <CardHeader

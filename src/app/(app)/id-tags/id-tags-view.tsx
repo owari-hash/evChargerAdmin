@@ -79,7 +79,7 @@ export function IdTagsView({
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--color-fg-subtle)]" />
             <Input
               className="pl-8"
-              placeholder="Карт, нэр, эзэмшигч, и-мэйлээр хайх…"
+              placeholder="Карт, нэр, и-мэйл, утасны дугаараар хайх…"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
@@ -152,6 +152,9 @@ export function IdTagsView({
                         {tag.label || tag.ownerName || '—'}
                         {tag.ownerEmail ? (
                           <p className="text-[var(--color-fg-subtle)]">{tag.ownerEmail}</p>
+                        ) : null}
+                        {tag.ownerPhone ? (
+                          <p className="text-[var(--color-fg-subtle)]">{tag.ownerPhone}</p>
                         ) : null}
                       </TD>
                       <TD className="font-mono text-xs text-[var(--color-fg-muted)]">

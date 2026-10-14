@@ -7,6 +7,7 @@ import useSWR from 'swr';
 import {
   ArrowLeft,
   Building2,
+  CreditCard,
   Edit2,
   ExternalLink,
   MapPin,
@@ -19,7 +20,7 @@ import {
 import { REFRESH } from '@/lib/live-query';
 import { apiUrl, fetcher } from '@/lib/client';
 import { formatDateTime, formatMoney, formatNumber, formatRelative } from '@/lib/format';
-import type { ChargePoint, Client } from '@/lib/types';
+import type { ChargePoint, Client, IdTag, Paginated } from '@/lib/types';
 import {
   Badge,
   Button,
@@ -42,6 +43,7 @@ import {
 import { ConnectorStatusBadge, OnlineBadge } from '@/components/ui/status';
 import { StatGrid } from '@/components/stat-card';
 import { EbarimtMerchantName, NetworkDefaultFee } from '@/components/ebarimt-merchant-select';
+import { ID_TAG_STATUS, mn } from '@/lib/mn';
 import { ClientModal } from '../client-modal';
 import { EditChargePointModal } from '../../charge-points/edit-charge-point-modal';
 
@@ -63,6 +65,16 @@ export function ClientDetailView({
     fetcher,
     { refreshInterval: REFRESH.config },
   );
+
+  // "Дотоод бүртгэл": member cards that charge for free against this client's
+  // own wallet — replaces the station's broken RFID fleet. Logged the same way
+  // every other card is, so the usage trail lives in /transactions as usual.
+  const { data: memberCardsData } = useSWR<Paginated<IdTag>>(
+    apiUrl('id-tags', { walletOwnerType: 'CLIENT', walletOwnerId: clientId, limit: 200 }),
+    fetcher,
+    { refreshInterval: REFRESH.config },
+  );
+  const memberCards = memberCardsData?.data ?? [];
 
   if (isLoading && !client) {
     return (
@@ -300,6 +312,63 @@ export function ClientDetailView({
               </DataRow>
               <DataRow label="Данс эзэмшигч">{client.payoutAccount?.accountName || '—'}</DataRow>
             </dl>
+          </Card>
+
+          <Card>
+            <CardHeader
+              title={`Дотоод гишүүдийн карт (${memberCards.length})`}
+              description="Эдгээр карт энэ харилцагчийн станцад үнэ төлбөргүй цэнэглэнэ"
+              actions={
+                canEdit ? (
+                  <Link href="/id-tags">
+                    <Button variant="secondary" size="sm">
+                      <Plus className="h-3.5 w-3.5" />
+                      Карт нэмэх
+                    </Button>
+                  </Link>
+                ) : null
+              }
+            />
+            {memberCards.length === 0 ? (
+              <div className="px-5 py-6 text-center text-xs text-[var(--color-fg-muted)]">
+                Одоогоор дотоод гишүүний карт бүртгэгдээгүй байна. RFID карт хэсгээс
+                &quot;Байгууллагын дотоод гишүүний карт&quot; сонголтоор нэмнэ үү.
+              </div>
+            ) : (
+              <ul className="divide-y divide-[var(--color-border)]">
+                {memberCards.map((t) => (
+                  <li
+                    key={t.idTag}
+                    className="flex items-center justify-between gap-3 px-5 py-2.5 text-sm"
+                  >
+                    <div className="flex min-w-0 items-center gap-2">
+                      <CreditCard className="h-4 w-4 shrink-0 text-[var(--color-fg-muted)]" />
+                      <div className="min-w-0">
+                        <p className="truncate font-medium">
+                          {t.label || t.ownerName || t.idTag}
+                        </p>
+                        <p className="truncate font-mono text-[11px] text-[var(--color-fg-subtle)]">
+                          {t.idTag}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 items-center gap-2">
+                      {t.status === 'Accepted' ? (
+                        <Badge tone="ok">{mn(ID_TAG_STATUS, t.status)}</Badge>
+                      ) : (
+                        <Badge tone="idle">{mn(ID_TAG_STATUS, t.status)}</Badge>
+                      )}
+                      <Link
+                        href={`/transactions?idTag=${encodeURIComponent(t.idTag)}`}
+                        className="text-xs text-[var(--color-brand)] hover:underline"
+                      >
+                        Лог
+                      </Link>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
           </Card>
         </div>
       </div>

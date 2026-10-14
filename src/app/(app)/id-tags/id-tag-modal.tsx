@@ -1,10 +1,11 @@
 'use client';
 
 import * as React from 'react';
+import useSWR from 'swr';
 import { toast } from 'sonner';
-import { api, errorMessage } from '@/lib/client';
-import { AUTHORIZATION_STATUSES, type IdTag } from '@/lib/types';
-import { Button, ErrorNote, Field, Input, Select, Textarea } from '@/components/ui/primitives';
+import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
+import { AUTHORIZATION_STATUSES, type Client, type IdTag, type Paginated } from '@/lib/types';
+import { Button, Checkbox, ErrorNote, Field, Input, Select, Textarea } from '@/components/ui/primitives';
 import { ID_TAG_STATUS, mn } from '@/lib/mn';
 import { Modal } from '@/components/ui/modal';
 import { DatePicker } from '@/components/ui/date-picker';
@@ -32,6 +33,7 @@ export function IdTagModal({
     label: tag?.label ?? '',
     ownerName: tag?.ownerName ?? '',
     ownerEmail: tag?.ownerEmail ?? '',
+    ownerPhone: tag?.ownerPhone ?? '',
     // The DatePicker works in YYYY-MM-DD.
     expiryDate: tag?.expiryDate ? tag.expiryDate.slice(0, 10) : '',
     maxActiveTransactions: String(tag?.maxActiveTransactions ?? 1),
@@ -39,10 +41,43 @@ export function IdTagModal({
     note: tag?.note ?? '',
   });
 
+  // An internal member card: it charges for free against a Client's own
+  // wallet, replacing that client's broken RFID fleet. See `walletOwnerType`
+  // on the backend `IdTag` model.
+  const [isOrgCard, setIsOrgCard] = React.useState(tag?.walletOwnerType === 'CLIENT');
+  const [clientId, setClientId] = React.useState(
+    tag?.walletOwnerType === 'CLIENT' ? (tag.walletOwnerId ?? '') : '',
+  );
+
+  const { data: clientsData } = useSWR<Paginated<Client>>(
+    isOrgCard ? apiUrl('clients', { limit: 200, status: 'active' }) : null,
+    fetcher,
+  );
+  const clients = clientsData?.data ?? [];
+
   const set =
     (key: keyof typeof form) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
       setForm((f) => ({ ...f, [key]: e.target.value }));
+
+  // Picking a client defaults the allow-list to exactly its own stations — an
+  // internal member card has no reason to charge anywhere else, and this is
+  // still a plain text field the admin can widen or narrow afterward.
+  async function selectClient(id: string) {
+    setClientId(id);
+    if (!id) return;
+    try {
+      const picked = await api.get<Client>(`clients/${encodeURIComponent(id)}`);
+      if (picked.stations) {
+        setForm((f) => ({
+          ...f,
+          allowedChargePointIds: picked.stations!.map((s) => s.cpId).join(', '),
+        }));
+      }
+    } catch {
+      // Best-effort convenience fill; the admin can still type stations in by hand.
+    }
+  }
 
   async function submit() {
     setSaving(true);
@@ -61,10 +96,20 @@ export function IdTagModal({
         label: form.label.trim() || undefined,
         ownerName: form.ownerName.trim() || undefined,
         ownerEmail: form.ownerEmail.trim() || undefined,
+        ownerPhone: form.ownerPhone.trim() || undefined,
         note: form.note.trim() || undefined,
         allowedChargePointIds: allowed.length ? allowed : undefined,
         expiryDate: form.expiryDate ? new Date(form.expiryDate).toISOString() : undefined,
+        ...(isOrgCard
+          ? { walletOwnerType: 'CLIENT', walletOwnerId: clientId }
+          : isEdit && tag.walletOwnerType === 'CLIENT'
+            ? { walletOwnerType: null, walletOwnerId: null }
+            : {}),
       };
+
+      if (isOrgCard && !clientId) {
+        throw new Error('Байгууллага сонгоно уу');
+      }
 
       if (isEdit) {
         await api.patch(`id-tags/${encodeURIComponent(tag.idTag)}`, body);
@@ -97,7 +142,7 @@ export function IdTagModal({
             variant="primary"
             onClick={submit}
             loading={saving}
-            disabled={!isEdit && !form.idTag.trim()}
+            disabled={(!isEdit && !form.idTag.trim()) || (isOrgCard && !clientId)}
           >
             {isEdit ? 'Хадгалах' : 'Карт үүсгэх'}
           </Button>
@@ -157,6 +202,10 @@ export function IdTagModal({
           </Field>
         </div>
 
+        <Field label="Эзэмшигчийн утас" hint="Kiosk/аппад бүртгүүлсэн бол автоматаар бөглөгдөнө.">
+          <Input value={form.ownerPhone} onChange={set('ownerPhone')} inputMode="tel" />
+        </Field>
+
         <Field
           label="Зэрэг цэнэглэх дээд тоо"
           hint="0 бол хязгааргүй. Ихэвчлэн 1 байдаг."
@@ -167,6 +216,38 @@ export function IdTagModal({
             inputMode="numeric"
           />
         </Field>
+
+        <div className="rounded-xl border border-[var(--color-border)] p-3">
+          <label className="flex items-center gap-2 text-sm cursor-pointer">
+            <Checkbox
+              checked={isOrgCard}
+              onChange={(e) => {
+                setIsOrgCard(e.target.checked);
+                if (!e.target.checked) setClientId('');
+              }}
+            />
+            Байгууллагын дотоод гишүүний карт
+          </label>
+          <p className="mt-1 text-xs text-[var(--color-fg-muted)]">
+            Сонгосон харилцагчийн станцуудад энэ карт үнэ төлбөргүй цэнэглэнэ. Тухайн
+            харилцагчийн хэтэвч дээр лог хадгалагдана.
+          </p>
+
+          {isOrgCard ? (
+            <div className="mt-3">
+              <Field label="Харилцагч">
+                <Select value={clientId} onChange={(e) => void selectClient(e.target.value)}>
+                  <option value="">(Сонгоогүй)</option>
+                  {clients.map((c) => (
+                    <option key={c.id ?? c._id} value={c.id ?? c._id}>
+                      {c.name} {c.businessRegister ? `(${c.businessRegister})` : ''}
+                    </option>
+                  ))}
+                </Select>
+              </Field>
+            </div>
+          ) : null}
+        </div>
 
         <Field
           label="Зөвшөөрөх станцууд"

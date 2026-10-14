@@ -19,8 +19,24 @@ import {
 import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty, TableLoading } from '@/components/ui/table';
 import { ConnectorStatusBadge, OnlineBadge, RegistrationBadge } from '@/components/ui/status';
 import { FilterActions, FilterBar, Pagination } from '@/components/ui/pagination';
+import { PageGuide } from '@/components/shell/page-guide';
 import { CreateChargePointModal } from './create-charge-point-modal';
 import { EditChargePointModal } from './edit-charge-point-modal';
+
+const CHARGE_POINTS_GUIDE_STEPS = [
+  {
+    title: 'Станц бүртгэх',
+    body: '"Станц бүртгэх" товч дарж, станцын дугаар (WebSocket хаягтай таарах ёстой) болон байршлыг оруулна. Нэг удаагийн AuthorizationKey гарч ирэхийг хадгална уу.',
+  },
+  {
+    title: 'Харилцагчид холбох',
+    body: 'Станцыг эзэмшиж буй байгууллагыг "Харилцагч" талбараас сонгоно. Шаардлагатай бол бусад харилцагчид "мөн харагдах" эрхийг нэмж болно.',
+  },
+  {
+    title: 'Тариф, хураамж',
+    body: '1 кВт·ц тариф болон үйлчилгээний хураамжийг станц тус бүрт эсвэл харилцагчаар нь тохируулна. Хоосон орхивол сүлжээний үндсэн утга ашиглагдана.',
+  },
+];
 
 export function ChargePointsView({
   canEdit,
@@ -112,6 +128,7 @@ export function ChargePointsView({
             <option value="true">Зөвхөн онлайн</option>
             <option value="false">Зөвхөн офлайн</option>
           </Select>
+          <PageGuide topic="charge-points" title="Станц удирдах" steps={CHARGE_POINTS_GUIDE_STEPS} />
           {canEdit ? (
             <FilterActions>
               <Button variant="primary" size="md" onClick={() => setCreating(true)}>
@@ -153,7 +170,7 @@ export function ChargePointsView({
               ) : (
                 rows.map((cp) => (
                   <TR key={cp.id}>
-                    <TD>
+                    <TD align="left" className="whitespace-nowrap">
                       <Link
                         href={`/charge-points/${encodeURIComponent(cp.id)}`}
                         className={cn(

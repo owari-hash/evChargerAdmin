@@ -4,6 +4,7 @@ import * as React from 'react';
 import { LogOut, Menu, Moon, Sun } from 'lucide-react';
 import { Button, Dot } from '@/components/ui/primitives';
 import { GlobalSearch } from './global-search';
+import { NotificationBell } from './notification-bell';
 import { logout } from '@/lib/client';
 import { useLiveEvents } from '@/lib/use-live-events';
 import { useLiveRevalidation } from '@/lib/live-query';
@@ -31,6 +32,7 @@ export function Topbar({ user, onMenu }: { user: SessionUser; onMenu: () => void
 
       <div className="flex min-w-0 items-center justify-end gap-2">
         <LiveIndicator />
+        <NotificationBell />
         <ThemeToggle />
         <Button
           variant="ghost"

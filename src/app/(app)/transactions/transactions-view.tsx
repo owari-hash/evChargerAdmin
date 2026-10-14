@@ -179,13 +179,22 @@ export function TransactionsView({
                       <TD>
                         <TransactionStatusBadge status={tx.status} />
                       </TD>
-                      <TD>
+                      <TD align="left" className="whitespace-nowrap">
                         <StationName id={tx.chargePointId} />
                         <span className="ml-1 text-xs text-[var(--color-fg-subtle)]">
                           #{tx.connectorId}
                         </span>
                       </TD>
-                      <TD className="font-mono text-xs">{tx.idTag}</TD>
+                      <TD className="text-xs">
+                        <span className="font-mono">{tx.idTag}</span>
+                        {tx.driver?.name || tx.driver?.vehicleBrand ? (
+                          <p className="text-[var(--color-fg-subtle)]">
+                            {[tx.driver?.name, [tx.driver?.vehicleBrand, tx.driver?.vehicleModel].filter(Boolean).join(' ')]
+                              .filter(Boolean)
+                              .join(' · ')}
+                          </p>
+                        ) : null}
+                      </TD>
                       <TD className="whitespace-nowrap text-xs text-[var(--color-fg-muted)]">
                         {formatDateTime(tx.startTimestamp)}
                       </TD>
@@ -198,7 +207,7 @@ export function TransactionsView({
                       <TD className="text-xs">
                         {tx.status === 'Active' ? formatPower(tx.lastPowerW) : '—'}
                       </TD>
-                      <TD className="text-xs">
+                      <TD align="right" className="text-xs">
                         {tx.cost != null ? formatMoney(tx.cost) : '—'}
                       </TD>
                       <TD className="text-xs text-[var(--color-fg-muted)]">{tx.stopReason ?? '—'}</TD>

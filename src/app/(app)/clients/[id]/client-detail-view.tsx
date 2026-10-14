@@ -159,7 +159,7 @@ export function ClientDetailView({
           <Card>
             <CardHeader
               title={`Харьяалагдах цэнэглэх станцууд (${stations.length})`}
-              description="Энэ харилцагчийн эзэмшилд бүртгэгдсэн бүх станц"
+              description="Энэ харилцагчийн эзэмшдэг болон холбогдсон бүх станц"
             />
             <TableWrap maxHeight="24rem">
               <Table>
@@ -199,6 +199,9 @@ export function ClientDetailView({
                           </Link>
                           {cp.name?.trim() ? (
                             <p className="font-mono text-[11px] text-[var(--color-fg-subtle)]">{cp.cpId}</p>
+                          ) : null}
+                          {cp.owned === false ? (
+                            <Badge tone="idle">Холбогдсон</Badge>
                           ) : null}
                         </TD>
                         <TD>

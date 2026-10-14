@@ -8,6 +8,7 @@ import { TriangleAlert } from 'lucide-react';
 import { Button, ErrorNote, Field, Input, Select, Textarea } from '@/components/ui/primitives';
 import { Modal } from '@/components/ui/modal';
 import { EbarimtMerchantSelect } from '@/components/ebarimt-merchant-select';
+import { LinkedClientsSelect } from '@/components/linked-clients-select';
 import { REGISTRATION_STATUS as REGISTRATION_STATUS_MN, mn } from '@/lib/mn';
 import { REGISTRATION_STATUSES, type ChargePoint, type Client, type Paginated } from '@/lib/types';
 
@@ -65,6 +66,10 @@ export function EditChargePointModal({
     ebarimtMerchantId: chargePoint.ebarimtMerchantId ?? '',
     tags: (chargePoint.tags ?? []).join(', '),
   }));
+
+  const [linkedClientIds, setLinkedClientIds] = React.useState<string[]>(
+    chargePoint.linkedClientIds ?? [],
+  );
 
   const set =
     (key: keyof typeof form) =>
@@ -139,6 +144,7 @@ export function EditChargePointModal({
           ...(renaming ? { cpId: nextId } : {}),
           name: form.name.trim() || null,
           clientId: form.clientId ? form.clientId : null,
+          linkedClientIds: linkedClientIds.filter((id) => id !== form.clientId),
           description: form.description.trim() || null,
           address: form.address.trim() || null,
           latitude,
@@ -242,6 +248,17 @@ export function EditChargePointModal({
             </Select>
           </Field>
         </div>
+
+        <Field
+          label="Бусад харилцагчид мөн харагдах"
+          hint="Эзэмшигчээс гадна энэ станцыг харж, дотоод гишүүний картаа ашиглах боломжтой байх харилцагчид."
+        >
+          <LinkedClientsSelect
+            ownerId={form.clientId}
+            value={linkedClientIds}
+            onChange={setLinkedClientIds}
+          />
+        </Field>
 
         <Field label="Хаяг">
           <Input value={form.address} onChange={set('address')} placeholder="Улаанбаатар" />

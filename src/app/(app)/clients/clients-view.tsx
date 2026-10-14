@@ -39,7 +39,23 @@ import {
 } from '@/components/ui/table';
 import { ConfirmModal } from '@/components/ui/modal';
 import { FilterActions, FilterBar, Pagination } from '@/components/ui/pagination';
+import { PageGuide } from '@/components/shell/page-guide';
 import { ClientModal } from './client-modal';
+
+const CLIENTS_GUIDE_STEPS = [
+  {
+    title: 'Харилцагч бүртгэх',
+    body: '"Харилцагч бүртгэх" товч дарж байгууллагын нэр, регистр, холбоо барих мэдээллийг оруулна.',
+  },
+  {
+    title: 'Станц холбох',
+    body: 'Цэнэглэх станцууд цэснээс станцаа засаж, "Харилцагч" талбарт энэ байгууллагыг сонгоно. Нэг станцыг олон харилцагчид "мөн харагдах" байдлаар нэмж болно.',
+  },
+  {
+    title: 'Дотоод гишүүний карт',
+    body: 'Харилцагчийн дэлгэрэнгүй хуудаснаас "Дотоод гишүүдийн карт" хэсэгт тухайн байгууллагын ажилтнуудын үнэ төлбөргүй цэнэглэх картуудыг харна.',
+  },
+];
 
 export function ClientsView({
   canEdit,
@@ -125,6 +141,7 @@ export function ClientsView({
             <option value="active">Зөвхөн идэвхтэй</option>
             <option value="inactive">Зөвхөн идэвхгүй</option>
           </Select>
+          <PageGuide topic="clients" title="Харилцагч удирдах" steps={CLIENTS_GUIDE_STEPS} />
           {canEdit ? (
             <FilterActions>
               <Button
@@ -173,7 +190,7 @@ export function ClientsView({
               ) : (
                 rows.map((c) => (
                   <TR key={c.id}>
-                    <TD className="whitespace-nowrap">
+                    <TD align="left" className="whitespace-nowrap">
                       {/* One line: name, then the contact person muted. */}
                       <div className="inline-flex max-w-[280px] items-center gap-2">
                         <Building2 className="h-4 w-4 shrink-0 text-[var(--color-fg-muted)]" />

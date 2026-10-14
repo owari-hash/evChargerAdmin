@@ -253,6 +253,10 @@ export function TransactionView({
             <DataRow label="RFID карт" mono>
               {tx.idTag}
             </DataRow>
+            <DataRow label="Жолооч">{tx.driver?.name || tx.driver?.phone || '—'}</DataRow>
+            <DataRow label="Машин">
+              {[tx.driver?.vehicleBrand, tx.driver?.vehicleModel].filter(Boolean).join(' ') || '—'}
+            </DataRow>
             <DataRow label="Зогсоосон карт" mono>
               {tx.stopIdTag ?? '—'}
             </DataRow>

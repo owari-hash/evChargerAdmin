@@ -88,6 +88,23 @@ export const api = {
   del: <T>(path: string) => request<T>('DELETE', apiUrl(path)),
 };
 
+/**
+ * Like `api.post`/`api.patch`, but for a multipart body (a file upload) —
+ * `request()` always JSON-encodes, which would corrupt the file bytes.
+ */
+export async function apiUploadForm<T>(
+  method: 'POST' | 'PATCH',
+  path: string,
+  form: FormData,
+): Promise<T> {
+  const res = await fetch(apiUrl(path), { method, body: form, cache: 'no-store' });
+  const payload = (await parse(res)) as { error?: string; details?: unknown } | null;
+  if (!res.ok) {
+    throw new ClientApiError(res.status, payload?.error ?? `Request failed (${res.status})`, payload?.details);
+  }
+  return payload as T;
+}
+
 export async function logout(): Promise<void> {
   await fetch(withBasePath('/console-api/auth/logout'), { method: 'POST' });
   // Full reload on sign-out, so nothing from the previous user survives in memory.

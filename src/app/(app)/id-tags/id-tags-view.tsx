@@ -13,7 +13,23 @@ import { Badge, Button, Card, EmptyState, Input, Select } from '@/components/ui/
 import { AuthStatusBadge } from '@/components/ui/status';
 import { ConfirmModal } from '@/components/ui/modal';
 import { FilterActions, FilterBar, Pagination } from '@/components/ui/pagination';
+import { PageGuide } from '@/components/shell/page-guide';
 import { ID_TAG_STATUS, mn } from '@/lib/mn';
+
+const ID_TAGS_GUIDE_STEPS = [
+  {
+    title: 'Карт бүртгэх',
+    body: '"Шинэ RFID карт" товч дарж картын дугаар, эзэмшигчийн мэдээллийг оруулна. Kiosk/апп-аар бүртгүүлсэн жолоочдод карт автоматаар үүснэ.',
+  },
+  {
+    title: 'Станцаар хязгаарлах',
+    body: '"Зөвшөөрөх станцууд" талбарт тодорхой станцуудыг зааж өгч болно — хоосон орхивол бүх станцад ажиллана.',
+  },
+  {
+    title: 'Байгууллагын дотоод карт',
+    body: 'Картыг нэг харилцагчийн дотоод гишүүнд үнэ төлбөргүй болгохын тулд "Байгууллагын дотоод гишүүний карт" сонголтыг идэвхжүүлж, харилцагчаа сонгоно.',
+  },
+];
 import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty, TableLoading } from '@/components/ui/table';
 import { IdTagModal } from './id-tag-modal';
 import { BulkImportModal } from './bulk-import-modal';
@@ -100,6 +116,7 @@ export function IdTagsView({
               </option>
             ))}
           </Select>
+          <PageGuide topic="id-tags" title="RFID карт удирдах" steps={ID_TAGS_GUIDE_STEPS} />
           {canEdit ? (
             <FilterActions>
               <Button variant="secondary" size="md" onClick={() => setImporting(true)}>
@@ -148,7 +165,7 @@ export function IdTagsView({
                       <TD>
                         <AuthStatusBadge status={tag.status} />
                       </TD>
-                      <TD className="text-xs">
+                      <TD align="left" className="whitespace-nowrap text-xs">
                         {tag.label || tag.ownerName || '—'}
                         {tag.ownerEmail ? (
                           <p className="text-[var(--color-fg-subtle)]">{tag.ownerEmail}</p>

@@ -10,6 +10,7 @@ import { Button, ErrorNote, Field, Input, Select } from '@/components/ui/primiti
 import { Modal } from '@/components/ui/modal';
 import { CopyButton } from '@/components/ui/copy-button';
 import { EbarimtMerchantSelect, parseFeePercent } from '@/components/ebarimt-merchant-select';
+import { LinkedClientsSelect } from '@/components/linked-clients-select';
 import { REGISTRATION_STATUS as REGISTRATION_STATUS_MN, mn } from '@/lib/mn';
 import { REGISTRATION_STATUSES, type Client, type Paginated } from '@/lib/types';
 
@@ -52,6 +53,7 @@ export function CreateChargePointModal({
     latitude: '',
     longitude: '',
   });
+  const [linkedClientIds, setLinkedClientIds] = React.useState<string[]>([]);
 
   const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm((f) => ({ ...f, [key]: e.target.value }));
@@ -71,6 +73,7 @@ export function CreateChargePointModal({
       latitude: '',
       longitude: '',
     });
+    setLinkedClientIds([]);
     setError(null);
     setCreated(null);
   }
@@ -98,6 +101,8 @@ export function CreateChargePointModal({
       };
       if (form.name.trim()) body.name = form.name.trim();
       if (form.clientId) body.clientId = form.clientId;
+      const links = linkedClientIds.filter((id) => id !== form.clientId);
+      if (links.length) body.linkedClientIds = links;
       if (form.address.trim()) body.address = form.address.trim();
       if (form.tariffPerKwh) body.tariffPerKwh = Number(form.tariffPerKwh);
       if (form.latitude) body.latitude = Number(form.latitude);
@@ -213,6 +218,17 @@ export function CreateChargePointModal({
             </Select>
           </Field>
         </div>
+
+        <Field
+          label="Бусад харилцагчид мөн харагдах"
+          hint="Эзэмшигчээс гадна энэ станцыг харж, дотоод гишүүний картаа ашиглах боломжтой байх харилцагчид."
+        >
+          <LinkedClientsSelect
+            ownerId={form.clientId}
+            value={linkedClientIds}
+            onChange={setLinkedClientIds}
+          />
+        </Field>
 
         <Field label="Хаяг">
           <Input value={form.address} onChange={set('address')} placeholder="Улаанбаатар" />

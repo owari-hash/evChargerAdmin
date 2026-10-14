@@ -43,10 +43,12 @@ async function handler(req: NextRequest, ctx: Ctx): Promise<NextResponse> {
     ...(await authHeaders()),
   };
 
+  // Read as bytes, not text: a multipart upload (an announcement image, say)
+  // carries binary data that a UTF-8 text round-trip would corrupt.
   const hasBody = req.method !== 'GET' && req.method !== 'HEAD';
-  let body: string | undefined;
+  let body: ArrayBuffer | undefined;
   if (hasBody) {
-    body = await req.text();
+    body = await req.arrayBuffer();
     const contentType = req.headers.get('content-type');
     if (contentType) headers['content-type'] = contentType;
   }

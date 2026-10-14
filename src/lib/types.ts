@@ -195,6 +195,11 @@ export interface ChargePoint {
   tags: string[];
   clientId?: string | null;
   client?: { id: string; name: string; businessRegister?: string } | null;
+  /** Other clients this station also shows up for, beyond the owner. */
+  linkedClientIds?: string[];
+  linkedClients?: { id: string; name: string; businessRegister?: string }[];
+  /** On a client's own station list: true for its owned stations, false for merely-linked ones. */
+  owned?: boolean;
   /** Eplug service fee override (0–100). Unset = the client's, then the network default. */
   feePercent?: number | null;
   /** E-barimt merchant override. Unset = the client's, then the network default. */
@@ -271,6 +276,8 @@ export interface Transaction {
     refundedAt?: string;
     ebarimtReturned?: boolean;
   };
+  /** Who was actually charging, and which vehicle — looked up from `idTag`. Null for a tag with no linked driver account (an RFID card, say). */
+  driver?: { name?: string; phone?: string; vehicleBrand?: string; vehicleModel?: string } | null;
 }
 
 export interface SampledValue {
@@ -750,4 +757,15 @@ export interface AppReleasePreview {
   configured: boolean;
   updateAvailable: boolean;
   forceUpdate: boolean;
+}
+
+export interface Announcement {
+  id: string;
+  title: string;
+  body: string;
+  imageUrl?: string | null;
+  isActive: boolean;
+  createdBy?: string;
+  createdAt: string;
+  updatedAt: string;
 }

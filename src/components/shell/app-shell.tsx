@@ -4,6 +4,7 @@ import * as React from 'react';
 import { SWRConfig } from 'swr';
 import { Sidebar } from './sidebar';
 import { Topbar } from './topbar';
+import { AdminOnboardingTour } from './onboarding-tour';
 import type { SessionUser } from '@/lib/types';
 import { SWR_DEFAULTS } from '@/lib/live-query';
 
@@ -26,6 +27,7 @@ export function AppShell({
             <div className="mx-auto w-full max-w-[1400px]">{children}</div>
           </main>
         </div>
+        <AdminOnboardingTour />
       </div>
     </SWRConfig>
   );

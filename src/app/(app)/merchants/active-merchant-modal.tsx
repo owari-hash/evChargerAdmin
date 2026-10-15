@@ -11,15 +11,17 @@ import { Modal } from '@/components/ui/modal';
 
 const POPULAR_BANKS: { code: string; name: string }[] = [
   { code: '050000', name: 'Хаан банк (Khan Bank)' },
-  { code: '040000', name: 'Голомт банк (Golomt Bank)' },
-  { code: '020000', name: 'Худалдаа хөгжлийн банк (TDB)' },
-  { code: '150000', name: 'Хас банк (XacBank)' },
+  { code: '150000', name: 'Голомт банк (Golomt Bank)' },
+  { code: '040000', name: 'Худалдаа хөгжлийн банк (TDB)' },
+  { code: '320000', name: 'Хас банк (XacBank)' },
   { code: '340000', name: 'Төрийн банк (State Bank)' },
+  { code: '390000', name: 'М банк (M Bank)' },
   { code: '380000', name: 'Богд банк (Bogd Bank)' },
-  { code: '320000', name: 'Капитрон банк (Capitron Bank)' },
-  { code: '360000', name: 'Чингис хаан банк (Chinggis Khaan Bank)' },
-  { code: '290000', name: 'Тээвэр хөгжлийн банк (TransBank)' },
-  { code: '300000', name: 'Ариг банк (Arig Bank)' },
+  { code: '300000', name: 'Капитрон банк (Capitron Bank)' },
+  { code: '330000', name: 'Чингис хаан банк (Chinggis Khaan Bank)' },
+  { code: '190000', name: 'Тээвэр хөгжлийн банк (TransBank)' },
+  { code: '210000', name: 'Ариг банк (Arig Bank)' },
+  { code: '290000', name: 'Үндэсний хөрөнгө оруулалтын банк (NIBank)' },
 ];
 
 /** Sentinel option that swaps the dropdown for a free-text bank code field. */

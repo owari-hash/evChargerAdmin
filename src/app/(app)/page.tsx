@@ -51,54 +51,56 @@ export default async function OverviewPage() {
     <>
       {/* Re-renders this server page in place every few seconds while visible. */}
       <AutoRefresh />
-      <StatGrid>
-        <StatCard
-          label="Цэнэглэх станц"
-          value={`${formatNumber(stats.chargePoints.online)} / ${formatNumber(stats.chargePoints.total)}`}
-          sub={`${formatNumber(stats.chargePoints.offline)} офлайн`}
-          icon={Zap}
-          tone={stats.chargePoints.online > 0 ? 'ok' : 'idle'}
-          href="/charge-points"
-        />
-        <StatCard
-          label="Одоо цэнэглэж буй"
-          value={formatNumber(charging)}
-          sub={`Нийт ${formatNumber(totalConnectors)} холбогч`}
-          icon={Plug}
-          tone={charging > 0 ? 'brand' : 'idle'}
-          href="/connectors"
-        />
-        <StatCard
-          label="Идэвхтэй цэнэглэлт"
-          value={formatNumber(stats.transactions.active)}
-          sub={`24 цагт ${formatNumber(stats.transactions.last24h)} эхэлсэн`}
-          icon={BatteryCharging}
-          tone={stats.transactions.active > 0 ? 'brand' : 'idle'}
-          href="/transactions?status=Active"
-        />
-        <StatCard
-          label="Эрчим хүч · 24ц"
-          value={formatKwh(stats.energyLast24hKwh, 1)}
-          sub={`${formatNumber(stats.transactions.completedLast24h)} цэнэглэлт дууссан`}
-          icon={Zap}
-          tone="info"
-        />
-        <StatCard
-          label="Орлого · 24ц"
-          value={formatMoney(stats.revenueLast24h)}
-          sub="Тарифтай цэнэглэлтээс"
-          icon={Coins}
-          tone="ok"
-        />
-        <StatCard
-          label="Аюулгүй байдлын сэрэмжлүүлэг"
-          value={formatNumber(stats.unacknowledgedCriticalSecurityEvents)}
-          sub="Ноцтой, хүлээн зөвшөөрөөгүй"
-          icon={ShieldAlert}
-          tone={stats.unacknowledgedCriticalSecurityEvents > 0 ? 'danger' : 'idle'}
-          href="/security"
-        />
-      </StatGrid>
+      <div data-tour="overview-kpis">
+        <StatGrid>
+          <StatCard
+            label="Цэнэглэх станц"
+            value={`${formatNumber(stats.chargePoints.online)} / ${formatNumber(stats.chargePoints.total)}`}
+            sub={`${formatNumber(stats.chargePoints.offline)} офлайн`}
+            icon={Zap}
+            tone={stats.chargePoints.online > 0 ? 'ok' : 'idle'}
+            href="/charge-points"
+          />
+          <StatCard
+            label="Одоо цэнэглэж буй"
+            value={formatNumber(charging)}
+            sub={`Нийт ${formatNumber(totalConnectors)} холбогч`}
+            icon={Plug}
+            tone={charging > 0 ? 'brand' : 'idle'}
+            href="/connectors"
+          />
+          <StatCard
+            label="Идэвхтэй цэнэглэлт"
+            value={formatNumber(stats.transactions.active)}
+            sub={`24 цагт ${formatNumber(stats.transactions.last24h)} эхэлсэн`}
+            icon={BatteryCharging}
+            tone={stats.transactions.active > 0 ? 'brand' : 'idle'}
+            href="/transactions?status=Active"
+          />
+          <StatCard
+            label="Эрчим хүч · 24ц"
+            value={formatKwh(stats.energyLast24hKwh, 1)}
+            sub={`${formatNumber(stats.transactions.completedLast24h)} цэнэглэлт дууссан`}
+            icon={Zap}
+            tone="info"
+          />
+          <StatCard
+            label="Орлого · 24ц"
+            value={formatMoney(stats.revenueLast24h)}
+            sub="Тарифтай цэнэглэлтээс"
+            icon={Coins}
+            tone="ok"
+          />
+          <StatCard
+            label="Аюулгүй байдлын сэрэмжлүүлэг"
+            value={formatNumber(stats.unacknowledgedCriticalSecurityEvents)}
+            sub="Ноцтой, хүлээн зөвшөөрөөгүй"
+            icon={ShieldAlert}
+            tone={stats.unacknowledgedCriticalSecurityEvents > 0 ? 'danger' : 'idle'}
+            href="/security"
+          />
+        </StatGrid>
+      </div>
 
       {faulted > 0 ? (
         <div className="mt-4 flex items-center gap-2.5 rounded-xl border border-[var(--color-danger)]/30 bg-[var(--color-danger-soft)] px-4 py-3 text-sm text-[var(--color-danger)]">

@@ -4,7 +4,8 @@ import * as React from 'react';
 import { SWRConfig } from 'swr';
 import { Sidebar } from './sidebar';
 import { Topbar } from './topbar';
-import { AdminOnboardingTour } from './onboarding-tour';
+import { FirstRunGuideProvider } from './first-run-guide';
+import { LiveStreamProvider } from './live-stream';
 import type { SessionUser } from '@/lib/types';
 import { SWR_DEFAULTS } from '@/lib/live-query';
 
@@ -19,16 +20,19 @@ export function AppShell({
 
   return (
     <SWRConfig value={SWR_DEFAULTS}>
-      <div className="min-h-dvh">
-        <Sidebar user={user} open={menuOpen} onClose={() => setMenuOpen(false)} />
-        <div className="flex min-h-dvh flex-col lg:pl-64">
-          <Topbar user={user} onMenu={() => setMenuOpen(true)} />
-          <main className="flex-1 px-4 py-6 sm:px-6">
-            <div className="mx-auto w-full max-w-[1400px]">{children}</div>
-          </main>
-        </div>
-        <AdminOnboardingTour />
-      </div>
+      <FirstRunGuideProvider setMenuOpen={setMenuOpen}>
+        <LiveStreamProvider>
+          <div className="min-h-dvh">
+            <Sidebar user={user} open={menuOpen} onClose={() => setMenuOpen(false)} />
+            <div className="flex min-h-dvh flex-col lg:pl-64">
+              <Topbar user={user} onMenu={() => setMenuOpen(true)} />
+              <main className="flex-1 px-4 py-6 sm:px-6">
+                <div className="mx-auto w-full max-w-[1400px]">{children}</div>
+              </main>
+            </div>
+          </div>
+        </LiveStreamProvider>
+      </FirstRunGuideProvider>
     </SWRConfig>
   );
 }

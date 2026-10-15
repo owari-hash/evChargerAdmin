@@ -1,0 +1,313 @@
+/*
+ * First-run guide popover — the sukhApp coach card on the web.
+ * The card is deliberately the same dark green in both themes, like the app.
+ */
+
+.driver-popover.eg-popover {
+  box-sizing: border-box;
+  min-width: 0;
+  width: min(340px, calc(100vw - 32px));
+  max-width: min(340px, calc(100vw - 32px));
+  padding: 0;
+  border-radius: 22px;
+  border: 1.2px solid rgb(52 211 153 / 0.35);
+  background: linear-gradient(135deg, #14532d 0%, #093928 55%, #042419 100%);
+  box-shadow:
+    0 18px 40px -8px rgb(0 0 0 / 0.45),
+    0 0 18px rgb(16 185 129 / 0.12);
+  color: #fff;
+  font-family: inherit;
+  z-index: 1000000000;
+  animation: eg-pop-in 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+@keyframes eg-pop-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+/* driver.js chrome we replace with our own card */
+.eg-popover .driver-popover-title,
+.eg-popover .driver-popover-footer,
+.eg-popover .driver-popover-close-btn {
+  display: none !important;
+}
+
+.eg-popover .driver-popover-description {
+  display: block !important;
+  margin: 0;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+}
+
+/* Arrow tinted to the card edge it leaves from */
+.eg-popover .driver-popover-arrow {
+  border-width: 8px;
+}
+.eg-popover .driver-popover-arrow-side-bottom {
+  border-bottom-color: #14532d;
+}
+.eg-popover .driver-popover-arrow-side-top {
+  border-top-color: #042419;
+}
+.eg-popover .driver-popover-arrow-side-right {
+  border-right-color: #14532d;
+}
+.eg-popover .driver-popover-arrow-side-left {
+  border-left-color: #093928;
+}
+
+.eg-card {
+  position: relative;
+  overflow: hidden;
+  border-radius: 21px;
+  padding: 16px 18px 15px;
+}
+
+.eg-glow {
+  position: absolute;
+  top: -25px;
+  right: -25px;
+  width: 110px;
+  height: 110px;
+  border-radius: 9999px;
+  background: rgb(52 211 153 / 0.16);
+  pointer-events: none;
+}
+
+.eg-x {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 0;
+  border-radius: 9999px;
+  background: rgb(255 255 255 / 0.08);
+  color: rgb(255 255 255 / 0.7);
+  font-size: 12px;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.eg-x:hover {
+  background: rgb(255 255 255 / 0.16);
+  color: #fff;
+}
+
+.eg-head {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-right: 30px;
+}
+
+.eg-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 9999px;
+  border: 1px solid rgb(52 211 153 / 0.45);
+  background: rgb(52 211 153 / 0.18);
+  color: #6ee7b7;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  line-height: 1.2;
+}
+
+.eg-tag-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 9999px;
+  background: #34d399;
+}
+
+.eg-count {
+  color: rgb(255 255 255 / 0.55);
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.eg-title {
+  position: relative;
+  margin: 10px 0 0;
+  color: #fff;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+
+.eg-desc {
+  position: relative;
+  margin: 6px 0 0;
+  color: rgb(209 250 229 / 0.95);
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
+.eg-foot {
+  position: relative;
+  margin-top: 14px;
+}
+
+.eg-check {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  color: rgb(209 250 229 / 0.8);
+  font-size: 12px;
+  cursor: pointer;
+  user-select: none;
+}
+.eg-check input {
+  position: absolute;
+  opacity: 0;
+  width: 16px;
+  height: 16px;
+  margin: 0;
+  cursor: pointer;
+}
+.eg-check-box {
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 5px;
+  border: 1.5px solid rgb(52 211 153 / 0.6);
+  background: rgb(255 255 255 / 0.04);
+  transition: background 0.15s, border-color 0.15s;
+}
+.eg-check-box::after {
+  content: '';
+  width: 8px;
+  height: 4px;
+  margin-top: -2px;
+  border-left: 2px solid #042419;
+  border-bottom: 2px solid #042419;
+  transform: rotate(-45deg);
+  opacity: 0;
+}
+.eg-check input:checked + .eg-check-box {
+  background: #34d399;
+  border-color: #34d399;
+}
+.eg-check input:checked + .eg-check-box::after {
+  opacity: 1;
+}
+.eg-check input:focus-visible + .eg-check-box {
+  outline: 2px solid #6ee7b7;
+  outline-offset: 2px;
+}
+.eg-check:hover .eg-check-text {
+  color: #fff;
+}
+
+.eg-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.eg-skip {
+  border: 0;
+  background: none;
+  padding: 6px 2px;
+  color: rgb(255 255 255 / 0.6);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+}
+.eg-skip:hover {
+  color: #fff;
+}
+
+.eg-dots {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+.eg-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 10px;
+  background: rgb(255 255 255 / 0.22);
+  transition: width 0.3s cubic-bezier(0.2, 0.8, 0.2, 1), background 0.3s;
+}
+.eg-dot.is-active {
+  width: 18px;
+  background: #34d399;
+  box-shadow: 0 0 3px rgb(52 211 153 / 0.25);
+}
+
+.eg-next {
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 12px;
+  padding: 8px 14px;
+  background: #10b981;
+  color: #fff;
+  font: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  box-shadow: 0 4px 12px -2px rgb(16 185 129 / 0.5);
+  cursor: pointer;
+  transition: background 0.15s, transform 0.15s;
+}
+.eg-next:hover {
+  background: #059669;
+  transform: translateY(-1px);
+}
+.eg-popover button:focus {
+  outline: none;
+}
+.eg-next:focus-visible,
+.eg-skip:focus-visible,
+.eg-x:focus-visible {
+  outline: 1.5px solid rgb(110 231 183 / 0.7);
+  outline-offset: 2px;
+}
+
+/* Pulsing green ring on the spotlighted element */
+body.eg-guide-on .driver-active-element {
+  outline: 1.5px solid rgb(16 185 129 / 0.85);
+  outline-offset: 3px;
+  border-radius: 12px;
+  animation: eg-ring 1.6s ease-in-out infinite;
+}
+
+@keyframes eg-ring {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgb(16 185 129 / 0.45);
+  }
+  50% {
+    box-shadow: 0 0 0 6px rgb(16 185 129 / 0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .driver-popover.eg-popover,
+  body.eg-guide-on .driver-active-element {
+    animation: none;
+  }
+}

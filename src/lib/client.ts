@@ -105,8 +105,18 @@ export async function apiUploadForm<T>(
   return payload as T;
 }
 
+/** Set when the first-run guide is skipped for this browser session (first-run-guide.tsx). */
+export const GUIDE_DISMISSED_COOKIE = 'eplug_guide_dismissed';
+
 export async function logout(): Promise<void> {
   await fetch(withBasePath('/console-api/auth/logout'), { method: 'POST' });
+  // The next operator to sign in here gets their own first-run guide decision.
+  document.cookie = `${GUIDE_DISMISSED_COOKIE}=; path=${BASE_PATH || '/'}; Max-Age=0; SameSite=Lax`;
+  try {
+    window.sessionStorage.removeItem('eplug-admin-guide-dismissed');
+  } catch {
+    // Storage blocked; nothing was stored there either.
+  }
   // Full reload on sign-out, so nothing from the previous user survives in memory.
   // eslint-disable-next-line @next/next/no-location-assign-relative-destination
   window.location.href = withBasePath('/login');

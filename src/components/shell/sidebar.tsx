@@ -3,11 +3,12 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { X } from 'lucide-react';
+import { GraduationCap, X } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { brand } from '@/lib/config';
 import { withBasePath } from '@/lib/base-path';
 import { visibleSections } from './nav-items';
+import { useFirstRunGuide } from './first-run-guide';
 import { ROLE } from '@/lib/mn';
 import type { SessionUser } from '@/lib/types';
 import { Button } from '@/components/ui/primitives';
@@ -23,6 +24,7 @@ export function Sidebar({
 }) {
   const pathname = usePathname();
   const sections = visibleSections(user.role);
+  const { startGuide } = useFirstRunGuide();
 
   return (
     <>
@@ -63,7 +65,7 @@ export function Sidebar({
           </Button>
         </div>
 
-        <nav className="flex-1 space-y-5 overflow-y-auto px-3 py-4">
+        <nav data-tour="sidebar-nav" className="flex-1 space-y-5 overflow-y-auto px-3 py-4">
           {sections.map((section) => (
             <div key={section.title}>
               <p className="px-2 pb-1.5 text-[10px] font-semibold uppercase tracking-wider text-[var(--color-fg-subtle)]">
@@ -99,11 +101,18 @@ export function Sidebar({
           ))}
         </nav>
 
-        <div className="shrink-0 border-t border-[var(--color-border)] px-4 py-3">
-          <p className="truncate text-xs font-medium">{user.email}</p>
-          <p className="text-[10px] uppercase tracking-wide text-[var(--color-fg-subtle)]">
-            {ROLE[user.role] ?? user.role}
-          </p>
+        <div className="flex shrink-0 items-center gap-2 border-t border-[var(--color-border)] px-4 py-3">
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-xs font-medium">{user.email}</p>
+            <p className="text-[10px] uppercase tracking-wide text-[var(--color-fg-subtle)]">
+              {ROLE[user.role] ?? user.role}
+            </p>
+          </div>
+          {/* Phones only: the topbar has no room for it there. */}
+          <Button variant="ghost" size="sm" className="lg:hidden" onClick={startGuide}>
+            <GraduationCap className="h-4 w-4" />
+            Заавар үзэх
+          </Button>
         </div>
       </aside>
     </>

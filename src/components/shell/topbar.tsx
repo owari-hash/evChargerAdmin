@@ -1,17 +1,19 @@
 'use client';
 
 import * as React from 'react';
-import { LogOut, Menu, Moon, Sun } from 'lucide-react';
+import { GraduationCap, LogOut, Menu, Moon, Sun } from 'lucide-react';
 import { Button, Dot } from '@/components/ui/primitives';
 import { GlobalSearch } from './global-search';
 import { NotificationBell } from './notification-bell';
+import { useFirstRunGuide } from './first-run-guide';
 import { logout } from '@/lib/client';
-import { useLiveEvents } from '@/lib/use-live-events';
+import { useLiveStreamEvents, useLiveStreamStatus } from './live-stream';
 import { useLiveRevalidation } from '@/lib/live-query';
 import { formatRelative } from '@/lib/format';
 import type { SessionUser } from '@/lib/types';
 
 export function Topbar({ user, onMenu }: { user: SessionUser; onMenu: () => void }) {
+  const { startGuide } = useFirstRunGuide();
   return (
     // 1fr / auto / 1fr keeps the search centred on the header itself rather than
     // on whatever is left over once the side controls have taken their space.
@@ -32,17 +34,33 @@ export function Topbar({ user, onMenu }: { user: SessionUser; onMenu: () => void
 
       <div className="flex min-w-0 items-center justify-end gap-2">
         <LiveIndicator />
-        <NotificationBell />
-        <ThemeToggle />
-        <Button
-          variant="ghost"
-          size="sm"
-          onClick={() => void logout()}
-          title={`${user.email} — Гарах`}
-        >
-          <LogOut className="h-3.5 w-3.5" />
-          <span className="hidden sm:inline">Гарах</span>
-        </Button>
+        <span data-tour="notifications" className="inline-flex">
+          <NotificationBell userId={user.id} />
+        </span>
+        <div data-tour="account" className="flex items-center gap-1">
+          <ThemeToggle />
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={startGuide}
+            aria-label="Заавар үзэх"
+            title="Заавар үзэх"
+            // The phone topbar is already full; there it lives in the drawer footer.
+            className="hidden sm:inline-flex"
+          >
+            <GraduationCap className="h-4 w-4" />
+            <span className="hidden xl:inline">Заавар үзэх</span>
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => void logout()}
+            title={`${user.email} — Гарах`}
+          >
+            <LogOut className="h-3.5 w-3.5" />
+            <span className="hidden sm:inline">Гарах</span>
+          </Button>
+        </div>
       </div>
     </header>
   );
@@ -54,8 +72,9 @@ export function Topbar({ user, onMenu }: { user: SessionUser; onMenu: () => void
  * affects — this is what makes the tables update without a refresh button.
  */
 function LiveIndicator() {
-  const onEvent = useLiveRevalidation();
-  const { status, lastEventAt } = useLiveEvents({ buffer: 1, onEvent });
+  // The shell's single shared stream (see live-stream.tsx), also feeding the bell.
+  useLiveStreamEvents(useLiveRevalidation());
+  const { status, lastEventAt } = useLiveStreamStatus();
 
   const tone = status === 'live' ? 'ok' : status === 'connecting' ? 'warn' : 'danger';
   const text =
@@ -63,6 +82,7 @@ function LiveIndicator() {
 
   return (
     <span
+      data-tour="live-status"
       className="hidden items-center gap-1.5 rounded-lg border border-[var(--color-border)] px-2.5 py-1 text-xs text-[var(--color-fg-muted)] sm:inline-flex"
       title={lastEventAt ? `Сүүлийн үйл явдал ${formatRelative(lastEventAt)}` : 'Одоогоор үйл явдал алга'}
     >

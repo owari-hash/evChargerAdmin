@@ -1,34 +1,28 @@
 'use client';
 
 import * as React from 'react';
-import { Bell } from 'lucide-react';
+import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { BatteryFull, Bell, PlugZap } from 'lucide-react';
 import { toast } from 'sonner';
-import { Button, Dot, type Tone } from '@/components/ui/primitives';
-import { useLiveEvents } from '@/lib/use-live-events';
-import { formatMoney, formatRelative } from '@/lib/format';
+import { Button, Dot } from '@/components/ui/primitives';
+import { formatMoney, formatNumber, formatRelative } from '@/lib/format';
 import { cn } from '@/lib/cn';
+import { useStationNames } from '@/lib/use-station-names';
+import {
+  markAllRead,
+  parseState,
+  readRaw,
+  recordNotification,
+  subscribeNotifications,
+  unreadCount,
+  type StoredNotification,
+} from '@/lib/notification-store';
 import type { CsmsEvent } from '@/lib/types';
+import { useLiveStreamEvents } from './live-stream';
+import { useFirstRunGuide } from './first-run-guide';
 
-/**
- * Every live event worth surfacing to an operator as a notification, beyond
- * the station/connector chatter `LiveIndicator` already revalidates quietly.
- * All financial: a payment, a wallet change, a refund.
- */
-const NOTIFICATION_EVENTS = [
-  'payment.paid',
-  'payment.canceled',
-  'wallet.credited',
-  'wallet.debited',
-  'transaction.refunded',
-] as const;
-
-interface NotificationItem {
-  id: string;
-  title: string;
-  detail: string;
-  tone: Tone;
-  at: Date;
-}
+type NewNotification = Omit<StoredNotification, 'toasted'>;
 
 const OWNER_LABEL: Record<string, string> = {
   USER: 'жолооч',
@@ -49,17 +43,65 @@ function ownerOf(data: Record<string, unknown>): string {
   return [label, idTag].filter(Boolean).join(' ');
 }
 
-/** Turns one raw CSMS event into a notification, or null for one this bell ignores. */
-function describe(event: CsmsEvent): NotificationItem | null {
+const num = (v: unknown): number | undefined =>
+  typeof v === 'number' && Number.isFinite(v) ? v : undefined;
+
+/**
+ * Turns one raw CSMS event into a notification, or null for one this bell
+ * ignores (station/connector chatter, which LiveIndicator revalidates quietly).
+ */
+function describe(event: CsmsEvent, stationName: (id?: string) => string | undefined): NewNotification | null {
   const data = (event.data ?? {}) as Record<string, unknown>;
-  const at = typeof event.at === 'string' ? new Date(event.at) : new Date();
-  const id = `${event.event}-${String(event._key ?? at.getTime())}`;
+  const at = typeof event.at === 'string' ? event.at : new Date().toISOString();
+  // The server timestamp is the same in every tab, which is what dedupes these.
+  const key = `${event.event}:${at}:${String(data.transactionId ?? data.idTag ?? '')}`;
+  const station = stationName(event.chargePointId) ?? event.chargePointId ?? '—';
 
   switch (event.event) {
+    case 'transaction.started': {
+      const id = data.transactionId;
+      if (id === undefined || id === null) return null;
+      const who = (data.driverName ? String(data.driverName) : '') || (data.idTag ? String(data.idTag) : '');
+      return {
+        key: `tx:${String(id)}:started`,
+        kind: 'transaction.started',
+        title: 'Цэнэглэлт эхэллээ',
+        detail: [station, data.connectorId !== undefined ? `Холбогч ${String(data.connectorId)}` : null, who || null]
+          .filter(Boolean)
+          .join(' · '),
+        tone: 'brand',
+        at,
+        href: `/transactions/${encodeURIComponent(String(id))}`,
+      };
+    }
+    case 'transaction.stopped': {
+      const id = data.transactionId;
+      if (id === undefined || id === null) return null;
+      const wh = num(data.energyWh);
+      const cost = num(data.cost);
+      return {
+        // A late StopTransaction re-settling a CSMS-closed session is the same
+        // stop, so it shares the key and is not announced twice.
+        key: `tx:${String(id)}:stopped`,
+        kind: 'transaction.stopped',
+        title: 'Цэнэглэлт дууслаа',
+        detail: [
+          station,
+          wh !== undefined ? `${formatNumber(wh / 1000, 2)} кВт·ц` : null,
+          cost !== undefined ? `₮${formatNumber(cost, 0)}` : null,
+        ]
+          .filter(Boolean)
+          .join(' · '),
+        tone: 'ok',
+        at,
+        href: `/transactions/${encodeURIComponent(String(id))}`,
+      };
+    }
     case 'payment.paid': {
       const amount = Number(data.paidAmount ?? data.amount ?? 0);
       return {
-        id,
+        key,
+        kind: 'payment',
         title: 'Төлбөр төлөгдлөө',
         detail: [formatMoney(amount), data.idTag ? String(data.idTag) : null].filter(Boolean).join(' · '),
         tone: 'ok',
@@ -68,7 +110,8 @@ function describe(event: CsmsEvent): NotificationItem | null {
     }
     case 'payment.canceled':
       return {
-        id,
+        key,
+        kind: 'payment',
         title: 'Төлбөр цуцлагдлаа',
         detail: data.idTag ? String(data.idTag) : '—',
         tone: 'warn',
@@ -78,7 +121,8 @@ function describe(event: CsmsEvent): NotificationItem | null {
       const amount = Number(data.amount ?? 0);
       const action = ENTRY_LABEL[String(data.type ?? '')] ?? 'орлого орлоо';
       return {
-        id,
+        key,
+        kind: 'wallet',
         title: `Хэтэвч ${action}`,
         detail: `+${formatMoney(amount)} · ${ownerOf(data)} · үлдэгдэл ${formatMoney(Number(data.balance ?? 0))}`,
         tone: 'ok',
@@ -88,7 +132,8 @@ function describe(event: CsmsEvent): NotificationItem | null {
     case 'wallet.debited': {
       const amount = Number(data.amount ?? 0);
       return {
-        id,
+        key,
+        kind: 'wallet',
         title: 'Цэнэглэлтийн төлбөр хасагдлаа',
         detail: `-${formatMoney(amount)} · ${ownerOf(data)} · үлдэгдэл ${formatMoney(Number(data.balance ?? 0))}`,
         tone: 'warn',
@@ -97,39 +142,88 @@ function describe(event: CsmsEvent): NotificationItem | null {
     }
     case 'transaction.refunded':
       return {
-        id,
+        key,
+        kind: 'refund',
         title: 'Цэнэглэлт буцаагдлаа',
         detail: data.transactionId ? `Цэнэглэлт #${data.transactionId}` : '—',
         tone: 'warn',
         at,
+        href: data.transactionId ? `/transactions/${encodeURIComponent(String(data.transactionId))}` : undefined,
       };
     default:
       return null;
   }
 }
 
-/**
- * Pops a toast the moment a payment, wallet change or refund happens anywhere
- * on the network, and keeps a short history behind the bell for whatever was
- * missed while looking elsewhere. In-memory only — reloading the console
- * clears it, same as the live station feed.
- */
-export function NotificationBell() {
-  const [items, setItems] = React.useState<NotificationItem[]>([]);
-  const [open, setOpen] = React.useState(false);
-  const [unread, setUnread] = React.useState(0);
-  const rootRef = React.useRef<HTMLDivElement>(null);
+function KindIcon({ item, className }: { item: Pick<StoredNotification, 'kind' | 'tone'>; className?: string }) {
+  if (item.kind === 'transaction.started') {
+    return <PlugZap className={cn('h-4 w-4 shrink-0 text-[var(--color-brand)]', className)} aria-hidden />;
+  }
+  if (item.kind === 'transaction.stopped') {
+    return <BatteryFull className={cn('h-4 w-4 shrink-0 text-[var(--color-ok)]', className)} aria-hidden />;
+  }
+  return (
+    <span className={cn('flex h-4 w-4 shrink-0 items-center justify-center', className)}>
+      <Dot tone={item.tone} />
+    </span>
+  );
+}
 
-  useLiveEvents({
-    events: NOTIFICATION_EVENTS,
-    buffer: 1,
-    onEvent: (event) => {
-      const item = describe(event);
-      if (!item) return;
-      setItems((prev) => [item, ...prev].slice(0, 50));
-      setUnread((n) => Math.min(n + 1, 99));
-      toast(item.title, { description: item.detail });
+/** At most this many held-back toasts are shown once the first-run guide closes. */
+const MAX_FLUSHED_TOASTS = 3;
+
+/**
+ * Pops a toast the moment a charging session starts or stops, a payment lands,
+ * a wallet changes or a refund happens anywhere on the network, and keeps the
+ * history behind the bell. Stored per operator in localStorage (see
+ * notification-store), shared by every open tab.
+ */
+export function NotificationBell({ userId }: { userId: string }) {
+  const [open, setOpen] = React.useState(false);
+  const rootRef = React.useRef<HTMLDivElement>(null);
+  const router = useRouter();
+  const stationName = useStationNames();
+  const { guideActive } = useFirstRunGuide();
+
+  const raw = React.useSyncExternalStore(
+    subscribeNotifications,
+    () => readRaw(userId),
+    () => '',
+  );
+  const state = React.useMemo(() => parseState(raw), [raw]);
+  const unread = unreadCount(state);
+
+  const show = React.useCallback(
+    (item: NewNotification) => {
+      const href = item.href;
+      toast(item.title, {
+        description: item.detail,
+        icon: <KindIcon item={item} />,
+        action: href ? { label: 'Нээх', onClick: () => router.push(href) } : undefined,
+      });
     },
+    [router],
+  );
+
+  // Toasts are held while the first-run guide is up and shown when it closes.
+  const held = React.useRef<NewNotification[]>([]);
+  const guideActiveRef = React.useRef(guideActive);
+  React.useEffect(() => {
+    guideActiveRef.current = guideActive;
+    if (guideActive || held.current.length === 0) return;
+    const pending = held.current.slice(-MAX_FLUSHED_TOASTS);
+    held.current = [];
+    for (const item of pending) show(item);
+  }, [guideActive, show]);
+
+  useLiveStreamEvents((event) => {
+    const item = describe(event, stationName);
+    if (!item) return;
+    void recordNotification(userId, item).then((shouldToast) => {
+      if (!shouldToast) return;
+      if (guideActiveRef.current) held.current.push(item);
+      else show(item);
+    });
   });
 
   React.useEffect(() => {
@@ -143,7 +237,7 @@ export function NotificationBell() {
 
   function toggle() {
     setOpen((o) => !o);
-    setUnread(0);
+    markAllRead(userId);
   }
 
   return (
@@ -158,29 +252,44 @@ export function NotificationBell() {
       ) : null}
 
       {open ? (
-        <div className="absolute right-0 top-full z-40 mt-2 w-80 overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-lg">
+        <div className="absolute right-0 top-full z-40 mt-2 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-lg">
           <div className="border-b border-[var(--color-border)] px-3 py-2 text-center text-xs font-semibold text-[var(--color-fg-muted)]">
             Мэдэгдлүүд
           </div>
           <div className="max-h-96 overflow-y-auto">
-            {items.length === 0 ? (
+            {state.items.length === 0 ? (
               <p className="px-3 py-6 text-center text-xs text-[var(--color-fg-subtle)]">
                 Одоогоор мэдэгдэл алга.
               </p>
             ) : (
-              items.map((item) => (
-                <div
-                  key={item.id}
-                  className="flex items-start gap-2 border-b border-[var(--color-border)] px-3 py-2.5 last:border-0"
-                >
-                  <Dot tone={item.tone} />
-                  <div className="min-w-0 flex-1 text-left">
-                    <p className="text-xs font-medium">{item.title}</p>
-                    <p className={cn('truncate text-xs text-[var(--color-fg-muted)]')}>{item.detail}</p>
-                    <p className="text-[10px] text-[var(--color-fg-subtle)]">{formatRelative(item.at)}</p>
+              state.items.map((item) => {
+                const body = (
+                  <>
+                    <KindIcon item={item} className="mt-0.5" />
+                    <div className="min-w-0 flex-1 text-left">
+                      <p className="text-xs font-medium">{item.title}</p>
+                      <p className="truncate text-xs text-[var(--color-fg-muted)]">{item.detail}</p>
+                      <p className="text-[10px] text-[var(--color-fg-subtle)]">{formatRelative(item.at)}</p>
+                    </div>
+                  </>
+                );
+                const rowClass =
+                  'flex items-start gap-2 border-b border-[var(--color-border)] px-3 py-2.5 last:border-0';
+                return item.href ? (
+                  <Link
+                    key={item.key}
+                    href={item.href}
+                    onClick={() => setOpen(false)}
+                    className={cn(rowClass, 'transition-colors hover:bg-[var(--color-surface-2)]')}
+                  >
+                    {body}
+                  </Link>
+                ) : (
+                  <div key={item.key} className={rowClass}>
+                    {body}
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>

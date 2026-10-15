@@ -4,6 +4,7 @@ import * as React from 'react';
 import { HelpCircle } from 'lucide-react';
 import { Modal } from '@/components/ui/modal';
 import { Button } from '@/components/ui/primitives';
+import { useFirstRunGuide } from './first-run-guide';
 
 export interface GuideStep {
   title: string;
@@ -35,11 +36,17 @@ function markSeen(topic: string): void {
  * per page, so each menu gets its own walkthrough without its own modal.
  */
 export function PageGuide({ topic, title, steps }: { topic: string; title: string; steps: GuideStep[] }) {
-  const [open, setOpen] = React.useState(() => !hasSeen(topic));
+  // First-visit auto-open waits while the shell's first-run guide is pending
+  // or running, then fires as before; the «?» button always opens at once.
+  const { suppressPageGuides } = useFirstRunGuide();
+  const [autoOpen, setAutoOpen] = React.useState(() => !hasSeen(topic));
+  const [manualOpen, setManualOpen] = React.useState(false);
+  const open = manualOpen || (autoOpen && !suppressPageGuides);
 
   function close() {
     markSeen(topic);
-    setOpen(false);
+    setAutoOpen(false);
+    setManualOpen(false);
   }
 
   return (
@@ -47,7 +54,8 @@ export function PageGuide({ topic, title, steps }: { topic: string; title: strin
       <Button
         variant="ghost"
         size="sm"
-        onClick={() => setOpen(true)}
+        onClick={() => setManualOpen(true)}
+        data-tour="page-guide"
         aria-label={`${title} — заавар`}
         title="Заавар харах"
       >

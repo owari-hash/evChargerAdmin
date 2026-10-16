@@ -549,7 +549,7 @@ function ConnectorsTab({
       <Card className="mb-4">
         <CardHeader
           title="Холбогч ба QR наалт"
-          description="Гарц бүр өөрийн байнгын QR кодтой. Станц холбогдоогүй байсан ч урьдчилан бүртгэж, наалтаа хэвлүүлж болно."
+          description="Хошуу бүр өөрийн байнгын QR кодтой. Станц холбогдоогүй байсан ч урьдчилан бүртгэж, наалтаа хэвлүүлж болно."
           actions={
             <div className="flex items-center gap-2">
               {guns.some((c) => c.code) ? (
@@ -589,11 +589,11 @@ function ConnectorsTab({
 
       {guns.length > 0 ? (
         <div className="mb-4 rounded-lg border border-[var(--color-info)]/30 bg-[var(--color-info-soft)]/40 px-4 py-3 text-xs text-[var(--color-fg-muted)]">
-          <p className="font-semibold text-[var(--color-fg)]">Аль гарц нь хэд дэх холбогч вэ?</p>
+          <p className="font-semibold text-[var(--color-fg)]">Аль хошуу нь хэд дэх холбогч вэ?</p>
           <p className="mt-1">
-            OCPP протокол үүнийг хэлж өгдөггүй — үйлдвэр нь өөрөө дугаарладаг. Гарц руу кабель
+            OCPP протокол үүнийг хэлж өгдөггүй — үйлдвэр нь өөрөө дугаарладаг. Хошуу руу кабель
             залгахад тухайн холбогчийн карт энд гэрэлтэнэ. Тэрийг нь тэмдэглээд нэр өгч, QR
-            наалтаа хэвлээрэй. Наалтыг гарц тодорхой болсны дараа наах нь зүйтэй.
+            наалтаа хэвлээрэй. Наалтыг хошуу тодорхой болсны дараа наах нь зүйтэй.
           </p>
         </div>
       ) : null}
@@ -721,7 +721,7 @@ function ConnectorsTab({
         tone="danger"
         title={`Холбогч №${deleting?.connectorId ?? ''} устгах уу?`}
         confirmLabel="Устгах"
-        message="Энэ гарцын QR код хүчингүй болно. Наалт нь станц дээрээ байвал дахин хэвлэх шаардлагатай."
+        message="Энэ хошууны QR код хүчингүй болно. Наалт нь станц дээрээ байвал дахин хэвлэх шаардлагатай."
       />
 
       <Card>

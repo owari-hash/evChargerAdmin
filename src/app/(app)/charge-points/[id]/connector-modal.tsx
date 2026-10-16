@@ -121,7 +121,7 @@ export function ConnectorModal({
           hint={
             editing
               ? 'Дугаарыг өөрчлөх боломжгүй — станц үүгээр таних тул.'
-              : 'Станц дээрх гарцын дугаар. OCPP-д 1-ээс эхэлнэ.'
+              : 'Станц дээрх хошууны дугаар. OCPP-д 1-ээс эхэлнэ.'
           }
           error={numberTaken ? `№${connectorId} аль хэдийн бүртгэгдсэн` : undefined}
           htmlFor="connector-number"

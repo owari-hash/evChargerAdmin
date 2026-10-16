@@ -40,7 +40,7 @@ export function StickerSheet({
           </Link>
           <h1 className="mt-1 text-lg font-semibold">QR наалт</h1>
           <p className="mt-0.5 text-sm text-[var(--color-fg-muted)]">
-            Гарц бүрийн байнгын код. Хэвлээд станцын тохирох гарц дээр наана уу.
+            Хошуу бүрийн байнгын код. Хэвлээд станцын тохирох хошуу дээр наана уу.
           </p>
         </div>
         {connectors.length > 0 ? (
@@ -114,7 +114,7 @@ function Sticker({
           {address ? <p className="truncate text-[10px] text-neutral-500">{address}</p> : null}
         </div>
         <div className="shrink-0 rounded-md bg-black px-2.5 py-1 text-center">
-          <p className="text-[9px] font-semibold uppercase leading-none text-white">Гарц</p>
+          <p className="text-[9px] font-semibold uppercase leading-none text-white">Хошуу</p>
           <p className="text-lg font-black leading-tight text-white">{connector.connectorId}</p>
         </div>
       </div>
@@ -123,7 +123,7 @@ function Sticker({
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={withBasePath(`/console-api/qr?data=${encodeURIComponent(connector.qrUrl ?? '')}`)}
-          alt={`Гарц ${connector.connectorId}-ийн QR код`}
+          alt={`Хошуу ${connector.connectorId}-ийн QR код`}
           className="h-28 w-28 shrink-0"
         />
         <div className="min-w-0 text-[11px] leading-snug">

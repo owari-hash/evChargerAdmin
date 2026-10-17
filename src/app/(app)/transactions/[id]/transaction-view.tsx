@@ -255,8 +255,13 @@ export function TransactionView({
             </DataRow>
             <DataRow label="Жолооч">{tx.driver?.name || tx.driver?.phone || '—'}</DataRow>
             <DataRow label="Машин">
-              {[tx.driver?.vehicleBrand, tx.driver?.vehicleModel].filter(Boolean).join(' ') || '—'}
+              {[tx.driver?.vehicleBrand, tx.driver?.vehicleModel].filter(Boolean).join(' ') || tx.vehicleModel || '—'}
             </DataRow>
+            {tx.vehicleVin ? (
+              <DataRow label="Машины VIN" mono>
+                <span className="font-bold text-[var(--color-brand)]">{tx.vehicleVin}</span>
+              </DataRow>
+            ) : null}
             <DataRow label="Зогсоосон карт" mono>
               {tx.stopIdTag ?? '—'}
             </DataRow>

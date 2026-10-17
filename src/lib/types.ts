@@ -247,6 +247,8 @@ export interface Transaction {
   lastPowerW?: number;
   lastSocPercent?: number;
   lastMeterValueAt?: string;
+  vehicleVin?: string;
+  vehicleModel?: string;
   tariffPerKwh?: number;
   /** Total the driver pays: energyCost + feeAmount. */
   cost?: number;

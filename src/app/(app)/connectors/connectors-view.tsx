@@ -32,7 +32,6 @@ import { FilterBar, Pagination } from '@/components/ui/pagination';
 import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty, TableLoading } from '@/components/ui/table';
 import { EditConnectorModal } from './edit-connector-modal';
 import { StationName } from '@/components/station-name';
-import { ConnectorStatusCounts } from '@/components/connector-status-counts';
 import { cn } from '@/lib/cn';
 
 /**
@@ -93,50 +92,38 @@ export function ConnectorsView({
   );
 
   const all = data?.data ?? [];
-  const rows = includeZero ? all : all.filter((c) => c.connectorId > 0);
+  const rows = React.useMemo(() => (includeZero ? all : all.filter((c) => c.connectorId > 0)), [all, includeZero]);
   const columns = canOperate ? 10 : 9;
 
-  // Cache counts across filter switches so filter buttons never disappear when clicked!
-  const [cachedCounts, setCachedCounts] = React.useState<Record<string, number>>({});
-
-  React.useEffect(() => {
-    // 1. If backend returns aggregated statusCounts for current station query
+  // Pure memoized counts without any state updates or infinite render loops
+  const counts = React.useMemo(() => {
     if (data?.statusCounts && Object.keys(data.statusCounts).length > 0) {
-      setCachedCounts((prev) => ({ ...prev, ...data.statusCounts }));
+      return data.statusCounts;
     }
-    // 2. If stats/overview is available and no station filter is set
-    else if (!debouncedCp && statsOverview?.connectors) {
-      const formatted: Record<string, number> = {};
+    const fromOverview: Record<string, number> = {};
+    if (statsOverview?.connectors) {
       for (const [s, count] of Object.entries(statsOverview.connectors)) {
-        if (count != null) formatted[s] = count;
+        if (count != null) fromOverview[s] = count;
       }
-      setCachedCounts((prev) => ({ ...prev, ...formatted }));
     }
-    // 3. Fallback: if unfiltered rows are loaded, accumulate them
-    else if (!status && rows.length > 0) {
-      const map: Record<string, number> = {};
-      for (const c of rows) {
-        map[c.status] = (map[c.status] ?? 0) + 1;
-      }
-      setCachedCounts((prev) => ({ ...prev, ...map }));
-    }
-  }, [data?.statusCounts, statsOverview?.connectors, debouncedCp, status, rows]);
+    return fromOverview;
+  }, [data?.statusCounts, statsOverview?.connectors]);
 
   // Total connectors count across the network or current station
   const totalCount = React.useMemo(() => {
     if (status === '' && data?.total != null) return data.total;
-    const fromCounts = Object.values(cachedCounts).reduce((a, b) => a + (Number(b) || 0), 0);
-    return fromCounts > 0 ? fromCounts : (data?.total ?? 0);
-  }, [status, data?.total, cachedCounts]);
+    const sum = Object.values(counts).reduce((a, b) => a + (Number(b) || 0), 0);
+    return sum > 0 ? sum : (data?.total ?? 0);
+  }, [status, data?.total, counts]);
 
   // Live charging statistics
-  const chargingCount = cachedCounts['Charging'] ?? 0;
-  const availableCount = cachedCounts['Available'] ?? 0;
+  const chargingCount = counts['Charging'] ?? 0;
+  const availableCount = counts['Available'] ?? 0;
   const attentionCount =
-    (cachedCounts['Faulted'] ?? 0) +
-    (cachedCounts['Unavailable'] ?? 0) +
-    (cachedCounts['SuspendedEV'] ?? 0) +
-    (cachedCounts['SuspendedEVSE'] ?? 0);
+    (counts['Faulted'] ?? 0) +
+    (counts['Unavailable'] ?? 0) +
+    (counts['SuspendedEV'] ?? 0) +
+    (counts['SuspendedEVSE'] ?? 0);
 
   // Calculate live power being delivered on the current visible page
   const livePowerSumW = React.useMemo(() => {
@@ -319,19 +306,6 @@ export function ConnectorsView({
         </button>
       </div>
 
-      {/* Persistent Status Filters Toolbar: The buttons NEVER disappear! */}
-      <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-2 shadow-xs">
-        <ConnectorStatusCounts
-          counts={cachedCounts}
-          selectedStatus={status}
-          onSelectStatus={(s) => {
-            setStatus(s);
-            setPage(1);
-          }}
-          total={totalCount}
-        />
-      </div>
-
       {/* Main Table Card */}
       <Card>
         <FilterBar>
@@ -370,7 +344,7 @@ export function ConnectorsView({
             <option value="">Бүх төлөв</option>
             {CONNECTOR_STATUSES.map((s) => (
               <option key={s} value={s}>
-                {mn(CONNECTOR_STATUS, s)} {cachedCounts[s] ? `(${cachedCounts[s]})` : ''}
+                {mn(CONNECTOR_STATUS, s)} {counts[s] ? `(${counts[s]})` : ''}
               </option>
             ))}
           </Select>

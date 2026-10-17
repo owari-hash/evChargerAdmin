@@ -16,6 +16,7 @@ import { Button, ErrorNote, Field, Input, Select } from '@/components/ui/primiti
 import { CopyButton } from '@/components/ui/copy-button';
 import { Modal } from '@/components/ui/modal';
 import { Tabs } from '@/components/ui/tabs';
+import { getMerchantId } from './active-merchant-modal';
 
 /** Fields shared by both merchant kinds. */
 const SHARED = {
@@ -76,10 +77,12 @@ export function MerchantModal({
   open,
   onClose,
   onSaved,
+  onSetActive,
 }: {
   open: boolean;
   onClose: () => void;
-  onSaved: () => void;
+  onSaved?: (merchant: QpayMerchant) => void;
+  onSetActive?: (merchant: { merchantId: string; merchantName: string; mccCode: string }) => void;
 }) {
   const [kind, setKind] = React.useState<QpayMerchantKind>('company');
   const [form, setForm] = React.useState<Form>(EMPTY);
@@ -114,7 +117,7 @@ export function MerchantModal({
         email: form.email.trim(),
       };
 
-      const merchant =
+      const res =
         kind === 'person'
           ? await api.post<QpayMerchant>('qpay/merchants/person', {
               ...shared,
@@ -128,9 +131,25 @@ export function MerchantModal({
               name: form.name.trim(),
             } satisfies QpayCompanyMerchantInput);
 
+      const mid = getMerchantId(res);
+      const merchant: QpayMerchant = {
+        ...res,
+        merchant_id: mid,
+        register_number: form.register_number.trim(),
+        mcc_code: form.mcc_code.trim(),
+        company_name: form.company_name.trim() || undefined,
+        name: form.name.trim() || undefined,
+        first_name: form.first_name.trim() || undefined,
+        last_name: form.last_name.trim() || undefined,
+        business_name: form.business_name.trim() || undefined,
+        phone: form.phone.trim(),
+        email: form.email.trim(),
+        address: form.address.trim(),
+      };
+
       toast.success('Мерчант QPay дээр бүртгэгдлээ');
-      setCreated(merchant ?? {});
-      onSaved();
+      setCreated(merchant);
+      onSaved?.(merchant);
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -141,36 +160,72 @@ export function MerchantModal({
   // ---- Result panel: the merchant_id is what the backend needs afterwards ----
 
   if (created) {
-    const merchantId = created.merchant_id ?? '';
+    const merchantId = getMerchantId(created);
+    const mName =
+      created.company_name ||
+      created.name ||
+      created.business_name ||
+      [created.last_name, created.first_name].filter(Boolean).join(' ') ||
+      '';
+
     return (
       <Modal
         open={open}
         onClose={onClose}
-        title="Мерчант бүртгэгдлээ"
+        title="Мерчант амжилттай бүртгэгдлээ"
         description={kind === 'person' ? 'Хувь хүн' : 'Байгууллага'}
         footer={
-          <Button variant="primary" onClick={onClose}>
-            Дуусгах
-          </Button>
+          <div className="flex w-full items-center justify-end gap-2">
+            <Button variant="ghost" size="sm" onClick={onClose}>
+              Дуусгах
+            </Button>
+            {onSetActive && merchantId ? (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  onClose();
+                  onSetActive({
+                    merchantId,
+                    merchantName: mName,
+                    mccCode: created.mcc_code || '5311',
+                  });
+                }}
+              >
+                <Check className="mr-1.5 h-3.5 w-3.5" />
+                Үндсэн идэвхтэй мерчант болгох
+              </Button>
+            ) : null}
+          </div>
         }
       >
         <div className="space-y-4">
           <div className="flex items-start gap-3 rounded-lg border border-[var(--color-ok)]/30 bg-[var(--color-ok-soft)] px-3 py-2.5">
             <Check className="mt-0.5 h-4 w-4 shrink-0 text-[var(--color-ok)]" />
-            <p className="text-xs text-[var(--color-fg)]">
-              QPay мерчантыг үүсгэлээ. Нэхэмжлэх үүсгэхийн тулд доорх мерчант ID-г
-              backend-ийн <code className="font-mono">QPAY_QUICKQR_MERCHANT_ID</code> тохиргоонд
-              хийнэ үү.
-            </p>
+            <div className="text-xs text-[var(--color-fg)]">
+              <p className="font-semibold">QPay дээр шинэ мерчант үүсгэгдлээ.</p>
+              <p className="mt-0.5 text-[var(--color-fg-muted)]">
+                QR төлбөр хүлээн авахын тулд &quot;Үндсэн идэвхтэй мерчант болгох&quot; товчийг дарж дансаа холбоно уу.
+              </p>
+            </div>
           </div>
 
           {merchantId ? (
-            <Field label="Мерчант ID">
-              <div className="flex items-center gap-2">
-                <Input readOnly value={merchantId} className="font-mono text-xs" />
-                <CopyButton value={merchantId} variant="secondary" />
-              </div>
-            </Field>
+            <div className="space-y-3">
+              <Field label="Мерчант ID (UUID)">
+                <div className="flex items-center gap-2">
+                  <Input readOnly value={merchantId} className="font-mono text-xs" />
+                  <CopyButton value={merchantId} variant="secondary" />
+                </div>
+              </Field>
+
+              {mName ? (
+                <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] p-2.5 text-xs">
+                  <span className="text-[var(--color-fg-muted)]">Мерчантын нэр: </span>
+                  <span className="font-medium text-[var(--color-fg)]">{mName}</span>
+                </div>
+              ) : null}
+            </div>
           ) : (
             <ErrorNote>
               QPay мерчант ID буцаасангүй. Жагсаалтыг шинэчилж шалгана уу.

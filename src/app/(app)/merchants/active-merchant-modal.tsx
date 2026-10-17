@@ -3,6 +3,7 @@
 import * as React from 'react';
 import useSWR from 'swr';
 import { toast } from 'sonner';
+import { Search, Loader2 } from 'lucide-react';
 import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
 import type { QpayActiveMerchantConfig, QpayMerchant } from '@/lib/types';
 import { Badge, Button, ErrorNote, Field, Input, Select, type SelectOption } from '@/components/ui/primitives';
@@ -32,7 +33,13 @@ const BANK_OPTIONS: SelectOption[] = [
   { value: CUSTOM_BANK, label: 'Өөр банкны код бичих…' },
 ];
 
-function getMerchantDisplayName(m: QpayMerchant): string {
+export function getMerchantId(m: QpayMerchant | Record<string, unknown> | null | undefined): string {
+  if (!m) return '';
+  const mid = m.merchant_id || (m as Record<string, unknown>).id || (m as Record<string, unknown>).merchantId;
+  return mid ? String(mid).trim() : '';
+}
+
+export function getMerchantDisplayName(m: QpayMerchant): string {
   const person = [m.last_name, m.first_name].filter(Boolean).join(' ');
   return m.name || m.business_name || m.company_name || person || '—';
 }
@@ -55,19 +62,48 @@ export function ActiveMerchantModal({
   merchants?: QpayMerchant[];
   onSuccess: () => void;
 }) {
-  // If no merchants were passed in, fetch from QuickQR endpoint
-  const { data: fetchedData } = useSWR<MerchantListResponse | QpayMerchant[]>(
-    open && (!merchants || merchants.length === 0)
-      ? apiUrl('qpay/merchants', { page: 1, limit: 100 })
-      : null,
+  // Always fetch latest merchants list from QuickQR endpoint when modal opens
+  const { data: fetchedData, isLoading: fetchingList } = useSWR<MerchantListResponse | QpayMerchant[]>(
+    open ? apiUrl('qpay/merchants', { page: 1, limit: 100 }) : null,
     fetcher,
+    { revalidateOnFocus: true },
   );
 
+  // Consolidated merchants list deduped by merchant_id
   const allMerchants = React.useMemo(() => {
-    if (merchants && merchants.length > 0) return merchants;
-    if (!fetchedData) return [];
-    return Array.isArray(fetchedData) ? fetchedData : (fetchedData.rows ?? []);
-  }, [merchants, fetchedData]);
+    const list: QpayMerchant[] = [];
+    const seen = new Set<string>();
+
+    const add = (m: QpayMerchant) => {
+      const mid = getMerchantId(m);
+      if (!mid || seen.has(mid)) return;
+      seen.add(mid);
+      list.push({ ...m, merchant_id: mid });
+    };
+
+    // 1. If initialData has a merchantId, include a fallback entry
+    if (initialData?.merchantId) {
+      add({
+        merchant_id: initialData.merchantId,
+        company_name: initialData.merchantName,
+        name: initialData.merchantName,
+        mcc_code: initialData.mccCode,
+      });
+    }
+
+    // 2. Add passed merchants (table rows + recently created merchants)
+    for (const m of merchants) add(m);
+
+    // 3. Add remote fetched merchants
+    const fetchedRows = fetchedData
+      ? Array.isArray(fetchedData)
+        ? fetchedData
+        : (fetchedData.rows ?? [])
+      : [];
+    for (const m of fetchedRows) add(m);
+
+    return list;
+  }, [merchants, fetchedData, initialData]);
 
   const [selectedMerchantId, setSelectedMerchantId] = React.useState<string>('');
   const [isManualInput, setIsManualInput] = React.useState<boolean>(false);
@@ -80,53 +116,43 @@ export function ActiveMerchantModal({
   const [accountNumber, setAccountNumber] = React.useState('');
   const [accountName, setAccountName] = React.useState('');
   const [saving, setSaving] = React.useState(false);
+  const [fetchingRemote, setFetchingRemote] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
 
-  // Seed the form once per opening. The merchant list keeps revalidating in the
-  // background, and re-seeding on every refresh would wipe what is being typed;
-  // it is only re-run while the list is still empty (i.e. still loading).
-  const seededRef = React.useRef(false);
+  // Auto-fetch merchant details from backend by ID
+  const fetchMerchantDetails = React.useCallback(async (id: string) => {
+    const cleanId = id.trim();
+    if (!cleanId || cleanId === '__manual__') return;
+    setFetchingRemote(true);
+    try {
+      const details = await api.get<QpayMerchant>(`qpay/merchants/${encodeURIComponent(cleanId)}`);
+      if (details) {
+        const mid = getMerchantId(details) || cleanId;
+        const name = getMerchantDisplayName(details);
+        setMerchantId(mid);
+        if (name && name !== '—') setMerchantName(name);
+        if (details.mcc_code) setMccCode(details.mcc_code);
+        setAccountName((prev) => (!prev || prev === 'ЗЭВ ТАБС ХХК' ? name : prev));
+      }
+    } catch {
+      // Keep what was entered if remote fetch fails
+    } finally {
+      setFetchingRemote(false);
+    }
+  }, []);
+
+  // Initialize or re-populate when modal opens or initialData/merchants change
   React.useEffect(() => {
-    if (!open) {
-      seededRef.current = false;
-      return;
-    }
-    if (seededRef.current) return;
-    if (allMerchants.length > 0) seededRef.current = true;
-
+    if (!open) return;
     setError(null);
-    const targetId = initialData?.merchantId ?? 'cc1a2b2f-aa84-474a-953c-c55b575a9883';
+
+    const targetId = (initialData?.merchantId ? String(initialData.merchantId) : '').trim();
     const bCode = initialData?.bankCode ?? '050000';
-    const accNum = initialData?.accountNumber ?? '5475332224';
-    const accName = initialData?.accountName ?? 'ЗЭВ ТАБС ХХК';
+    const accNum = initialData?.accountNumber ?? '';
+    const accName = initialData?.accountName ?? '';
 
-    const matched = allMerchants.find((m) => m.merchant_id === targetId);
-
-    if (matched && matched.merchant_id) {
-      setSelectedMerchantId(matched.merchant_id);
-      setIsManualInput(false);
-      setMerchantId(matched.merchant_id);
-      const name = getMerchantDisplayName(matched) || initialData?.merchantName || 'ЗЭВ ТАБС ХХК';
-      setMerchantName(name);
-      setMccCode(matched.mcc_code || initialData?.mccCode || '5311');
-      setAccountName(accName || name);
-    } else if (targetId) {
-      setSelectedMerchantId(targetId);
-      setIsManualInput(false);
-      setMerchantId(targetId);
-      setMerchantName(initialData?.merchantName ?? 'ЗЭВ ТАБС ХХК');
-      setMccCode(initialData?.mccCode ?? '5311');
-      setAccountName(accName);
-    } else {
-      setSelectedMerchantId('');
-      setIsManualInput(false);
-      setMerchantId('');
-      setMerchantName('');
-      setMccCode('5311');
-      setAccountName('');
-    }
-
-    setAccountNumber(accNum);
+    if (accNum) setAccountNumber(accNum);
+    if (accName) setAccountName(accName);
 
     const known = POPULAR_BANKS.some((b) => b.code === bCode);
     if (known) {
@@ -136,33 +162,69 @@ export function ActiveMerchantModal({
       setSelectedBank(CUSTOM_BANK);
       setCustomBankCode(bCode);
     }
-  }, [open, initialData, allMerchants]);
+
+    if (targetId) {
+      const matched = allMerchants.find((m) => getMerchantId(m) === targetId);
+      if (matched) {
+        const mid = getMerchantId(matched);
+        setSelectedMerchantId(mid);
+        setIsManualInput(false);
+        setMerchantId(mid);
+        const name = getMerchantDisplayName(matched) || initialData?.merchantName || '';
+        setMerchantName(name);
+        setMccCode(matched.mcc_code || initialData?.mccCode || '5311');
+        if (!accName) setAccountName(name);
+      } else {
+        setSelectedMerchantId(targetId);
+        setIsManualInput(false);
+        setMerchantId(targetId);
+        setMerchantName(initialData?.merchantName ?? '');
+        setMccCode(initialData?.mccCode ?? '5311');
+        if (!accName && initialData?.merchantName) setAccountName(initialData.merchantName);
+        void fetchMerchantDetails(targetId);
+      }
+    } else if (allMerchants.length > 0) {
+      const first = allMerchants[0];
+      const mid = getMerchantId(first);
+      setSelectedMerchantId(mid);
+      setIsManualInput(false);
+      setMerchantId(mid);
+      const name = getMerchantDisplayName(first);
+      setMerchantName(name);
+      setMccCode(first.mcc_code || '5311');
+      if (!accName) setAccountName(name);
+    }
+  }, [open, initialData, allMerchants, fetchMerchantDetails]);
 
   // Handle dropdown selection
-  function handleSelectMerchant(value: string) {
-    setSelectedMerchantId(value);
-    if (value === '__manual__') {
+  async function handleSelectMerchant(value: string) {
+    const val = value.trim();
+    setSelectedMerchantId(val);
+
+    if (val === '__manual__') {
       setIsManualInput(true);
       return;
     }
 
     setIsManualInput(false);
-    const matched = allMerchants.find((m) => m.merchant_id === value);
-    if (matched && matched.merchant_id) {
-      setMerchantId(matched.merchant_id);
+    const matched = allMerchants.find((m) => getMerchantId(m) === val);
+    if (matched) {
+      const mid = getMerchantId(matched);
+      setMerchantId(mid);
       const name = getMerchantDisplayName(matched);
       setMerchantName(name);
       setMccCode(matched.mcc_code || '5311');
-      if (!accountName || accountName === 'ЗЭВ ТАБС ХХК') {
+      if (!accountName || accountName === 'ЗЭВ ТАБС ХХК' || accountName === merchantName) {
         setAccountName(name);
       }
-    } else {
-      setMerchantId(value);
+    } else if (val) {
+      setMerchantId(val);
+      await fetchMerchantDetails(val);
     }
   }
 
   const selectedMerchant = React.useMemo(() => {
-    return allMerchants.find((m) => m.merchant_id === merchantId) ?? null;
+    return allMerchants.find((m) => getMerchantId(m) === merchantId) ?? null;
   }, [allMerchants, merchantId]);
 
   const bankCode = selectedBank === CUSTOM_BANK ? customBankCode.trim() : selectedBank;
@@ -197,7 +259,7 @@ export function ActiveMerchantModal({
         accountNumber: accountNumber.trim(),
         accountName: accountName.trim(),
       });
-      toast.success('QPay идэвхтэй мерчант амжилттай тохируулагдлаа');
+      toast.success('QPay үндсэн идэвхтэй мерчант амжилттай тохируулагдлаа');
       onSuccess();
       onClose();
     } catch (err) {
@@ -235,50 +297,57 @@ export function ActiveMerchantModal({
         {error ? <ErrorNote>{error}</ErrorNote> : null}
 
         <div className="space-y-3">
-          {/* Dropdown selector so user does not have to fill or type UUID */}
+          {/* Dropdown selector with automatically fetched and passed merchants */}
           <Field
             label="Бүртгэлтэй мерчантаас сонгох *"
             hint="Сонгосон мерчантын ID, нэр, регистр, MCC мэдээлэл автоматаар татагдана"
           >
-            <Select
-              value={isManualInput ? '__manual__' : selectedMerchantId}
-              onChange={(e) => handleSelectMerchant(e.target.value)}
-            >
-              <option value="" disabled>
-                — Жагсаалтаас мерчант сонгох —
-              </option>
-              {allMerchants.map((m) => {
-                const name = getMerchantDisplayName(m);
-                const reg = m.register_number ? `РД: ${m.register_number}` : '';
-                const mcc = m.mcc_code ? `MCC: ${m.mcc_code}` : '';
-                const extra = [reg, mcc].filter(Boolean).join(' · ');
-                return (
-                  <option key={m.merchant_id} value={m.merchant_id}>
-                    {name} {extra ? `(${extra})` : ''}
-                  </option>
-                );
-              })}
-              {/* If initial merchant is not in list, render it as an option */}
-              {merchantId && !allMerchants.some((m) => m.merchant_id === merchantId) && !isManualInput && (
-                <option value={merchantId}>
-                  {merchantName || merchantId} (Одоогийн үндсэн мерчант)
+            <div className="relative">
+              <Select
+                value={isManualInput ? '__manual__' : selectedMerchantId}
+                onChange={(e) => void handleSelectMerchant(e.target.value)}
+              >
+                <option value="" disabled>
+                  {fetchingList ? '— Мерчантууд ачаалж байна… —' : '— Жагсаалтаас мерчант сонгох —'}
                 </option>
-              )}
-              <option value="__manual__">Гараар өөр UUID оруулах…</option>
-            </Select>
+                {allMerchants.map((m, idx) => {
+                  const mid = getMerchantId(m);
+                  if (!mid) return null;
+                  const name = getMerchantDisplayName(m);
+                  const reg = m.register_number ? `РД: ${m.register_number}` : '';
+                  const mcc = m.mcc_code ? `MCC: ${m.mcc_code}` : '';
+                  const extra = [reg, mcc].filter(Boolean).join(' · ');
+                  return (
+                    <option key={mid || idx} value={mid}>
+                      {name} {extra ? `(${extra})` : ''}
+                    </option>
+                  );
+                })}
+                {/* Fallback option if merchantId was manually passed and not yet in allMerchants */}
+                {merchantId && !allMerchants.some((m) => getMerchantId(m) === merchantId) && !isManualInput && (
+                  <option value={merchantId}>
+                    {merchantName || merchantId} (Шинэ мерчант)
+                  </option>
+                )}
+                <option value="__manual__">Гараар өөр UUID оруулах…</option>
+              </Select>
+            </div>
           </Field>
 
-          {/* Auto-populated details card with user's requested 6 items */}
-          {(!isManualInput && (selectedMerchant || merchantId)) && (
+          {/* Auto-populated details card */}
+          {!isManualInput && (selectedMerchant || merchantId) && (
             <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)] p-3 space-y-2.5">
               <div className="flex items-start justify-between gap-2">
                 <div>
                   <span className="text-[10px] font-semibold uppercase tracking-wider text-[var(--color-fg-subtle)]">
                     Сонгогдсон мерчант
                   </span>
-                  <p className="text-sm font-semibold text-[var(--color-fg)]">
-                    {selectedMerchant ? getMerchantDisplayName(selectedMerchant) : merchantName || '—'}
-                  </p>
+                  <div className="flex items-center gap-2">
+                    <p className="text-sm font-semibold text-[var(--color-fg)]">
+                      {selectedMerchant ? getMerchantDisplayName(selectedMerchant) : merchantName || '—'}
+                    </p>
+                    {fetchingRemote ? <Loader2 className="h-3 w-3 animate-spin text-[var(--color-brand)]" /> : null}
+                  </div>
                   {selectedMerchant?.company_name &&
                     selectedMerchant.company_name !== getMerchantDisplayName(selectedMerchant) && (
                       <p className="text-xs text-[var(--color-fg-subtle)]">
@@ -324,17 +393,35 @@ export function ActiveMerchantModal({
             </div>
           )}
 
-          {/* Fallback manual inputs only shown if user chooses manual UUID mode */}
+          {/* Fallback manual inputs if user chooses manual UUID mode */}
           {isManualInput && (
             <div className="space-y-3 rounded-lg border border-dashed border-[var(--color-border)] p-3">
               <Field label="Мерчант ID (UUID) *" hint="QPay QuickQR мерчантын ID оруулна уу">
-                <Input
-                  value={merchantId}
-                  onChange={(e) => setMerchantId(e.target.value)}
-                  placeholder="жишээ: cc1a2b2f-aa84-474a-953c-c55b575a9883"
-                  className="font-mono text-xs"
-                  required
-                />
+                <div className="flex items-center gap-2">
+                  <Input
+                    value={merchantId}
+                    onChange={(e) => setMerchantId(e.target.value)}
+                    placeholder="жишээ: cc1a2b2f-aa84-474a-953c-c55b575a9883"
+                    className="font-mono text-xs"
+                    required
+                  />
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    type="button"
+                    onClick={() => void fetchMerchantDetails(merchantId)}
+                    disabled={!merchantId.trim() || fetchingRemote}
+                    title="QPay-ээс мэдээлэл татах"
+                    className="shrink-0 text-xs"
+                  >
+                    {fetchingRemote ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : (
+                      <Search className="h-3.5 w-3.5" />
+                    )}
+                    Татах
+                  </Button>
+                </div>
               </Field>
 
               <Field label="Мерчантын нэр" hint="Байгууллага эсвэл бизнесийн нэр">

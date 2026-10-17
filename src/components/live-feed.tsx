@@ -86,12 +86,16 @@ export function LiveFeed({
   showChargePoint = true,
   /** Refresh server-rendered data when a state-changing event arrives. */
   refreshOnEvent = false,
+  onEvent: externalOnEvent,
+  onClear: externalOnClear,
 }: {
   chargePointId?: string;
   height?: string;
   events?: readonly string[];
   showChargePoint?: boolean;
   refreshOnEvent?: boolean;
+  onEvent?: (event: CsmsEvent) => void;
+  onClear?: () => void;
 }) {
   const router = useRouter();
   const [paused, setPaused] = React.useState(false);
@@ -99,8 +103,9 @@ export function LiveFeed({
   // Coalesce bursts: a busy site can emit many events per second and refreshing
   // the route on each one would thrash the server.
   const refreshTimer = React.useRef<ReturnType<typeof setTimeout> | null>(null);
-  const onEvent = React.useCallback(
+  const handleEvent = React.useCallback(
     (event: CsmsEvent) => {
+      externalOnEvent?.(event);
       if (!refreshOnEvent) return;
       if (event.event === 'transaction.metervalue' || event.event === 'chargepoint.heartbeat') return;
       if (refreshTimer.current) return;
@@ -109,7 +114,7 @@ export function LiveFeed({
         router.refresh();
       }, 1500);
     },
-    [refreshOnEvent, router],
+    [refreshOnEvent, router, externalOnEvent],
   );
 
   React.useEffect(
@@ -124,8 +129,13 @@ export function LiveFeed({
     events: wanted,
     buffer: 150,
     enabled: !paused,
-    onEvent,
+    onEvent: handleEvent,
   });
+
+  const handleClear = React.useCallback(() => {
+    clear();
+    externalOnClear?.();
+  }, [clear, externalOnClear]);
 
   return (
     <div className="flex h-full flex-col">
@@ -147,7 +157,7 @@ export function LiveFeed({
           <Button variant="ghost" size="icon" onClick={() => setPaused((p) => !p)} aria-label={paused ? 'Үргэлжлүүлэх' : 'Түр зогсоох'}>
             {paused ? <Play className="h-3.5 w-3.5" /> : <Pause className="h-3.5 w-3.5" />}
           </Button>
-          <Button variant="ghost" size="icon" onClick={clear} aria-label="Урсгал цэвэрлэх">
+          <Button variant="ghost" size="icon" onClick={handleClear} aria-label="Урсгал цэвэрлэх">
             <Trash2 className="h-3.5 w-3.5" />
           </Button>
         </div>

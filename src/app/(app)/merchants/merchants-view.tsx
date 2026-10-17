@@ -23,7 +23,7 @@ import {
   TR,
 } from '@/components/ui/table';
 import { MerchantModal } from './merchant-modal';
-import { ActiveMerchantModal } from './active-merchant-modal';
+import { ActiveMerchantModal, getMerchantDisplayName, getMerchantId } from './active-merchant-modal';
 
 /**
  * QuickQR returns the merchant list as `{ rows, count }`, but a bare array shows
@@ -44,12 +44,6 @@ function readTotal(data: MerchantList | QpayMerchant[] | undefined, rows: number
   return Array.isArray(data) ? data.length : (data.count ?? rows);
 }
 
-/** Display name: whichever of the company/person name fields QPay filled in. */
-function merchantName(m: QpayMerchant): string {
-  const person = [m.last_name, m.first_name].filter(Boolean).join(' ');
-  return m.name || m.business_name || m.company_name || person || '—';
-}
-
 export function MerchantsView({
   canEdit,
   canDelete,
@@ -64,6 +58,7 @@ export function MerchantsView({
   const [configuringActive, setConfiguringActive] = React.useState(false);
   const [selectedForActive, setSelectedForActive] = React.useState<Partial<QpayActiveMerchantConfig> | null>(null);
   const [busy, setBusy] = React.useState(false);
+  const [createdMerchants, setCreatedMerchants] = React.useState<QpayMerchant[]>([]);
 
   // Whether QuickQR is configured at all decides between "empty" and "not set up".
   const { data: config } = useSWR<PaymentsConfig>(apiUrl('payments/config'), fetcher, {
@@ -83,16 +78,44 @@ export function MerchantsView({
     { refreshInterval: REFRESH.config, keepPreviousData: true },
   );
 
-  const rows = readRows(data);
-  const total = readTotal(data, rows.length);
+  const rawRows = readRows(data);
+  const total = readTotal(data, rawRows.length);
+
+  // Combine recently created merchants with fetched rows so new merchants show up immediately
+  const rows = React.useMemo(() => {
+    const list: QpayMerchant[] = [];
+    const seen = new Set<string>();
+
+    for (const m of createdMerchants) {
+      const mid = getMerchantId(m);
+      if (mid && !seen.has(mid)) {
+        seen.add(mid);
+        list.push({ ...m, merchant_id: mid });
+      }
+    }
+
+    for (const m of rawRows) {
+      const mid = getMerchantId(m);
+      if (mid && !seen.has(mid)) {
+        seen.add(mid);
+        list.push({ ...m, merchant_id: mid });
+      } else if (!mid) {
+        list.push(m);
+      }
+    }
+
+    return list;
+  }, [createdMerchants, rawRows]);
 
   async function remove() {
-    if (!deleting?.merchant_id) return;
+    const deletingId = getMerchantId(deleting);
+    if (!deletingId) return;
     setBusy(true);
     try {
-      await api.del(`qpay/merchants/${encodeURIComponent(deleting.merchant_id)}`);
+      await api.del(`qpay/merchants/${encodeURIComponent(deletingId)}`);
       toast.success('Мерчант устгагдлаа');
       setDeleting(null);
+      setCreatedMerchants((prev) => prev.filter((m) => getMerchantId(m) !== deletingId));
       void mutate();
     } catch (err) {
       toast.error(errorMessage(err));
@@ -220,62 +243,63 @@ export function MerchantsView({
                 <TableEmpty colSpan={7}>Одоогоор бүртгэсэн мерчант алга.</TableEmpty>
               ) : (
                 rows.map((m, i) => {
+                  const mid = getMerchantId(m);
                   const isActive = !!(
-                    m.merchant_id &&
+                    mid &&
                     activeMerchant?.merchantId &&
-                    m.merchant_id === activeMerchant.merchantId
+                    mid === activeMerchant.merchantId
                   );
 
                   return (
-                    <TR key={m.merchant_id ?? i}>
+                    <TR key={mid || i}>
                       <TD className="text-xs font-medium">
-                        <div className="flex items-center justify-center gap-2">
-                          <span>{merchantName(m)}</span>
+                        <div className="flex items-center gap-2">
+                          <span>{getMerchantDisplayName(m)}</span>
                           {isActive && <Badge tone="ok">Идэвхтэй</Badge>}
                         </div>
-                        {m.company_name && m.company_name !== merchantName(m) ? (
+                        {m.company_name && m.company_name !== getMerchantDisplayName(m) ? (
                           <p className="text-[var(--color-fg-subtle)]">{m.company_name}</p>
                         ) : null}
                       </TD>
-                    <TD>
-                      {m.merchant_id ? (
-                        <span className="inline-flex items-center gap-1">
-                          <span className="font-mono text-xs text-[var(--color-fg-muted)]">
-                            {m.merchant_id.slice(0, 8)}…
-                          </span>
-                          <CopyButton value={m.merchant_id} size="icon" />
-                        </span>
-                      ) : (
-                        '—'
-                      )}
-                    </TD>
-                    <TD className="font-mono text-xs">{m.register_number ?? '—'}</TD>
-                    <TD className="text-xs">
-                      {m.mcc_code ? <Badge tone="info">{m.mcc_code}</Badge> : '—'}
-                    </TD>
-                    <TD className="text-xs">
-                      {m.phone ?? '—'}
-                      {m.email ? (
-                        <p className="text-[var(--color-fg-subtle)]">{m.email}</p>
-                      ) : null}
-                    </TD>
-                    <TD className="max-w-[220px] truncate text-xs text-[var(--color-fg-muted)]">
-                      {m.address ?? '—'}
-                    </TD>
                       <TD>
-                        <div className="flex items-center justify-center gap-1">
-                          {!isActive && canEdit && m.merchant_id ? (
+                        {mid ? (
+                          <span className="inline-flex items-center gap-1">
+                            <span className="font-mono text-xs text-[var(--color-fg-muted)]">
+                              {mid.slice(0, 8)}…
+                            </span>
+                            <CopyButton value={mid} size="icon" />
+                          </span>
+                        ) : (
+                          '—'
+                        )}
+                      </TD>
+                      <TD className="font-mono text-xs">{m.register_number ?? '—'}</TD>
+                      <TD className="text-xs">
+                        {m.mcc_code ? <Badge tone="info">{m.mcc_code}</Badge> : '—'}
+                      </TD>
+                      <TD className="text-xs">
+                        {m.phone ?? '—'}
+                        {m.email ? (
+                          <p className="text-[var(--color-fg-subtle)]">{m.email}</p>
+                        ) : null}
+                      </TD>
+                      <TD className="max-w-[220px] truncate text-xs text-[var(--color-fg-muted)]">
+                        {m.address ?? '—'}
+                      </TD>
+                      <TD>
+                        <div className="flex items-center justify-end gap-1">
+                          {!isActive && canEdit && mid ? (
                             <Button
                               variant="ghost"
                               size="sm"
                               onClick={() => {
                                 setSelectedForActive({
-                                  merchantId: m.merchant_id,
-                                  merchantName: merchantName(m) || m.company_name || '',
+                                  merchantId: mid,
+                                  merchantName: getMerchantDisplayName(m) || m.company_name || '',
                                   mccCode: m.mcc_code || activeMerchant?.mccCode || '5311',
                                   bankCode: activeMerchant?.bankCode || '050000',
                                   accountNumber: activeMerchant?.accountNumber || '',
-                                  accountName: activeMerchant?.accountName || merchantName(m) || '',
+                                  accountName: activeMerchant?.accountName || getMerchantDisplayName(m) || '',
                                 });
                                 setConfiguringActive(true);
                               }}
@@ -286,7 +310,7 @@ export function MerchantsView({
                               Сонгох
                             </Button>
                           ) : null}
-                          {canDelete && m.merchant_id ? (
+                          {canDelete && mid ? (
                             <Button
                               variant="ghost"
                               size="icon"
@@ -349,7 +373,15 @@ export function MerchantsView({
         key={creating ? 'create' : 'closed'}
         open={creating}
         onClose={() => setCreating(false)}
-        onSaved={() => void mutate()}
+        onSaved={(newM) => {
+          setCreatedMerchants((prev) => [newM, ...prev]);
+          void mutate();
+        }}
+        onSetActive={(cfg) => {
+          setCreating(false);
+          setSelectedForActive(cfg);
+          setConfiguringActive(true);
+        }}
       />
 
       <ConfirmModal
@@ -362,7 +394,7 @@ export function MerchantsView({
         message={
           <>
             <span className="block">
-              <span className="font-medium">{deleting ? merchantName(deleting) : ''}</span> QPay
+              <span className="font-medium">{deleting ? getMerchantDisplayName(deleting) : ''}</span> QPay
               дээрээс устгагдана.
             </span>
             <span className="mt-2 block">

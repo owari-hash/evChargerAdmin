@@ -445,6 +445,7 @@ export interface Paginated<T> {
   total: number;
   page: number;
   limit: number;
+  statusCounts?: Record<string, number>;
 }
 
 export interface StatsOverview {

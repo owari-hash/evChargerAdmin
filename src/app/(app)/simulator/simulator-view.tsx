@@ -9,11 +9,13 @@ import {
   Car,
   CheckCircle2,
   Cpu,
+  Eye,
   Layers,
   Play,
   PlayCircle,
   Plug,
   RefreshCw,
+  Search,
   Sliders,
   Square,
   Terminal,
@@ -22,7 +24,11 @@ import {
   WifiOff,
   Zap,
 } from 'lucide-react';
+import useSWR from 'swr';
 import { Badge, Button, Card, CardBody, CardHeader, Dot, Input } from '@/components/ui/primitives';
+import { Table, TableWrap, TBody, TH, THead } from '@/components/ui/table';
+import { apiUrl, fetcher } from '@/lib/client';
+import { formatDateTime } from '@/lib/format';
 import { cn } from '@/lib/cn';
 import { toast } from 'sonner';
 
@@ -83,12 +89,30 @@ interface OcppLogEntry {
   payload: unknown;
 }
 
+interface VehicleDetectionRecord {
+  id: string;
+  _id?: string;
+  cpId: string;
+  connectorId?: number;
+  vin?: string;
+  model?: string;
+  source: string;
+  protocolMessage?: string;
+  batteryCapacity?: number;
+  soc?: number;
+  maxPowerKw?: number;
+  transactionId?: number;
+  remoteAddress?: string;
+  rawPayload?: unknown;
+  detectedAt: string;
+}
+
 // ============================================================================
 // Main Simulator View Component
 // ============================================================================
 
 export function SimulatorView() {
-  const [activeTab, setActiveTab] = React.useState<'single' | 'fleet'>('single');
+  const [activeTab, setActiveTab] = React.useState<'single' | 'fleet' | 'detections'>('single');
 
   // Station Connection state
   const [cpId, setCpId] = React.useState('CP-SIM-001');
@@ -644,6 +668,18 @@ export function SimulatorView() {
             <Layers className="h-4 w-4" />
             Ачаалал шалгах (Fleet Load)
           </button>
+          <button
+            onClick={() => setActiveTab('detections')}
+            className={cn(
+              'flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-medium transition',
+              activeTab === 'detections'
+                ? 'bg-[var(--color-brand)] text-[var(--color-brand-fg)] shadow-sm'
+                : 'text-[var(--color-fg-muted)] hover:text-[var(--color-fg)]',
+            )}
+          >
+            <Car className="h-4 w-4" />
+            Бодит илэрсэн машинуудын лог
+          </button>
         </div>
       </div>
 
@@ -985,7 +1021,7 @@ export function SimulatorView() {
             </Card>
           </div>
         </div>
-      ) : (
+      ) : activeTab === 'fleet' ? (
         /* Fleet Load Testing Tab */
         <div className="space-y-6">
           <Card>
@@ -1073,7 +1109,157 @@ export function SimulatorView() {
             </CardBody>
           </Card>
         </div>
+      ) : (
+        <VehicleDetectionsTab />
       )}
+    </div>
+  );
+}
+
+function VehicleDetectionsTab() {
+  const [search, setSearch] = React.useState('');
+  const [selectedLog, setSelectedLog] = React.useState<VehicleDetectionRecord | null>(null);
+
+  const { data, isLoading, mutate } = useSWR<{
+    data: VehicleDetectionRecord[];
+    total: number;
+  }>(apiUrl('vehicle-detections', { limit: 50, vin: search || undefined }), fetcher, {
+    refreshInterval: 5000,
+  });
+
+  const list = data?.data ?? [];
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <CardHeader
+          title={
+            <div className="flex items-center gap-2">
+              <Car className="h-5 w-5 text-[var(--color-brand)]" />
+              Бодит станцад холбогдсон машинуудын лог (Vehicle Detection Database)
+            </div>
+          }
+          description="Станц дээр кабель залгагдах эсвэл цэнэглэлт эхлэх бүрт машин болон VIN-ийг автоматаар өгөгдлийн санд (vehicledetections) хадгалсан түүх."
+          actions={
+            <Button variant="secondary" size="sm" onClick={() => mutate()} className="gap-1.5">
+              <RefreshCw className="h-3.5 w-3.5" />
+              Шинэчлэх
+            </Button>
+          }
+        />
+        <CardBody className="p-4 space-y-4">
+          <div className="flex gap-3">
+            <div className="relative flex-1 max-w-sm">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-[var(--color-fg-muted)]" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="VIN дугаараар хайх..."
+                className="pl-9 text-xs font-mono"
+              />
+            </div>
+          </div>
+
+          <TableWrap maxHeight="28rem">
+            <Table>
+              <THead>
+                <tr>
+                  <TH>Хугацаа</TH>
+                  <TH>Станц (cpId)</TH>
+                  <TH>Машины VIN</TH>
+                  <TH>Загвар</TH>
+                  <TH>Эх сурвалж (Source)</TH>
+                  <TH>Зайны багтаамж / SoC</TH>
+                  <TH>Гүйлгээ ID</TH>
+                  <TH>Түүхий өгөгдөл</TH>
+                </tr>
+              </THead>
+              <TBody>
+                {isLoading ? (
+                  <tr>
+                    <td colSpan={8} className="text-center py-8 text-xs text-[var(--color-fg-muted)]">
+                      Уншиж байна...
+                    </td>
+                  </tr>
+                ) : list.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} className="text-center py-8 text-xs text-[var(--color-fg-muted)]">
+                      Одоогоор машинтай холбогдсон бичлэг алга байна. Бодит станцад машин залгахад энд автоматаар бүртгэгдэнэ.
+                    </td>
+                  </tr>
+                ) : (
+                  list.map((item) => (
+                    <tr key={item.id} className="hover:bg-[var(--color-surface-2)]/50 transition">
+                      <td className="text-xs text-[var(--color-fg-muted)] whitespace-nowrap">
+                        {formatDateTime(item.detectedAt)}
+                      </td>
+                      <td className="text-xs font-semibold text-[var(--color-fg)]">
+                        {item.cpId}
+                      </td>
+                      <td className="text-xs font-mono font-bold text-[var(--color-brand)]">
+                        {item.vin || '—'}
+                      </td>
+                      <td className="text-xs text-[var(--color-fg)]">
+                        {item.model || '—'}
+                      </td>
+                      <td className="text-xs">
+                        <Badge tone={item.source === 'DataTransfer' ? 'ok' : 'info'}>
+                          {item.source}
+                          {item.protocolMessage ? ` (${item.protocolMessage})` : ''}
+                        </Badge>
+                      </td>
+                      <td className="text-xs text-[var(--color-fg)] font-mono">
+                        {item.batteryCapacity ? `${item.batteryCapacity} kWh` : ''}
+                        {item.soc !== undefined && item.soc !== null ? ` (${item.soc}%)` : ''}
+                        {!item.batteryCapacity && item.soc === undefined ? '—' : ''}
+                      </td>
+                      <td className="text-xs font-mono text-[var(--color-fg-muted)]">
+                        {item.transactionId ? `#${item.transactionId}` : '—'}
+                      </td>
+                      <td>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedLog(item)}
+                          className="h-7 text-xs gap-1"
+                        >
+                          <Eye className="h-3.5 w-3.5" />
+                          Харах
+                        </Button>
+                      </td>
+                    </tr>
+                  ))
+                )}
+              </TBody>
+            </Table>
+          </TableWrap>
+        </CardBody>
+      </Card>
+
+      {/* Raw Payload Modal / Inspector */}
+      {selectedLog ? (
+        <Card className="border-[var(--color-brand)]/40">
+          <CardHeader
+            title={
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-xs font-semibold">Станц: {selectedLog.cpId}</span>
+                <span className="text-xs text-[var(--color-fg-muted)]">· {formatDateTime(selectedLog.detectedAt)}</span>
+              </div>
+            }
+            actions={
+              <Button variant="ghost" size="sm" onClick={() => setSelectedLog(null)}>
+                Хаах
+              </Button>
+            }
+          />
+          <CardBody className="p-4">
+            <div className="text-xs font-medium text-[var(--color-fg)] mb-2">Станцаас илгээсэн түүхий өгөгдөл (Raw Payload):</div>
+            <pre className="p-3 rounded-lg bg-[var(--color-surface-2)] text-[11px] font-mono overflow-x-auto text-[var(--color-fg)]">
+              {JSON.stringify(selectedLog.rawPayload ?? selectedLog, null, 2)}
+            </pre>
+          </CardBody>
+        </Card>
+      ) : null}
     </div>
   );
 }

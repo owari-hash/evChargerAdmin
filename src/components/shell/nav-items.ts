@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   Megaphone,
   Plug,
+  PlayCircle,
   Settings,
   Smartphone,
   ShieldCheck,
@@ -44,6 +45,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: '/connectors', label: 'Холбогч', icon: Plug },
       { href: '/transactions', label: 'Цэнэглэлт', icon: BatteryCharging, prefix: true },
       { href: '/live', label: 'Шууд урсгал', icon: Activity },
+      { href: '/simulator', label: 'OCPP Симулятор', icon: PlayCircle },
     ],
   },
   {

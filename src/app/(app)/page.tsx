@@ -171,7 +171,11 @@ export default async function OverviewPage() {
                         </Link>
                       </TD>
                       <TD>
-                        <StationName id={tx.chargePointId} />
+                        <StationName
+                          id={tx.chargePointId}
+                          name={tx.chargePointName}
+                          cpId={tx.cpId}
+                        />
                         <span className="ml-1 text-xs text-[var(--color-fg-subtle)]">
                           #{tx.connectorId}
                         </span>

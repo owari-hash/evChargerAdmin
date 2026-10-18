@@ -246,6 +246,9 @@ export interface Transaction {
   transactionId: number;
   _id?: number;
   chargePointId: string;
+  cpId?: string;
+  chargePointName?: string;
+  chargePoint?: { id: string; cpId: string; name?: string } | null;
   connectorId: number;
   idTag: string;
   status: TransactionStatus;

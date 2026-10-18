@@ -165,7 +165,12 @@ export function TransactionView({
               {tx.startedRemotely ? <Badge tone="info">Алсаас эхэлсэн</Badge> : null}
               {tx.stoppedRemotely ? <Badge tone="info">Алсаас зогссон</Badge> : null}
               <span className="inline-flex items-center gap-1 text-xs text-[var(--color-fg-muted)]">
-                <StationName id={tx.chargePointId} inline />
+                <StationName
+                  id={tx.chargePointId}
+                  name={tx.chargePointName}
+                  cpId={tx.cpId}
+                  inline
+                />
                 {` · ${tx.connectorId} холбогч · карт `}
                 <Link
                   href={`/id-tags?search=${encodeURIComponent(tx.idTag)}`}

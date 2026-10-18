@@ -3,9 +3,9 @@
  * and narrow: the console only relies on fields the API actually documents.
  */
 
-export type UserRole = 'ADMIN' | 'OPERATOR' | 'VIEWER';
+export type UserRole = 'ADMIN' | 'OPERATOR' | 'VIEWER' | 'CLIENT';
 
-export const USER_ROLES: UserRole[] = ['ADMIN', 'OPERATOR', 'VIEWER'];
+export const USER_ROLES: UserRole[] = ['ADMIN', 'OPERATOR', 'VIEWER', 'CLIENT'];
 
 export type RegistrationStatus = 'Accepted' | 'Pending' | 'Rejected';
 export const REGISTRATION_STATUSES: RegistrationStatus[] = ['Accepted', 'Pending', 'Rejected'];
@@ -107,10 +107,14 @@ export interface SessionUser {
   id: string;
   email: string;
   role: UserRole;
+  clientId?: string;
+  clientName?: string;
 }
 
 export interface User extends SessionUser {
   name?: string;
+  clientId?: string;
+  client?: { id: string; name: string };
   isActive: boolean;
   lastLoginAt?: string;
   createdAt: string;
@@ -618,6 +622,12 @@ export interface QpayActiveMerchantConfig {
 // Харилцагч (Clients / Partners) (backend: /api/clients/*)
 // ---------------------------------------------------------------------------
 
+export interface ClientLoginAccount {
+  email: string;
+  isActive: boolean;
+  lastLoginAt?: string;
+}
+
 export interface Client {
   id: string;
   _id?: string;
@@ -629,6 +639,7 @@ export interface Client {
   address?: string | null;
   description?: string | null;
   isActive: boolean;
+  loginAccount?: ClientLoginAccount | null;
   /** Eplug service fee (0–100) on this client's stations. Unset = network default. */
   feePercent?: number | null;
   /** Receipts for this client's stations are issued under this merchant. Unset = network default. */
@@ -654,12 +665,122 @@ export interface ClientInput {
   contactPerson?: string | null;
   phone?: string | null;
   email?: string | null;
+  password?: string | null;
   address?: string | null;
   description?: string | null;
   isActive?: boolean;
   feePercent?: number | null;
   ebarimtMerchantId?: string | null;
   payoutAccount?: PayoutAccount | null;
+}
+
+// ---------------------------------------------------------------------------
+// Тайлан (Reports) (backend: /api/reports/*)
+// ---------------------------------------------------------------------------
+
+export interface StationReportRow {
+  chargePointId: string;
+  cpId: string;
+  name: string;
+  address?: string;
+  tariffPerKwh: number;
+  sessionsCount: number;
+  energyWh: number;
+  energyKwh: number;
+  energyCost: number;
+  feePercent: number;
+  feeAmount: number;
+  gross: number;
+  clientNet: number;
+  formula: {
+    kwhFormula: string;
+    energyCostFormula: string;
+    feeFormula: string;
+    grossFormula: string;
+    netFormula: string;
+    summaryDisplay: string;
+  };
+}
+
+export interface DailyReportRow {
+  date: string;
+  sessionsCount: number;
+  energyWh: number;
+  energyKwh: number;
+  gross: number;
+  fee: number;
+  net: number;
+}
+
+export interface ConnectorReportRow {
+  chargePointId: string;
+  connectorId: number;
+  cpId: string;
+  stationName: string;
+  sessionsCount: number;
+  energyKwh: number;
+  gross: number;
+  fee: number;
+  net: number;
+}
+
+export interface RecentSessionReportRow {
+  id: number;
+  chargePointId: string;
+  cpId: string;
+  stationName: string;
+  connectorId: number;
+  idTag: string;
+  vehicleModel?: string;
+  startTimestamp: string;
+  stopTimestamp: string;
+  energyWh: number;
+  energyKwh: number;
+  tariffPerKwh: number;
+  energyCost: number;
+  feePercent: number;
+  feeAmount: number;
+  cost: number;
+  clientNet: number;
+}
+
+export interface ReportSummary {
+  period: {
+    from: string | null;
+    to: string | null;
+  };
+  client?: {
+    id: string;
+    name: string;
+    businessRegister?: string;
+    feePercent?: number;
+    payoutAccount?: PayoutAccount;
+  } | null;
+  totals: {
+    sessionsCount: number;
+    energyWh: number;
+    energyKwh: number;
+    gross: number;
+    fee: number;
+    net: number;
+    paidTotal: number;
+    outstanding: number;
+    lastPaidAt: string | null;
+    averageSessionKwh: number;
+    averageSessionCost: number;
+  };
+  formulasGuide: {
+    energy: string;
+    energyCost: string;
+    fee: string;
+    gross: string;
+    clientNet: string;
+    outstanding: string;
+  };
+  stations: StationReportRow[];
+  daily: DailyReportRow[];
+  connectors: ConnectorReportRow[];
+  recentSessions: RecentSessionReportRow[];
 }
 
 // ---------------------------------------------------------------------------

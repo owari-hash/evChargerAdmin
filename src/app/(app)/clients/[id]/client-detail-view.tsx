@@ -10,6 +10,9 @@ import {
   CreditCard,
   Edit2,
   ExternalLink,
+  FileSpreadsheet,
+  KeyRound,
+  Lock,
   MapPin,
   Pencil,
   Phone,
@@ -17,8 +20,9 @@ import {
   Plus,
   Zap,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { REFRESH } from '@/lib/live-query';
-import { apiUrl, fetcher } from '@/lib/client';
+import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
 import { formatDateTime, formatMoney, formatNumber, formatRelative } from '@/lib/format';
 import type { ChargePoint, Client, IdTag, Paginated } from '@/lib/types';
 import {
@@ -28,7 +32,12 @@ import {
   CardHeader,
   DataRow,
   EmptyState,
+  ErrorNote,
+  Field,
+  Input,
+  Select,
 } from '@/components/ui/primitives';
+import { Modal } from '@/components/ui/modal';
 import {
   Table,
   TableEmpty,
@@ -59,6 +68,7 @@ export function ClientDetailView({
   const router = useRouter();
   const [editingClient, setEditingClient] = React.useState(false);
   const [editingStation, setEditingStation] = React.useState<ChargePoint | null>(null);
+  const [editingLogin, setEditingLogin] = React.useState(false);
 
   const { data: client, error, isLoading, mutate } = useSWR<Client>(
     apiUrl(`clients/${encodeURIComponent(clientId)}`),
@@ -107,13 +117,20 @@ export function ClientDetailView({
 
   return (
     <>
-      <div className="mb-4">
+      <div className="mb-4 flex items-center justify-between">
         <Link
           href="/clients"
           className="inline-flex items-center gap-1.5 text-xs text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] transition-colors"
         >
           <ArrowLeft className="h-3.5 w-3.5" />
           Харилцагчдын жагсаалт руу буцах
+        </Link>
+
+        <Link href={`/reports?clientId=${client.id || client._id}`}>
+          <Button variant="secondary" size="sm">
+            <FileSpreadsheet className="h-3.5 w-3.5 text-[var(--color-brand)]" />
+            Станцын тайлан үзэх
+          </Button>
         </Link>
       </div>
 
@@ -317,6 +334,41 @@ export function ClientDetailView({
             </dl>
           </Card>
 
+          {/* Client Web Login Account */}
+          <Card>
+            <CardHeader
+              title="Нэвтрэх эрх (Вэб самбар)"
+              description="Харилцагч системд нэвтэрч өөрийн станц, тайлангаа хянана"
+              actions={
+                canEdit ? (
+                  <Button variant="secondary" size="sm" onClick={() => setEditingLogin(true)}>
+                    <KeyRound className="h-3.5 w-3.5" />
+                    {client.loginAccount ? 'Нууц үг солих' : 'Эрх үүсгэх'}
+                  </Button>
+                ) : null
+              }
+            />
+            <dl className="divide-y divide-[var(--color-border)] px-5 py-2">
+              <DataRow label="Нэвтрэх имэйл">
+                {client.loginAccount?.email ?? client.email ?? 'Тохируулаагүй'}
+              </DataRow>
+              <DataRow label="Нэвтрэх төлөв">
+                {client.loginAccount ? (
+                  client.loginAccount.isActive ? (
+                    <Badge tone="ok">Идэвхтэй</Badge>
+                  ) : (
+                    <Badge tone="warn">Түр хаагдсан</Badge>
+                  )
+                ) : (
+                  <Badge tone="idle">Эрх үүсгээгүй</Badge>
+                )}
+              </DataRow>
+              <DataRow label="Сүүлд нэвтэрсэн">
+                {client.loginAccount?.lastLoginAt ? formatDateTime(client.loginAccount.lastLoginAt) : 'Нэвтрээгүй'}
+              </DataRow>
+            </dl>
+          </Card>
+
           <Card>
             <CardHeader
               title={`Дотоод гишүүдийн карт (${memberCards.length})`}
@@ -398,6 +450,120 @@ export function ClientDetailView({
           }}
         />
       ) : null}
+
+      {editingLogin ? (
+        <ClientLoginModal
+          clientId={client.id || client._id!}
+          defaultEmail={client.loginAccount?.email ?? client.email ?? ''}
+          isActive={client.loginAccount?.isActive ?? true}
+          onClose={() => setEditingLogin(false)}
+          onSaved={() => {
+            setEditingLogin(false);
+            void mutate();
+          }}
+        />
+      ) : null}
     </>
+  );
+}
+
+function ClientLoginModal({
+  clientId,
+  defaultEmail,
+  isActive,
+  onClose,
+  onSaved,
+}: {
+  clientId: string;
+  defaultEmail: string;
+  isActive: boolean;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [email, setEmail] = React.useState(defaultEmail);
+  const [password, setPassword] = React.useState('');
+  const [active, setActive] = React.useState(isActive);
+  const [saving, setSaving] = React.useState(false);
+  const [error, setError] = React.useState<string | null>(null);
+
+  async function submit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!email.trim()) {
+      setError('Имэйл хаягийг оруулна уу.');
+      return;
+    }
+    if (!password || password.length < 6) {
+      setError('Нууц үг хамгийн багадаа 6 тэмдэгт байх ёстой.');
+      return;
+    }
+
+    setSaving(true);
+    setError(null);
+
+    try {
+      await api.post(`clients/${encodeURIComponent(clientId)}/login-account`, {
+        email: email.trim().toLowerCase(),
+        password,
+        isActive: active,
+      });
+      toast.success('Харилцагчийн нэвтрэх эрх амжилттай хадгалагдлаа');
+      onSaved();
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Modal open onClose={onClose} title="Харилцагчийн нэвтрэх эрх тохируулах" size="sm">
+      <form onSubmit={submit} className="space-y-4">
+        {error ? <ErrorNote>{error}</ErrorNote> : null}
+
+        <Field label="Нэвтрэх имэйл хаяг *" hint="Харилцагчийн нэвтрэх нэр">
+          <Input
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="client@company.mn"
+            required
+            autoFocus
+          />
+        </Field>
+
+        <Field
+          label="Шинэ нууц үг *"
+          hint="Хамгийн багадаа 6 тэмдэгт"
+        >
+          <Input
+            type="password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            placeholder="••••••••"
+            required
+            autoComplete="new-password"
+          />
+        </Field>
+
+        <Field label="Эрхийн төлөв">
+          <Select
+            value={String(active)}
+            onChange={(e) => setActive(e.target.value === 'true')}
+          >
+            <option value="true">Идэвхтэй (Нэвтрэх боломжтой)</option>
+            <option value="false">Идэвхгүй (Нэвтрэлтийг хаах)</option>
+          </Select>
+        </Field>
+
+        <div className="flex justify-end gap-2 pt-2">
+          <Button type="button" variant="ghost" onClick={onClose} disabled={saving}>
+            Болих
+          </Button>
+          <Button type="submit" variant="primary" loading={saving}>
+            Хадгалах
+          </Button>
+        </div>
+      </form>
+    </Modal>
   );
 }

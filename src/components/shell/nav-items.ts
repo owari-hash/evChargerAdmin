@@ -6,6 +6,7 @@ import {
   CalendarClock,
   CreditCard,
   Cpu,
+  FileSpreadsheet,
   FileText,
   LayoutDashboard,
   Megaphone,
@@ -36,6 +37,31 @@ export interface NavSection {
   items: NavItem[];
 }
 
+export const CLIENT_NAV_SECTIONS: NavSection[] = [
+  {
+    title: 'Миний станцууд',
+    items: [
+      { href: '/', label: 'Ерөнхий тойм', icon: LayoutDashboard },
+      { href: '/charge-points', label: 'Цэнэглэх станц', icon: Zap, prefix: true },
+      { href: '/connectors', label: 'Холбогч', icon: Plug },
+      { href: '/transactions', label: 'Цэнэглэлт', icon: BatteryCharging, prefix: true },
+    ],
+  },
+  {
+    title: 'Тайлан & Тооцоо',
+    items: [
+      { href: '/reports', label: 'Тайлан', icon: FileSpreadsheet, prefix: true },
+      { href: '/settlements', label: 'Тооцоо', icon: Banknote },
+    ],
+  },
+  {
+    title: 'Хандалт',
+    items: [
+      { href: '/id-tags', label: 'Дотоод карт', icon: CreditCard, prefix: true },
+    ],
+  },
+];
+
 export const NAV_SECTIONS: NavSection[] = [
   {
     title: 'Үйл ажиллагаа',
@@ -44,6 +70,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: '/charge-points', label: 'Цэнэглэх станц', icon: Zap, prefix: true },
       { href: '/connectors', label: 'Холбогч', icon: Plug },
       { href: '/transactions', label: 'Цэнэглэлт', icon: BatteryCharging, prefix: true },
+      { href: '/reports', label: 'Тайлан', icon: FileSpreadsheet, prefix: true },
       { href: '/live', label: 'Шууд урсгал', icon: Activity },
       { href: '/simulator', label: 'OCPP Симулятор', icon: PlayCircle },
     ],
@@ -78,9 +105,12 @@ export const NAV_SECTIONS: NavSection[] = [
   },
 ];
 
-const RANK: Record<UserRole, number> = { VIEWER: 0, OPERATOR: 1, ADMIN: 2 };
+const RANK: Record<UserRole, number> = { CLIENT: 0, VIEWER: 1, OPERATOR: 2, ADMIN: 3 };
 
 export function visibleSections(role: UserRole): NavSection[] {
+  if (role === 'CLIENT') {
+    return CLIENT_NAV_SECTIONS;
+  }
   return NAV_SECTIONS.map((section) => ({
     ...section,
     items: section.items.filter((item) => RANK[role] >= RANK[item.minRole ?? 'VIEWER']),

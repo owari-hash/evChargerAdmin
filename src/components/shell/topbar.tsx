@@ -33,6 +33,11 @@ export function Topbar({ user, onMenu }: { user: SessionUser; onMenu: () => void
       <GlobalSearch role={user.role} className="w-44 sm:w-72 md:w-96" />
 
       <div className="flex min-w-0 items-center justify-end gap-2">
+        {user.role === 'CLIENT' && (
+          <span className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md bg-[var(--color-brand)]/10 text-[var(--color-brand)] border border-[var(--color-brand)]/20">
+            {user.clientName ?? 'Харилцагч'}
+          </span>
+        )}
         <LiveIndicator />
         <span data-tour="notifications" className="inline-flex">
           <NotificationBell userId={user.id} />

@@ -33,6 +33,7 @@ export function ClientModal({
   });
   const [feePercent, setFeePercent] = React.useState(client?.feePercent?.toString() ?? '');
   const [ebarimtMerchantId, setEbarimtMerchantId] = React.useState(client?.ebarimtMerchantId ?? '');
+  const [password, setPassword] = React.useState('');
   const [payout, setPayout] = React.useState<Required<PayoutAccount>>({
     bankName: client?.payoutAccount?.bankName ?? '',
     bankCode: client?.payoutAccount?.bankCode ?? '',
@@ -57,6 +58,10 @@ export function ClientModal({
       setError('Харилцагчийн нэрийг оруулна уу.');
       return;
     }
+    if (password && password.length < 6) {
+      setError('Нууц үг хамгийн багадаа 6 тэмдэгт байх ёстой.');
+      return;
+    }
     const fee = parseFeePercent(feePercent);
     if (fee === undefined) {
       setError('Үйлчилгээний хураамж 0-100 хооронд тоо байх ёстой.');
@@ -79,6 +84,7 @@ export function ClientModal({
       contactPerson: form.contactPerson?.trim() || null,
       phone: form.phone?.trim() || null,
       email: form.email?.trim() || null,
+      password: password.trim() || undefined,
       address: form.address?.trim() || null,
       description: form.description?.trim() || null,
       isActive: form.isActive ?? true,
@@ -166,7 +172,7 @@ export function ClientModal({
         </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
-          <Field label="Имэйл хаяг">
+          <Field label="Имэйл хаяг" hint="Нэвтрэх нэр болон холбоо барих хаяг">
             <Input
               type="email"
               value={form.email ?? ''}
@@ -175,21 +181,36 @@ export function ClientModal({
             />
           </Field>
 
+          <Field
+            label="Нэвтрэх нууц үг"
+            hint={isNew ? 'Харилцагч самбарт нэвтрэх нууц үг (6+)' : 'Шинэчлэх бол нууц үг оруулна уу'}
+          >
+            <Input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="••••••••"
+              autoComplete="new-password"
+            />
+          </Field>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Төлөв">
             <Select value={String(form.isActive)} onChange={set('isActive')}>
               <option value="true">Идэвхтэй (Хамтран ажиллаж буй)</option>
               <option value="false">Идэвхгүй (Түр зогсоосон)</option>
             </Select>
           </Field>
-        </div>
 
-        <Field label="Хаяг байршил">
-          <Input
-            value={form.address ?? ''}
-            onChange={set('address')}
-            placeholder="УБ хот, Сүхбаатар дүүрэг, 1-р хороо..."
-          />
-        </Field>
+          <Field label="Хаяг байршил">
+            <Input
+              value={form.address ?? ''}
+              onChange={set('address')}
+              placeholder="УБ хот, Сүхбаатар дүүрэг, 1-р хороо..."
+            />
+          </Field>
+        </div>
 
         <Field label="Тэмдэглэл / Тайлбар">
           <Textarea

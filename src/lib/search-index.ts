@@ -769,7 +769,7 @@ export const SEARCH_ENTRIES: SearchEntry[] = [
 // Matching
 // ---------------------------------------------------------------------------
 
-const RANK: Record<UserRole, number> = { VIEWER: 0, OPERATOR: 1, ADMIN: 2 };
+const RANK: Record<UserRole, number> = { CLIENT: 0, VIEWER: 1, OPERATOR: 2, ADMIN: 3 };
 
 export interface SearchResult {
   entry: SearchEntry;

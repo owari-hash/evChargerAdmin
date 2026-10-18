@@ -56,7 +56,13 @@ export function readPrincipal(token: string): SessionUser | null {
     const claims = decodeJwt(token) as Partial<SessionUser> & { exp?: number };
     if (!claims.id || !claims.email || !claims.role) return null;
     if (claims.exp && claims.exp * 1000 <= Date.now()) return null;
-    return { id: claims.id, email: claims.email, role: claims.role };
+    return {
+      id: claims.id,
+      email: claims.email,
+      role: claims.role,
+      clientId: claims.clientId,
+      clientName: claims.clientName,
+    };
   } catch {
     return null;
   }
@@ -72,7 +78,7 @@ function tokenTtlSeconds(token: string): number {
   }
 }
 
-const RANK: Record<UserRole, number> = { VIEWER: 0, OPERATOR: 1, ADMIN: 2 };
+const RANK: Record<UserRole, number> = { CLIENT: 0, VIEWER: 1, OPERATOR: 2, ADMIN: 3 };
 
 export function hasRole(user: SessionUser | null, min: UserRole): boolean {
   if (!user) return false;

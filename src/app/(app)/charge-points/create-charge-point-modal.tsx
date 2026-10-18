@@ -11,8 +11,9 @@ import { Modal } from '@/components/ui/modal';
 import { CopyButton } from '@/components/ui/copy-button';
 import { EbarimtMerchantSelect, parseFeePercent } from '@/components/ebarimt-merchant-select';
 import { LinkedClientsSelect } from '@/components/linked-clients-select';
+import { TariffZonesEditor } from '@/components/tariff-zones-editor';
 import { REGISTRATION_STATUS as REGISTRATION_STATUS_MN, mn } from '@/lib/mn';
-import { REGISTRATION_STATUSES, type Client, type Paginated } from '@/lib/types';
+import { REGISTRATION_STATUSES, type Client, type Paginated, type TariffZone } from '@/lib/types';
 
 interface CreatedResponse {
   id: string;
@@ -54,6 +55,7 @@ export function CreateChargePointModal({
     longitude: '',
   });
   const [linkedClientIds, setLinkedClientIds] = React.useState<string[]>([]);
+  const [tariffZones, setTariffZones] = React.useState<TariffZone[]>([]);
 
   const set = (key: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) =>
     setForm((f) => ({ ...f, [key]: e.target.value }));
@@ -74,6 +76,7 @@ export function CreateChargePointModal({
       longitude: '',
     });
     setLinkedClientIds([]);
+    setTariffZones([]);
     setError(null);
     setCreated(null);
   }
@@ -105,6 +108,7 @@ export function CreateChargePointModal({
       if (links.length) body.linkedClientIds = links;
       if (form.address.trim()) body.address = form.address.trim();
       if (form.tariffPerKwh) body.tariffPerKwh = Number(form.tariffPerKwh);
+      if (tariffZones.length) body.tariffZones = tariffZones;
       if (form.latitude) body.latitude = Number(form.latitude);
       if (form.longitude) body.longitude = Number(form.longitude);
       // Left out = inherit from the client, then the network default.
@@ -271,6 +275,13 @@ export function CreateChargePointModal({
 
         <Field label="1 кВт·ц тариф (₮)" hint="Дууссан цэнэглэлтийн төлбөрийг тооцоход ашиглана. Үнэгүй бол хоосон орхино уу.">
           <Input value={form.tariffPerKwh} onChange={set('tariffPerKwh')} placeholder="450" inputMode="decimal" />
+        </Field>
+
+        <Field
+          label="Цагийн бүсийн тариф"
+          hint='Жишээ: 13:00–17:00 — 400₮, 17:00–20:00 — 600₮. Дээрх "1 кВт·ц тариф" тэдгээрийн хооронд ашиглагдана.'
+        >
+          <TariffZonesEditor zones={tariffZones} onChange={setTariffZones} />
         </Field>
 
         <div className="grid gap-4 sm:grid-cols-2">

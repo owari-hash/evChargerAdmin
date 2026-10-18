@@ -9,8 +9,9 @@ import { Button, ErrorNote, Field, Input, Select, Textarea } from '@/components/
 import { Modal } from '@/components/ui/modal';
 import { EbarimtMerchantSelect } from '@/components/ebarimt-merchant-select';
 import { LinkedClientsSelect } from '@/components/linked-clients-select';
+import { TariffZonesEditor } from '@/components/tariff-zones-editor';
 import { REGISTRATION_STATUS as REGISTRATION_STATUS_MN, mn } from '@/lib/mn';
-import { REGISTRATION_STATUSES, type ChargePoint, type Client, type Paginated } from '@/lib/types';
+import { REGISTRATION_STATUSES, type ChargePoint, type Client, type Paginated, type TariffZone } from '@/lib/types';
 
 /** Same rule the API applies to a charge point identifier. */
 const ID_PATTERN = /^[\w.:@-]+$/;
@@ -70,6 +71,7 @@ export function EditChargePointModal({
   const [linkedClientIds, setLinkedClientIds] = React.useState<string[]>(
     chargePoint.linkedClientIds ?? [],
   );
+  const [tariffZones, setTariffZones] = React.useState<TariffZone[]>(chargePoint.tariffZones ?? []);
 
   const set =
     (key: keyof typeof form) =>
@@ -150,6 +152,7 @@ export function EditChargePointModal({
           latitude,
           longitude,
           tariffPerKwh,
+          tariffZones,
           // null = inherit from the client again.
           feePercent,
           ebarimtMerchantId: form.ebarimtMerchantId || null,
@@ -333,6 +336,13 @@ export function EditChargePointModal({
             placeholder="450"
             inputMode="decimal"
           />
+        </Field>
+
+        <Field
+          label="Цагийн бүсийн тариф"
+          hint='Жишээ: 13:00–17:00 — 400₮, 17:00–20:00 — 600₮. Дээрх "1 кВт·ц тариф" тэдгээрийн хооронд ашиглагдана.'
+        >
+          <TariffZonesEditor zones={tariffZones} onChange={setTariffZones} />
         </Field>
 
         <div className="grid gap-4 sm:grid-cols-2">

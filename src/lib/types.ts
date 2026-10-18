@@ -159,6 +159,14 @@ export interface ConnectorInput {
   label?: string | null;
 }
 
+/** Minutes are since local (Mongolia, UTC+8) midnight; startMinute < endMinute,
+ *  no wraparound — a night rate needs two entries either side of midnight. */
+export interface TariffZone {
+  startMinute: number;
+  endMinute: number;
+  tariffPerKwh: number;
+}
+
 export interface ChargePoint {
   /** The CSMS's own identifier. Stable across renames; used in API paths. */
   id: string;
@@ -191,7 +199,10 @@ export interface ChargePoint {
   latitude?: number;
   longitude?: number;
   address?: string;
+  /** The rate whenever no `tariffZones` entry covers the current time. */
   tariffPerKwh?: number;
+  /** Time-of-day pricing — e.g. 13:00–17:00 at one rate, 17:00–20:00 at another. */
+  tariffZones?: TariffZone[];
   tags: string[];
   clientId?: string | null;
   client?: { id: string; name: string; businessRegister?: string } | null;

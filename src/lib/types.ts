@@ -166,6 +166,7 @@ export interface ConnectorInput {
 /** Minutes are since local (Mongolia, UTC+8) midnight; startMinute < endMinute,
  *  no wraparound — a night rate needs two entries either side of midnight. */
 export interface TariffZone {
+  name?: string;
   startMinute: number;
   endMinute: number;
   tariffPerKwh: number;

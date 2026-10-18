@@ -57,14 +57,14 @@ export function Modal({
         // `m-auto` is what centres the dialog: the browser's own stylesheet
         // centres a modal <dialog> with `margin: auto`, and Tailwind's preflight
         // resets every element to `margin: 0`, which was pinning it top-left.
-        'm-auto w-[calc(100vw-2rem)] rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-0 text-[var(--color-fg)] shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm',
+        'm-auto w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-0 text-[var(--color-fg)] shadow-2xl backdrop:bg-black/50 backdrop:backdrop-blur-sm',
         'open:animate-in-fade',
         widths[size],
       )}
     >
       {open ? (
         <div className="flex flex-col">
-          <div className="flex items-start justify-between gap-4 border-b border-[var(--color-border)] px-5 py-4">
+          <div className="flex items-start justify-between gap-4 border-b border-[var(--color-border)] px-6 py-4">
             <div className="min-w-0">
               <h2 className="text-sm font-semibold">{title}</h2>
               {description ? (
@@ -76,10 +76,10 @@ export function Modal({
             </Button>
           </div>
 
-          <div className="max-h-[65vh] overflow-y-auto px-5 py-4">{children}</div>
+          <div className="max-h-[min(80vh,760px)] overflow-y-auto px-6 py-5 pb-7">{children}</div>
 
           {footer ? (
-            <div className="flex items-center justify-end gap-2 border-t border-[var(--color-border)] bg-[var(--color-surface-2)] px-5 py-3">
+            <div className="flex items-center justify-end gap-2.5 border-t border-[var(--color-border)] bg-[var(--color-surface-2)] px-6 py-3.5">
               {footer}
             </div>
           ) : null}

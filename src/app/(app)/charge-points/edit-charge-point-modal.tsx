@@ -325,46 +325,59 @@ export function EditChargePointModal({
           </Field>
         </div>
 
-        <Field
-          label="1 кВт·ц тариф (₮)"
-          error={fieldErrors.tariffPerKwh}
-          hint="Дууссан цэнэглэлтийн төлбөрийг тооцоход ашиглана. Үнэгүй бол хоосон орхино уу."
-        >
-          <Input
-            value={form.tariffPerKwh}
-            onChange={set('tariffPerKwh')}
-            placeholder="450"
-            inputMode="decimal"
-          />
-        </Field>
+        {/* Үнэ тариф & тооцоолол */}
+        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)]/30 p-4 space-y-4">
+          <div className="border-b border-[var(--color-border)] pb-2.5">
+            <h3 className="text-xs font-semibold uppercase tracking-wider text-[var(--color-fg-muted)]">
+              Үнэ тариф & тооцоолол
+            </h3>
+          </div>
 
-        <Field
-          label="Цагийн бүсийн тариф"
-          hint='Жишээ: 13:00–17:00 — 400₮, 17:00–20:00 — 600₮. Дээрх "1 кВт·ц тариф" тэдгээрийн хооронд ашиглагдана.'
-        >
-          <TariffZonesEditor zones={tariffZones} onChange={setTariffZones} />
-        </Field>
-
-        <div className="grid gap-4 sm:grid-cols-2">
           <Field
-            label="Үйлчилгээний хураамж (%)"
-            error={fieldErrors.feePercent}
-            hint="Хоосон бол харилцагчийнхаас, түүнд ч байхгүй бол сүлжээний үндсэн хувь."
+            label="1 кВт·ц суурь тариф (₮)"
+            error={fieldErrors.tariffPerKwh}
+            hint="Дууссан цэнэглэлтийн суурь төлбөр. Цагийн бүсэд хамаарахгүй үед ашиглагдана. Үнэгүй бол хоосон орхино уу."
           >
             <Input
-              value={form.feePercent}
-              onChange={set('feePercent')}
-              placeholder="Харилцагчийнхаас"
+              value={form.tariffPerKwh}
+              onChange={set('tariffPerKwh')}
+              placeholder="450"
               inputMode="decimal"
             />
           </Field>
-          <Field label="Е-баримт мерчант" hint="Хоосон бол харилцагчийн мерчант ашиглагдана.">
-            <EbarimtMerchantSelect
-              value={form.ebarimtMerchantId}
-              onChange={(v) => setForm((f) => ({ ...f, ebarimtMerchantId: v }))}
-              blankLabel="(Харилцагчийнхаас)"
+
+          <div>
+            <label className="block text-xs font-medium text-[var(--color-fg-muted)] mb-2">
+              Цагийн бүсийн тусгай тариф (Time-of-Use)
+            </label>
+            <TariffZonesEditor
+              zones={tariffZones}
+              onChange={setTariffZones}
+              baseTariff={form.tariffPerKwh}
             />
-          </Field>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2 pt-2 border-t border-[var(--color-border)]/60">
+            <Field
+              label="Үйлчилгээний хураамж (%)"
+              error={fieldErrors.feePercent}
+              hint="Хоосон бол харилцагчийнхаас, түүнд ч байхгүй бол сүлжээний үндсэн хувь."
+            >
+              <Input
+                value={form.feePercent}
+                onChange={set('feePercent')}
+                placeholder="Харилцагчийнхаас"
+                inputMode="decimal"
+              />
+            </Field>
+            <Field label="Е-баримт мерчант" hint="Хоосон бол харилцагчийн мерчант ашиглагдана.">
+              <EbarimtMerchantSelect
+                value={form.ebarimtMerchantId}
+                onChange={(v) => setForm((f) => ({ ...f, ebarimtMerchantId: v }))}
+                blankLabel="(Харилцагчийнхаас)"
+              />
+            </Field>
+          </div>
         </div>
 
         <Field

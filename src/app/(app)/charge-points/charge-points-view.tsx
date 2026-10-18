@@ -3,9 +3,10 @@
 import * as React from 'react';
 import Link from 'next/link';
 import useSWR from 'swr';
-import { Building2, Pencil, Plus, Search, Zap } from 'lucide-react';
+import { Building2, Pencil, Plus, Search, Trash2, Zap } from 'lucide-react';
+import { toast } from 'sonner';
 import { REFRESH } from '@/lib/live-query';
-import { apiUrl, fetcher } from '@/lib/client';
+import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
 import { cn } from '@/lib/cn';
 import { formatNumber, formatRelative } from '@/lib/format';
 import type { ChargePoint, Client, Paginated } from '@/lib/types';
@@ -20,6 +21,7 @@ import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty, TableLoading } 
 import { ConnectorStatusBadge, OnlineBadge, RegistrationBadge } from '@/components/ui/status';
 import { FilterActions, FilterBar, Pagination } from '@/components/ui/pagination';
 import { PageGuide } from '@/components/shell/page-guide';
+import { ConfirmModal } from '@/components/ui/modal';
 import { CreateChargePointModal } from './create-charge-point-modal';
 import { EditChargePointModal } from './edit-charge-point-modal';
 
@@ -53,6 +55,10 @@ export function ChargePointsView({
   const [limit, setLimit] = React.useState(50);
   const [creating, setCreating] = React.useState(false);
   const [editing, setEditing] = React.useState<ChargePoint | null>(null);
+  const [cleanConfirmOpen, setCleanConfirmOpen] = React.useState(false);
+  const [cleaningSimulators, setCleaningSimulators] = React.useState(false);
+  const [deletingStation, setDeletingStation] = React.useState<ChargePoint | null>(null);
+  const [isDeleting, setIsDeleting] = React.useState(false);
 
   const { data: clientsData } = useSWR<Paginated<Client>>(
     apiUrl('clients', { limit: 100 }),
@@ -60,6 +66,42 @@ export function ChargePointsView({
     { refreshInterval: REFRESH.config },
   );
   const clients = clientsData?.data ?? [];
+
+  async function handleCleanSimulators() {
+    setCleaningSimulators(true);
+    try {
+      const res = await api.post<{
+        deletedCount: number;
+        deletedStations: Array<{ id: string; cpId: string; name?: string }>;
+        preservedStations: Array<{ id: string; cpId: string; name?: string }>;
+      }>('charge-points/cleanup-simulators');
+      setCleanConfirmOpen(false);
+      toast.success(
+        `Нийт ${res.deletedCount} симулятор станцыг баазаас амжилттай цэвэрлэлээ. Үндсэн бодит станцууд хөндөгдөөгүй.`,
+      );
+      void mutate();
+    } catch (err) {
+      toast.error(errorMessage(err));
+    } finally {
+      setCleaningSimulators(false);
+    }
+  }
+
+  async function handleDeleteStation() {
+    if (!deletingStation) return;
+    setIsDeleting(true);
+    try {
+      const targetId = deletingStation.id || deletingStation._id || deletingStation.cpId;
+      await api.del(`charge-points/${encodeURIComponent(targetId)}`);
+      toast.success(`«${deletingStation.name?.trim() || deletingStation.cpId}» станцыг устгалаа`);
+      setDeletingStation(null);
+      void mutate();
+    } catch (err) {
+      toast.error(errorMessage(err));
+    } finally {
+      setIsDeleting(false);
+    }
+  }
 
   // Debounce so typing does not fire a request per keystroke.
   React.useEffect(() => {
@@ -131,6 +173,16 @@ export function ChargePointsView({
           <PageGuide topic="charge-points" title="Станц удирдах" steps={CHARGE_POINTS_GUIDE_STEPS} />
           {canEdit ? (
             <FilterActions>
+              <Button
+                variant="secondary"
+                size="md"
+                onClick={() => setCleanConfirmOpen(true)}
+                className="text-[var(--color-danger)] hover:bg-[var(--color-danger-soft)] hover:text-[var(--color-danger)]"
+                title="FLEET-SIM, CP-SIM зэрэг туршилтын виртуал станцуудыг баазаас цэвэрлэх"
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+                Симулятор станцууд цэвэрлэх
+              </Button>
               <Button variant="primary" size="md" onClick={() => setCreating(true)}>
                 <Plus className="h-3.5 w-3.5" />
                 Станц бүртгэх
@@ -233,15 +285,27 @@ export function ChargePointsView({
                     </TD>
                     {canEdit ? (
                       <TD>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setEditing(cp)}
-                          aria-label={`${cp.name?.trim() || cp.cpId} станцыг засах`}
-                        >
-                          <Pencil className="h-3.5 w-3.5" />
-                          Засах
-                        </Button>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setEditing(cp)}
+                            aria-label={`${cp.name?.trim() || cp.cpId} станцыг засах`}
+                          >
+                            <Pencil className="h-3.5 w-3.5" />
+                            Засах
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setDeletingStation(cp)}
+                            className="text-[var(--color-danger)] hover:bg-[var(--color-danger-soft)] hover:text-[var(--color-danger)]"
+                            aria-label={`${cp.name?.trim() || cp.cpId} станцыг устгах`}
+                            title="Станц устгах"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </Button>
+                        </div>
                       </TD>
                     ) : null}
                   </TR>
@@ -305,6 +369,43 @@ export function ChargePointsView({
           }}
         />
       ) : null}
+
+      {/* Simulator cleanup confirmation modal */}
+      <ConfirmModal
+        open={cleanConfirmOpen}
+        onClose={() => setCleanConfirmOpen(false)}
+        onConfirm={() => void handleCleanSimulators()}
+        title="Симулятор станцуудыг цэвэрлэх"
+        confirmLabel="Бүх симулятор станцыг устгах"
+        loading={cleaningSimulators}
+        tone="danger"
+        message={
+          <div className="space-y-2 text-xs">
+            <p>
+              Та OCPP симулятороор үүсгэгдсэн бүх виртуал станцуудыг (FLEET-SIM-*, CP-SIM-*, Rey-* болон EPlug-Fleet загварууд) устгах гэж байна.
+            </p>
+            <p className="font-semibold text-emerald-600 dark:text-emerald-400">
+              ✓ Үндсэн бодит станцууд (Багануур ТӨХК гэх мэт) болон харилцагчийн бүртгэлүүд хөндөгдөхгүй, найдвартай хадгалагдана.
+            </p>
+          </div>
+        }
+      />
+
+      {/* Individual station deletion modal */}
+      <ConfirmModal
+        open={Boolean(deletingStation)}
+        onClose={() => setDeletingStation(null)}
+        onConfirm={() => void handleDeleteStation()}
+        title="Станц устгах"
+        confirmLabel="Устгах"
+        loading={isDeleting}
+        tone="danger"
+        message={
+          <p className="text-xs">
+            «<span className="font-semibold">{deletingStation?.name?.trim() || deletingStation?.cpId}</span>» станцыг баазаас бүрмөсөн устгах уу? Түүний бүх холбогч, тохиргоонууд хамт устах болно.
+          </p>
+        }
+      />
     </>
   );
 }

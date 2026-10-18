@@ -27,7 +27,7 @@ import {
 import useSWR from 'swr';
 import { Badge, Button, Card, CardBody, CardHeader, Dot, Input } from '@/components/ui/primitives';
 import { Table, TableWrap, TBody, TH, THead } from '@/components/ui/table';
-import { apiUrl, fetcher } from '@/lib/client';
+import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
 import { formatDateTime } from '@/lib/format';
 import { cn } from '@/lib/cn';
 import { toast } from 'sonner';
@@ -629,6 +629,29 @@ export function SimulatorView() {
     }
   };
 
+  const [cleaningSims, setCleaningSims] = React.useState(false);
+
+  const cleanSimulators = async () => {
+    if (
+      !confirm(
+        'FLEET-SIM, CP-SIM зэрэг бүх туршилтын виртуал станцуудыг баазаас устгах уу?\n(Багануур болон бодит станцууд хөндөгдөхгүй, найдвартай үлдэнэ)',
+      )
+    ) {
+      return;
+    }
+    setCleaningSims(true);
+    try {
+      const res = await api.post<{ deletedCount: number }>('charge-points/cleanup-simulators');
+      toast.success(
+        `Нийт ${res.deletedCount} симулятор станцыг баазаас амжилттай устгалаа. Бодит станцууд хэвээр үлдсэн.`,
+      );
+    } catch (err) {
+      toast.error(errorMessage(err));
+    } finally {
+      setCleaningSims(false);
+    }
+  };
+
   return (
     <div className="space-y-6 pb-12">
       {/* Top Banner / Mode Switcher */}
@@ -1057,7 +1080,7 @@ export function SimulatorView() {
               </div>
 
               {/* Start / Stop Fleet Controls */}
-              <div className="flex gap-3">
+              <div className="flex flex-wrap items-center gap-3">
                 {!fleetRunning ? (
                   <Button variant="primary" onClick={startFleetTest} className="gap-2">
                     <Play className="h-4 w-4" />
@@ -1069,6 +1092,17 @@ export function SimulatorView() {
                     Бүх станцыг салгаж зогсоох
                   </Button>
                 )}
+
+                <Button
+                  variant="secondary"
+                  onClick={cleanSimulators}
+                  disabled={cleaningSims || fleetRunning}
+                  className="gap-2 text-[var(--color-danger)] hover:bg-[var(--color-danger-soft)] hover:text-[var(--color-danger)]"
+                  title="FLEET-SIM, CP-SIM зэрэг туршилтын виртуал станцуудыг баазаас цэвэрлэх"
+                >
+                  <Trash2 className="h-4 w-4" />
+                  {cleaningSims ? 'Цэвэрлэж байна...' : 'Туршилтын виртуал станцуудыг баазаас цэвэрлэх'}
+                </Button>
               </div>
 
               {/* Live Metric Stats */}

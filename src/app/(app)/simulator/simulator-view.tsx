@@ -158,6 +158,8 @@ export function SimulatorView() {
   const heartbeatTimerRef = React.useRef<NodeJS.Timeout | null>(null);
   const meterTimerRef = React.useRef<NodeJS.Timeout | null>(null);
   const fleetSocketsRef = React.useRef<WebSocket[]>([]);
+  const activeTxIdRef = React.useRef<number | null>(null);
+  const meterWhRef = React.useRef<number>(100_000);
 
   // Auto-detect default WS URL on mount
   React.useEffect(() => {
@@ -299,7 +301,8 @@ export function SimulatorView() {
             } else if (action === 'RemoteStopTransaction') {
               replyPayload = { status: 'Accepted' };
               toast.info('Алсаас зогсоох (RemoteStop) хүсэлт ирлээ!');
-              setTimeout(() => void handleStopCharging('Remote'), 500);
+              const remoteTxId = Number(payload.transactionId) || activeTxIdRef.current || undefined;
+              setTimeout(() => void handleStopCharging('Remote', remoteTxId), 500);
             } else if (action === 'GetConfiguration') {
               replyPayload = {
                 configurationKey: [
@@ -409,6 +412,7 @@ export function SimulatorView() {
 
     const txId = start.transactionId;
     setActiveTxId(txId);
+    activeTxIdRef.current = txId;
 
     await callOcpp('StatusNotification', {
       connectorId,
@@ -429,6 +433,7 @@ export function SimulatorView() {
 
         const addedWh = Math.round((power * 1000 * 5) / 3600);
         const newMeter = prevMeter + addedWh;
+        meterWhRef.current = newMeter;
 
         setCurrentSoc((prevSoc) => {
           const addedSoc = (addedWh / (customCar.batteryKwh * 1000)) * 100;
@@ -471,8 +476,9 @@ export function SimulatorView() {
   };
 
   // Step 3: Stop Charging
-  const handleStopCharging = async (reason = 'Local') => {
-    if (!activeTxId || !connected) return;
+  const handleStopCharging = async (reason = 'Local', overrideTxId?: number) => {
+    const txId = overrideTxId || activeTxIdRef.current || activeTxId;
+    if (!txId || !connected) return;
 
     if (meterTimerRef.current) clearInterval(meterTimerRef.current);
 
@@ -485,13 +491,14 @@ export function SimulatorView() {
     setStationStatus('Finishing');
 
     await callOcpp('StopTransaction', {
-      transactionId: activeTxId,
+      transactionId: txId,
       idTag,
-      meterStop: meterWh,
+      meterStop: meterWhRef.current || meterWh,
       timestamp: new Date().toISOString(),
       reason,
     });
 
+    activeTxIdRef.current = null;
     setActiveTxId(null);
     toast.success('Цэнэглэлт зогслоо');
 

@@ -10,6 +10,7 @@ import { formatMoney, formatNumber, formatRelative } from '@/lib/format';
 import { cn } from '@/lib/cn';
 import { useStationNames } from '@/lib/use-station-names';
 import {
+  fetchServerNotifications,
   markAllRead,
   parseState,
   readRaw,
@@ -210,6 +211,12 @@ export function NotificationBell({ userId }: { userId: string }) {
       if (shouldToast) show(item);
     });
   });
+
+  React.useEffect(() => {
+    if (userId) {
+      void fetchServerNotifications(userId);
+    }
+  }, [userId]);
 
   React.useEffect(() => {
     if (!open) return;

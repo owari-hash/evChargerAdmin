@@ -11,6 +11,7 @@
  */
 
 import type { Tone } from '@/components/ui/primitives';
+import { apiUrl } from './client';
 
 export type NotificationKind =
   | 'transaction.started'
@@ -98,6 +99,33 @@ async function withLock<T>(userId: string, fn: () => T): Promise<T> {
   return locks.request(storageKey(userId), () => fn());
 }
 
+/** Fetches notifications saved on the server and synchronizes local state. */
+export async function fetchServerNotifications(userId: string): Promise<void> {
+  if (!userId) return;
+  try {
+    const res = await fetch(apiUrl('notifications'), { cache: 'no-store' });
+    if (!res.ok) return;
+    const data = (await res.json()) as { items?: StoredNotification[] };
+    if (!data || !Array.isArray(data.items)) return;
+
+    await withLock(userId, () => {
+      const state = readState(userId);
+      const existingKeys = new Set(state.items.map((i) => i.key));
+      const serverItems = data.items ?? [];
+      const newFromServer = serverItems.filter((i) => !existingKeys.has(i.key));
+
+      if (newFromServer.length > 0 || (state.items.length === 0 && serverItems.length > 0)) {
+        const merged = [...state.items, ...newFromServer]
+          .sort((a, b) => new Date(b.at).getTime() - new Date(a.at).getTime())
+          .slice(0, MAX_ITEMS);
+        writeState(userId, { ...state, items: merged });
+      }
+    });
+  } catch {
+    // Network down or server unreachable — cached state persists.
+  }
+}
+
 /**
  * Record a notification unless some tab already has. Returns whether this tab
  * should toast it: the tab that records it toasts when visible; if that tab was
@@ -108,6 +136,18 @@ export async function recordNotification(
   item: Omit<StoredNotification, 'toasted'>,
 ): Promise<boolean> {
   const visible = document.visibilityState === 'visible';
+
+  // Persist to server
+  try {
+    void fetch(apiUrl('notifications'), {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify(item),
+    }).catch(() => {});
+  } catch {
+    // Network down
+  }
+
   return withLock(userId, () => {
     const state = readState(userId);
     const existing = state.items.find((n) => n.key === item.key);
@@ -124,6 +164,14 @@ export async function recordNotification(
 }
 
 export function markAllRead(userId: string): void {
+  try {
+    void fetch(apiUrl('notifications/read-all'), {
+      method: 'POST',
+    }).catch(() => {});
+  } catch {
+    // Network down
+  }
+
   void withLock(userId, () => {
     const state = readState(userId);
     state.readAt = new Date().toISOString();

@@ -333,6 +333,7 @@ export interface IdTag {
   maxActiveTransactions: number;
   allowedChargePointIds?: string[];
   note?: string;
+  isInternal?: boolean;
   activeTransactions?: number;
   /** Set when this tag is an internal member card — charges for free against the client's own wallet instead of its own balance. */
   walletOwnerType?: 'USER' | 'IDTAG' | 'CLIENT';

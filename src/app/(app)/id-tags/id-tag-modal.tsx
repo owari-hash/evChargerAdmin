@@ -41,9 +41,7 @@ export function IdTagModal({
     note: tag?.note ?? '',
   });
 
-  // An internal member card: it charges for free against a Client's own
-  // wallet, replacing that client's broken RFID fleet. See `walletOwnerType`
-  // on the backend `IdTag` model.
+  const [isInternal, setIsInternal] = React.useState(Boolean(tag?.isInternal));
   const [isOrgCard, setIsOrgCard] = React.useState(tag?.walletOwnerType === 'CLIENT');
   const [clientId, setClientId] = React.useState(
     tag?.walletOwnerType === 'CLIENT' ? (tag.walletOwnerId ?? '') : '',
@@ -97,6 +95,7 @@ export function IdTagModal({
         ownerName: form.ownerName.trim() || undefined,
         ownerEmail: form.ownerEmail.trim() || undefined,
         ownerPhone: form.ownerPhone.trim() || undefined,
+        isInternal: isInternal || isOrgCard,
         note: form.note.trim() || undefined,
         allowedChargePointIds: allowed.length ? allowed : undefined,
         expiryDate: form.expiryDate ? new Date(form.expiryDate).toISOString() : undefined,
@@ -217,36 +216,51 @@ export function IdTagModal({
           />
         </Field>
 
-        <div className="rounded-xl border border-[var(--color-border)] p-3">
-          <label className="flex items-center gap-2 text-sm cursor-pointer">
-            <Checkbox
-              checked={isOrgCard}
-              onChange={(e) => {
-                setIsOrgCard(e.target.checked);
-                if (!e.target.checked) setClientId('');
-              }}
-            />
-            Байгууллагын дотоод гишүүний карт
-          </label>
-          <p className="mt-1 text-xs text-[var(--color-fg-muted)]">
-            Сонгосон харилцагчийн станцуудад энэ карт үнэ төлбөргүй цэнэглэнэ. Тухайн
-            харилцагчийн хэтэвч дээр лог хадгалагдана.
-          </p>
+        <div className="rounded-xl border border-[var(--color-border)] p-3 space-y-3">
+          <div>
+            <label className="flex items-center gap-2 text-sm cursor-pointer font-medium">
+              <Checkbox
+                checked={isInternal}
+                onChange={(e) => setIsInternal(e.target.checked)}
+              />
+              Дотоод хэрэглэгч (Үнэ төлбөргүй цэнэглэх)
+            </label>
+            <p className="mt-1 text-xs text-[var(--color-fg-muted)]">
+              Энэ хэрэглэгч/карт станцуудад үнэ төлбөргүй цэнэглэнэ (хэтэвчний үлдэгдэл шаардахгүй). Зарцуулсан кВт болон хураамж админ тайланд бүрэн тооцогдож харагдана.
+            </p>
+          </div>
 
-          {isOrgCard ? (
-            <div className="mt-3">
-              <Field label="Харилцагч">
-                <Select value={clientId} onChange={(e) => void selectClient(e.target.value)}>
-                  <option value="">(Сонгоогүй)</option>
-                  {clients.map((c) => (
-                    <option key={c.id ?? c._id} value={c.id ?? c._id}>
-                      {c.name} {c.businessRegister ? `(${c.businessRegister})` : ''}
-                    </option>
-                  ))}
-                </Select>
-              </Field>
-            </div>
-          ) : null}
+          <div className="pt-2 border-t border-[var(--color-border)]">
+            <label className="flex items-center gap-2 text-sm cursor-pointer">
+              <Checkbox
+                checked={isOrgCard}
+                onChange={(e) => {
+                  setIsOrgCard(e.target.checked);
+                  if (e.target.checked) setIsInternal(true);
+                  if (!e.target.checked) setClientId('');
+                }}
+              />
+              Байгууллагын дотоод гишүүний карт
+            </label>
+            <p className="mt-1 text-xs text-[var(--color-fg-muted)]">
+              Сонгосон харилцагчийн станцуудад энэ карт үнэ төлбөргүй цэнэглэнэ.
+            </p>
+
+            {isOrgCard ? (
+              <div className="mt-3">
+                <Field label="Харилцагч">
+                  <Select value={clientId} onChange={(e) => void selectClient(e.target.value)}>
+                    <option value="">(Сонгоогүй)</option>
+                    {clients.map((c) => (
+                      <option key={c.id ?? c._id} value={c.id ?? c._id}>
+                        {c.name} {c.businessRegister ? `(${c.businessRegister})` : ''}
+                      </option>
+                    ))}
+                  </Select>
+                </Field>
+              </div>
+            ) : null}
+          </div>
         </div>
 
         <Field

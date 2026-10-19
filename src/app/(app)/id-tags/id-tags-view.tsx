@@ -161,7 +161,14 @@ export function IdTagsView({
                     tag.expiryDate != null && new Date(tag.expiryDate).getTime() < now;
                   return (
                     <TR key={tag.idTag}>
-                      <TD className="font-mono text-xs font-medium">{tag.idTag}</TD>
+                      <TD className="font-mono text-xs font-medium">
+                        <div className="flex items-center gap-1.5">
+                          <span>{tag.idTag}</span>
+                          {tag.isInternal || tag.walletOwnerType === 'CLIENT' ? (
+                            <Badge tone="ok">Дотоод</Badge>
+                          ) : null}
+                        </div>
+                      </TD>
                       <TD>
                         <AuthStatusBadge status={tag.status} />
                       </TD>

@@ -3,6 +3,7 @@ import {
   Banknote,
   BatteryCharging,
   Building2,
+  Calculator,
   CalendarClock,
   CreditCard,
   Cpu,
@@ -52,6 +53,7 @@ export const CLIENT_NAV_SECTIONS: NavSection[] = [
     items: [
       { href: '/reports', label: 'Тайлан', icon: FileSpreadsheet, prefix: true },
       { href: '/settlements', label: 'Тооцоо', icon: Banknote },
+      { href: '/tariffs', label: 'Цахилгааны тариф', icon: Calculator },
     ],
   },
   {
@@ -92,6 +94,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: '/jobs', label: 'Программ хангамж ба лог', icon: Cpu },
       { href: '/merchants', label: 'QPay мерчант', icon: Store, minRole: 'OPERATOR' },
       { href: '/ebarimt-merchants', label: 'И-Баримт мерчант', icon: FileText, minRole: 'OPERATOR' },
+      { href: '/tariffs', label: 'Цахилгааны тариф', icon: Calculator, prefix: true },
       { href: '/security', label: 'Аюулгүй байдал', icon: ShieldCheck, prefix: true },
     ],
   },

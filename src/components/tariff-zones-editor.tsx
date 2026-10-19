@@ -53,10 +53,10 @@ const ZONE_COLORS = [
 ];
 
 const PRESETS = [
-  { name: 'Шөнийн тариф', startMinute: 0, endMinute: 360, defaultPrice: 200, label: 'Шөнийн (00:00–06:00)' },
-  { name: 'Өдрийн тариф', startMinute: 360, endMinute: 1020, defaultPrice: 400, label: 'Өдрийн (06:00–17:00)' },
-  { name: 'Оргил ачаалал', startMinute: 1020, endMinute: 1320, defaultPrice: 650, label: 'Оргил цаг (17:00–22:00)' },
-  { name: 'Оройн тариф', startMinute: 1320, endMinute: 1440, defaultPrice: 350, label: 'Оройн (22:00–24:00)' },
+  { name: 'Шөнийн тариф', startMinute: 0, endMinute: 360, defaultPrice: 168, label: 'Шөнийн (00:00–06:00 · 168₮)' },
+  { name: 'Өдрийн тариф', startMinute: 360, endMinute: 1020, defaultPrice: 278, label: 'Өдрийн (06:00–17:00 · 278₮)' },
+  { name: 'Оргил ачаалал', startMinute: 1020, endMinute: 1320, defaultPrice: 417, label: 'Оргил цаг (17:00–22:00 · 417₮)' },
+  { name: 'Шөнийн тариф', startMinute: 1320, endMinute: 1440, defaultPrice: 168, label: 'Шөнийн (22:00–24:00 · 168₮)' },
 ];
 
 export function TariffZonesEditor({
@@ -219,6 +219,23 @@ export function TariffZonesEditor({
           <Sparkles className="h-3 w-3 text-[var(--color-brand)]" />
           Бэлэн загварууд:
         </span>
+        <button
+          type="button"
+          onClick={() => {
+            onChange(
+              PRESETS.map((p) => ({
+                name: p.name,
+                startMinute: p.startMinute,
+                endMinute: p.endMinute,
+                tariffPerKwh: p.defaultPrice,
+              }))
+            );
+          }}
+          className="inline-flex items-center gap-1 rounded-md border border-[var(--color-brand)]/40 bg-[var(--color-brand)]/10 px-2 py-1 text-[11px] font-semibold text-[var(--color-brand)] transition hover:bg-[var(--color-brand)]/20 cursor-pointer shadow-xs"
+        >
+          <Sparkles className="h-2.5 w-2.5" />
+          <span>ЭХЗХ 350 тариф бүрэн оруулах (168 / 278 / 417₮)</span>
+        </button>
         {PRESETS.map((preset) => {
           const isAdded = zones.some((z) => z.startMinute === preset.startMinute && z.endMinute === preset.endMinute);
           return (
@@ -228,7 +245,7 @@ export function TariffZonesEditor({
               onClick={() => applyPreset(preset)}
               disabled={isAdded}
               className={cn(
-                'inline-flex items-center gap-1 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-[11px] transition hover:bg-[var(--color-surface-2)] disabled:opacity-40 disabled:cursor-not-allowed',
+                'inline-flex items-center gap-1 rounded-md border border-[var(--color-border)] bg-[var(--color-surface)] px-2 py-1 text-[11px] transition hover:bg-[var(--color-surface-2)] disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer',
                 isAdded && 'bg-[var(--color-surface-2)] text-[var(--color-fg-subtle)]'
               )}
             >
@@ -237,6 +254,14 @@ export function TariffZonesEditor({
             </button>
           );
         })}
+        <a
+          href="/tariffs"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="ml-auto inline-flex items-center gap-1 text-[11px] font-medium text-[var(--color-brand)] hover:underline"
+        >
+          <span>Тарифын тооцоолуур ↗</span>
+        </a>
       </div>
 
       {/* Validation Error Banner */}

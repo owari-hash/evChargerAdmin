@@ -175,6 +175,10 @@ const MENU_KEYWORDS: Record<string, string[]> = {
     'ебаримт', 'и-баримт', 'баримт', 'татвар', 'тин', 'нөат', 'ebarimt', 'tin', 'vat', 'tax',
   ],
   '/security': ['аюулгүй', 'гэрчилгээ', 'сертификат', 'security', 'certificate', 'ayuulgui'],
+  '/tariffs': [
+    'тариф', 'цахилгааны тариф', 'үнэ', 'тооцоолуур', 'квт', 'квтц', '350',
+    'tariff', 'tariffs', 'rate', 'rates', 'calculator', 'energy', 'price', 'une', 'tootsooluur',
+  ],
   '/users': ['хэрэглэгч', 'эрх', 'админ', 'бүртгэл', 'user', 'role', 'admin', 'hereglegch'],
   '/app-versions': [
     'апп', 'хувилбар', 'шинэчлэл', 'версон', 'андройд', 'айфон', 'дэлгүүр',

@@ -1,11 +1,10 @@
 'use client';
 
 import * as React from 'react';
-import { GraduationCap, LogOut, Menu, Moon, Sun } from 'lucide-react';
+import { LogOut, Menu, Moon, Sun } from 'lucide-react';
 import { Button, Dot } from '@/components/ui/primitives';
 import { GlobalSearch } from './global-search';
 import { NotificationBell } from './notification-bell';
-import { useFirstRunGuide } from './first-run-guide';
 import { logout } from '@/lib/client';
 import { useLiveStreamEvents, useLiveStreamStatus } from './live-stream';
 import { useLiveRevalidation } from '@/lib/live-query';
@@ -13,7 +12,6 @@ import { formatRelative } from '@/lib/format';
 import type { SessionUser } from '@/lib/types';
 
 export function Topbar({ user, onMenu }: { user: SessionUser; onMenu: () => void }) {
-  const { startGuide } = useFirstRunGuide();
   return (
     // 1fr / auto / 1fr keeps the search centred on the header itself rather than
     // on whatever is left over once the side controls have taken their space.
@@ -44,18 +42,6 @@ export function Topbar({ user, onMenu }: { user: SessionUser; onMenu: () => void
         </span>
         <div data-tour="account" className="flex items-center gap-1">
           <ThemeToggle />
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={startGuide}
-            aria-label="Заавар үзэх"
-            title="Заавар үзэх"
-            // The phone topbar is already full; there it lives in the drawer footer.
-            className="hidden sm:inline-flex"
-          >
-            <GraduationCap className="h-4 w-4" />
-            <span className="hidden xl:inline">Заавар үзэх</span>
-          </Button>
           <Button
             variant="ghost"
             size="sm"

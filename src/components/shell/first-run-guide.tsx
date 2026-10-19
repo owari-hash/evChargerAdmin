@@ -357,30 +357,8 @@ export function FirstRunGuideProvider({
       run(mode);
     };
 
-    // Dev-only: `?tour=1` previews the auto-shown guide without the server.
-    const preview =
-      process.env.NODE_ENV !== 'production' &&
-      new URLSearchParams(window.location.search).get('tour') === '1';
-    const pending: Promise<boolean> = preview
-      ? Promise.resolve(true)
-      : sessionDismissed()
-        ? Promise.resolve(false)
-        : api
-            .get<{ guidePending?: boolean } | null>('auth/me')
-            .then((me) => me?.guidePending === true)
-            // Backend unreachable — no guide this time; nothing to loop on.
-            .catch(() => false);
-
-    void pending.then((show) => {
-      if (cancelled) return;
-      setStatus(show ? 'pending' : 'idle');
-      if (show) timer = setTimeout(() => startWhenIdle(preview ? 'preview' : 'auto'), 700);
-    });
-
-    return () => {
-      cancelled = true;
-      if (timer) clearTimeout(timer);
-    };
+    // Tour disabled per operator requirements.
+    setStatus('idle');
   }, [run]);
 
   // Tear down if the shell unmounts mid-guide (logout, hard error).
@@ -394,11 +372,11 @@ export function FirstRunGuideProvider({
 
   const value = React.useMemo(
     () => ({
-      startGuide: () => run('replay'),
-      suppressPageGuides: status !== 'idle',
-      guideActive: status === 'pending' || status === 'running',
+      startGuide: () => {},
+      suppressPageGuides: false,
+      guideActive: false,
     }),
-    [run, status],
+    [],
   );
 
   return <GuideContext.Provider value={value}>{children}</GuideContext.Provider>;

@@ -3,12 +3,11 @@
 import Image from 'next/image';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { GraduationCap, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { brand } from '@/lib/config';
 import { withBasePath } from '@/lib/base-path';
 import { visibleSections } from './nav-items';
-import { useFirstRunGuide } from './first-run-guide';
 import { ROLE } from '@/lib/mn';
 import type { SessionUser } from '@/lib/types';
 import { Button } from '@/components/ui/primitives';
@@ -24,7 +23,6 @@ export function Sidebar({
 }) {
   const pathname = usePathname();
   const sections = visibleSections(user.role);
-  const { startGuide } = useFirstRunGuide();
 
   return (
     <>
@@ -110,11 +108,6 @@ export function Sidebar({
               {ROLE[user.role] ?? user.role}
             </p>
           </div>
-          {/* Phones only: the topbar has no room for it there. */}
-          <Button variant="ghost" size="sm" className="lg:hidden" onClick={startGuide}>
-            <GraduationCap className="h-4 w-4" />
-            Заавар үзэх
-          </Button>
         </div>
       </aside>
     </>

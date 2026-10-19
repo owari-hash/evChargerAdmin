@@ -20,7 +20,6 @@ import {
 } from '@/lib/notification-store';
 import type { CsmsEvent } from '@/lib/types';
 import { useLiveStreamEvents } from './live-stream';
-import { useFirstRunGuide } from './first-run-guide';
 
 type NewNotification = Omit<StoredNotification, 'toasted'>;
 
@@ -183,7 +182,6 @@ export function NotificationBell({ userId }: { userId: string }) {
   const rootRef = React.useRef<HTMLDivElement>(null);
   const router = useRouter();
   const stationName = useStationNames();
-  const { guideActive } = useFirstRunGuide();
 
   const raw = React.useSyncExternalStore(
     subscribeNotifications,
@@ -205,24 +203,11 @@ export function NotificationBell({ userId }: { userId: string }) {
     [router],
   );
 
-  // Toasts are held while the first-run guide is up and shown when it closes.
-  const held = React.useRef<NewNotification[]>([]);
-  const guideActiveRef = React.useRef(guideActive);
-  React.useEffect(() => {
-    guideActiveRef.current = guideActive;
-    if (guideActive || held.current.length === 0) return;
-    const pending = held.current.slice(-MAX_FLUSHED_TOASTS);
-    held.current = [];
-    for (const item of pending) show(item);
-  }, [guideActive, show]);
-
   useLiveStreamEvents((event) => {
     const item = describe(event, stationName);
     if (!item) return;
     void recordNotification(userId, item).then((shouldToast) => {
-      if (!shouldToast) return;
-      if (guideActiveRef.current) held.current.push(item);
-      else show(item);
+      if (shouldToast) show(item);
     });
   });
 

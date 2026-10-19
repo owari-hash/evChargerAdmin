@@ -462,11 +462,18 @@ export function ConnectorsView({
                           </span>
 
                           <div className="flex flex-col leading-tight">
-                            {c.connectorType ? (
-                              <span className="text-[11px] font-medium text-[var(--color-fg)]">
-                                {c.connectorType}
-                              </span>
-                            ) : null}
+                            <div className="flex items-center gap-1.5">
+                              {c.connectorType ? (
+                                <span className="text-[11px] font-medium text-[var(--color-fg)]">
+                                  {c.connectorType}
+                                </span>
+                              ) : null}
+                              {c.label ? (
+                                <span className="rounded bg-[var(--color-surface-2)] px-1 text-[10px] font-medium text-[var(--color-brand)]">
+                                  {c.label}
+                                </span>
+                              ) : null}
+                            </div>
                             {c.powerKw ? (
                               <span className="text-[10px] text-[var(--color-fg-subtle)]">
                                 {c.powerKw} кВт

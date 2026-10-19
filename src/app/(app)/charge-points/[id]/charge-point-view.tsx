@@ -13,6 +13,7 @@ import {
   PlugZap,
   Printer,
   Trash2,
+  Unlock,
   Unplug,
 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -73,6 +74,7 @@ export function ChargePointView({
   const [confirmDelete, setConfirmDelete] = React.useState(false);
   const [editing, setEditing] = React.useState(false);
   const [confirmRotate, setConfirmRotate] = React.useState(false);
+  const [confirmClearKey, setConfirmClearKey] = React.useState(false);
   const [rotatedKey, setRotatedKey] = React.useState<string | null>(null);
 
   const connectors = (detail.connectors ?? []).filter((c) => c.connectorId > 0);
@@ -95,6 +97,22 @@ export function ChargePointView({
     try {
       await api.post(`charge-points/${encodeURIComponent(detail.id)}/disconnect`);
       toast.success('WebSocket холболт хаагдлаа. Станц удахгүй дахин холбогдоно.');
+      router.refresh();
+    } catch (err) {
+      toast.error(errorMessage(err));
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function clearKey() {
+    setBusy(true);
+    try {
+      await api.patch(`charge-points/${encodeURIComponent(detail.id)}`, {
+        authorizationKey: null,
+      });
+      setConfirmClearKey(false);
+      toast.success('Нууц түлхүүрийг арилгалаа. Станц одоо нууц үггүйгээр шууд холбогдох боломжтой.');
       router.refresh();
     } catch (err) {
       toast.error(errorMessage(err));
@@ -181,6 +199,10 @@ export function ChargePointView({
               ) : null}
               {canAdmin ? (
                 <>
+                  <Button variant="secondary" size="sm" onClick={() => setConfirmClearKey(true)} title="Нууц түлхүүрийг арилгах / Нээлттэй болгох">
+                    <Unlock className="h-3.5 w-3.5" />
+                    Түлхүүр арилгах
+                  </Button>
                   <Button variant="secondary" size="sm" onClick={() => setConfirmRotate(true)}>
                     <KeyRound className="h-3.5 w-3.5" />
                     Түлхүүр шинэчлэх
@@ -260,6 +282,27 @@ export function ChargePointView({
             </span>
             <span className="mt-2 block">
               Цэнэглэлт болон тоолуурын утга тайланд үлдэнэ. Үйлдлийг буцаах боломжгүй.
+            </span>
+          </>
+        }
+      />
+
+      <ConfirmModal
+        open={confirmClearKey}
+        onClose={() => setConfirmClearKey(false)}
+        onConfirm={() => void clearKey()}
+        loading={busy}
+        tone="primary"
+        title="Нууц түлхүүрийг арилгах уу?"
+        confirmLabel="Тийм, нээлттэй болгох"
+        message={
+          <>
+            <span className="block">
+              Станцын AuthorizationKey шаардлагыг арилгаснаар станц ямар нэг нууц үггүйгээр
+              зөвхөн өөрийн WebSocket хаягаар шууд холбогдох боломжтой болно.
+            </span>
+            <span className="mt-2 block text-xs text-[var(--color-fg-muted)]">
+              Энэ нь үйлдвэрийн нээлттэй тохиргоотой олонх станцуудад тохиромжтой.
             </span>
           </>
         }

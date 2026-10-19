@@ -5,7 +5,7 @@ import useSWR from 'swr';
 import { toast } from 'sonner';
 import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
 import { TriangleAlert } from 'lucide-react';
-import { Button, ErrorNote, Field, Input, Select, Textarea } from '@/components/ui/primitives';
+import { Button, Checkbox, ErrorNote, Field, Input, Select, Textarea } from '@/components/ui/primitives';
 import { Modal } from '@/components/ui/modal';
 import { EbarimtMerchantSelect } from '@/components/ebarimt-merchant-select';
 import { LinkedClientsSelect } from '@/components/linked-clients-select';
@@ -72,6 +72,7 @@ export function EditChargePointModal({
     chargePoint.linkedClientIds ?? [],
   );
   const [tariffZones, setTariffZones] = React.useState<TariffZone[]>(chargePoint.tariffZones ?? []);
+  const [clearAuthKey, setClearAuthKey] = React.useState(false);
 
   const set =
     (key: keyof typeof form) =>
@@ -144,6 +145,7 @@ export function EditChargePointModal({
         `charge-points/${encodeURIComponent(chargePoint.id)}`,
         {
           ...(renaming ? { cpId: nextId } : {}),
+          ...(clearAuthKey ? { authorizationKey: null } : {}),
           name: form.name.trim() || null,
           clientId: form.clientId ? form.clientId : null,
           linkedClientIds: linkedClientIds.filter((id) => id !== form.clientId),
@@ -323,6 +325,23 @@ export function EditChargePointModal({
               inputMode="numeric"
             />
           </Field>
+        </div>
+
+        <div className="flex items-start gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)]/50 p-3.5">
+          <Checkbox
+            id="clear-auth-key"
+            checked={clearAuthKey}
+            onChange={(e) => setClearAuthKey(e.target.checked)}
+            className="mt-0.5"
+          />
+          <div className="space-y-0.5">
+            <label htmlFor="clear-auth-key" className="text-xs font-semibold text-[var(--color-fg)] cursor-pointer">
+              Нууц түлхүүрийг арилгах (Нууц үггүй нээлттэй болгох)
+            </label>
+            <p className="text-[11px] text-[var(--color-fg-muted)]">
+              Идэвхжүүлбэл энэ станцын AuthorizationKey шаардлагыг устгаж, станц нууц үггүйгээр зөвхөн WebSocket хаягаараа шууд холбогдох боломжтой болно.
+            </p>
+          </div>
         </div>
 
         {/* Үнэ тариф & тооцоолол */}

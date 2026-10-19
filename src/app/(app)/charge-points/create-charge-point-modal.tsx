@@ -6,7 +6,7 @@ import useSWR from 'swr';
 import { KeyRound, TriangleAlert } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
-import { Button, ErrorNote, Field, Input, Select } from '@/components/ui/primitives';
+import { Button, Checkbox, ErrorNote, Field, Input, Select } from '@/components/ui/primitives';
 import { Modal } from '@/components/ui/modal';
 import { CopyButton } from '@/components/ui/copy-button';
 import { EbarimtMerchantSelect, parseFeePercent } from '@/components/ebarimt-merchant-select';
@@ -54,6 +54,7 @@ export function CreateChargePointModal({
     latitude: '',
     longitude: '',
   });
+  const [useAuthKey, setUseAuthKey] = React.useState(false);
   const [linkedClientIds, setLinkedClientIds] = React.useState<string[]>([]);
   const [tariffZones, setTariffZones] = React.useState<TariffZone[]>([]);
 
@@ -75,6 +76,7 @@ export function CreateChargePointModal({
       latitude: '',
       longitude: '',
     });
+    setUseAuthKey(false);
     setLinkedClientIds([]);
     setTariffZones([]);
     setError(null);
@@ -101,6 +103,7 @@ export function CreateChargePointModal({
         registrationStatus: form.registrationStatus,
         securityProfile: Number(form.securityProfile),
         heartbeatInterval: Number(form.heartbeatInterval) || 300,
+        authorizationKey: useAuthKey ? undefined : null,
       };
       if (form.name.trim()) body.name = form.name.trim();
       if (form.clientId) body.clientId = form.clientId;
@@ -116,10 +119,16 @@ export function CreateChargePointModal({
       if (form.ebarimtMerchantId) body.ebarimtMerchantId = form.ebarimtMerchantId;
 
       const res = await api.post<CreatedResponse>('charge-points', body);
-      setCreated(res);
       onCreated?.();
       router.refresh();
-      toast.success(`${res.id} станц бүртгэгдлээ`);
+
+      if (res.authorizationKey) {
+        setCreated(res);
+        toast.success(`${res.id} станц бүртгэгдлээ`);
+      } else {
+        close();
+        toast.success(`${res.id} станц амжилттай бүртгэгдлээ (нууц түлхүүр шаардахгүй)`);
+      }
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -206,6 +215,23 @@ export function CreateChargePointModal({
             className="font-mono"
           />
         </Field>
+
+        <div className="flex items-start gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-2)]/50 p-3.5">
+          <Checkbox
+            id="use-auth-key"
+            checked={useAuthKey}
+            onChange={(e) => setUseAuthKey(e.target.checked)}
+            className="mt-0.5"
+          />
+          <div className="space-y-0.5">
+            <label htmlFor="use-auth-key" className="text-xs font-semibold text-[var(--color-fg)] cursor-pointer">
+              Нууц түлхүүр (AuthorizationKey) шаардах
+            </label>
+            <p className="text-[11px] text-[var(--color-fg-muted)]">
+              Унтраалттай үед станц нууц үггүйгээр зөвхөн WebSocket хаягаараа шууд холбогдоно (Ихэнх станцад тохиромжтой).
+            </p>
+          </div>
+        </div>
 
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Харагдах нэр">

@@ -288,7 +288,7 @@ export function CreateChargePointModal({
             <Input
               value={form.tariffPerKwh}
               onChange={set('tariffPerKwh')}
-              placeholder="450"
+              placeholder="0.00"
               inputMode="decimal"
             />
           </Field>

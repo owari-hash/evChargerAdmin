@@ -4,8 +4,129 @@ import * as React from 'react';
 import Link from 'next/link';
 import { Plus, Trash2, Clock, Sparkles, AlertTriangle } from 'lucide-react';
 import { Button, Input } from '@/components/ui/primitives';
+import { formatNumber } from '@/lib/format';
 import type { TariffZone } from '@/lib/types';
 import { cn } from '@/lib/cn';
+
+function FormattedTariffInput({
+  value,
+  onChange,
+  className,
+}: {
+  value: number | undefined | null;
+  onChange: (val: number) => void;
+  className?: string;
+}) {
+  const [focused, setFocused] = React.useState(false);
+  const [text, setText] = React.useState('');
+
+  const formattedValue = React.useMemo(() => {
+    if (value == null || value === 0) return '';
+    return Number(value).toLocaleString('mn-MN', {
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    });
+  }, [value]);
+
+  const displayValue = focused ? text : formattedValue;
+
+  function handleFocus() {
+    setFocused(true);
+    setText(value != null && value !== 0 ? String(value) : '');
+  }
+
+  function handleBlur() {
+    setFocused(false);
+    const cleaned = text.replace(/,/g, '').trim();
+    const num = parseFloat(cleaned);
+    if (!Number.isNaN(num) && num >= 0) {
+      const rounded = Math.round(num * 100) / 100;
+      onChange(rounded);
+    } else {
+      onChange(0);
+    }
+  }
+
+  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
+    const raw = e.target.value.replace(/,/g, '');
+    if (raw === '' || /^\d*\.?\d*$/.test(raw)) {
+      setText(raw);
+      const num = parseFloat(raw);
+      if (!Number.isNaN(num)) {
+        onChange(num);
+      } else if (raw === '') {
+        onChange(0);
+      }
+    }
+  }
+
+  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+    if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      const current = (value || 0) + 1;
+      const rounded = Math.round(current * 100) / 100;
+      onChange(rounded);
+      setText(String(rounded));
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      const current = Math.max(0, (value || 0) - 1);
+      const rounded = Math.round(current * 100) / 100;
+      onChange(rounded);
+      setText(String(rounded));
+    }
+  }
+
+  function step(delta: number) {
+    const next = Math.max(0, (value || 0) + delta);
+    const rounded = Math.round(next * 100) / 100;
+    onChange(rounded);
+    if (focused) {
+      setText(String(rounded));
+    }
+  }
+
+  return (
+    <div className="relative">
+      <Input
+        type="text"
+        inputMode="decimal"
+        value={displayValue}
+        onFocus={handleFocus}
+        onBlur={handleBlur}
+        onChange={handleChange}
+        onKeyDown={handleKeyDown}
+        placeholder="0.00"
+        className={cn('h-9 text-xs pr-14 font-mono font-semibold', className)}
+      />
+      {/* Stepper buttons + Currency symbol */}
+      <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+        <div className="flex flex-col text-[9px] text-[var(--color-fg-subtle)] leading-none">
+          <button
+            type="button"
+            tabIndex={-1}
+            onClick={() => step(1)}
+            className="hover:text-[var(--color-fg)] p-0.5 cursor-pointer leading-none"
+            aria-label="Ихэсгэх"
+          >
+            ▲
+          </button>
+          <button
+            type="button"
+            tabIndex={-1}
+            onClick={() => step(-1)}
+            className="hover:text-[var(--color-fg)] p-0.5 cursor-pointer leading-none"
+            aria-label="Багасгах"
+          >
+            ▼
+          </button>
+        </div>
+        <span className="text-xs font-medium text-[var(--color-fg-subtle)] pl-0.5">
+          ₮
+        </span>
+      </div>
+    </div>
+  );
+}
 
 function minutesToTime(minutes: number): string {
   if (minutes >= 1440) return '24:00';
@@ -135,7 +256,7 @@ export function TariffZonesEditor({
         <div className="relative h-7 w-full overflow-hidden rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] flex">
           {zones.length === 0 ? (
             <div className="flex h-full w-full items-center justify-center bg-[var(--color-surface-2)] text-[11px] text-[var(--color-fg-muted)]">
-              Суурь тариф: {baseTariff ? `${baseTariff}₮ / кВт·ц` : 'Тохируулаагүй'}
+              Суурь тариф: {baseTariff != null && baseTariff !== '' ? `${formatNumber(Number(baseTariff), 2)}₮ / кВт·ц` : 'Тохируулаагүй'}
             </div>
           ) : (
             (() => {
@@ -169,14 +290,14 @@ export function TariffZonesEditor({
                       'h-full flex items-center justify-center overflow-hidden border-r border-black/10 px-1 font-medium transition-all text-[10px] text-white select-none',
                       color.bar
                     )}
-                    title={`${z.name || 'Бүс ' + (idx + 1)}: ${minutesToTime(z.startMinute)} – ${minutesToTime(z.endMinute)} (${z.tariffPerKwh}₮/кВт·ц)`}
+                    title={`${z.name || 'Бүс ' + (idx + 1)}: ${minutesToTime(z.startMinute)} – ${minutesToTime(z.endMinute)} (${formatNumber(z.tariffPerKwh, 2)}₮/кВт·ц)`}
                   >
                     {zoneWidth > 14 ? (
                       <span className="truncate">
-                        {z.name || `Бүс ${idx + 1}`} ({z.tariffPerKwh}₮)
+                        {z.name || `Бүс ${idx + 1}`} ({formatNumber(z.tariffPerKwh, 2)}₮)
                       </span>
                     ) : zoneWidth > 8 ? (
-                      <span className="truncate">{z.tariffPerKwh}₮</span>
+                      <span className="truncate">{formatNumber(z.tariffPerKwh, 2)}₮</span>
                     ) : null}
                   </div>
                 );
@@ -322,6 +443,9 @@ export function TariffZonesEditor({
                     <span className="rounded-md bg-[var(--color-surface-2)] px-2 py-0.5 text-[11px] font-medium text-[var(--color-fg-muted)]">
                       {formatDuration(zone.startMinute, zone.endMinute)}
                     </span>
+                    <span className="rounded-md bg-[var(--color-surface-2)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-brand)] font-mono">
+                      {formatNumber(zone.tariffPerKwh, 2)} ₮
+                    </span>
                   </div>
 
                   <Button
@@ -388,20 +512,10 @@ export function TariffZonesEditor({
                     <label className="text-[11px] font-medium text-[var(--color-fg-muted)]">
                       Тариф (₮ / кВт·ц)
                     </label>
-                    <div className="relative">
-                      <Input
-                        type="number"
-                        min={0}
-                        step="any"
-                        value={zone.tariffPerKwh || ''}
-                        onChange={(e) => update(i, { tariffPerKwh: Math.max(0, Number(e.target.value) || 0) })}
-                        placeholder="450"
-                        className="h-9 text-xs pr-8 font-mono font-semibold"
-                      />
-                      <span className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-medium text-[var(--color-fg-subtle)]">
-                        ₮
-                      </span>
-                    </div>
+                    <FormattedTariffInput
+                      value={zone.tariffPerKwh}
+                      onChange={(val) => update(i, { tariffPerKwh: val })}
+                    />
                   </div>
                 </div>
               </div>

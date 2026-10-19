@@ -10,6 +10,7 @@ import { formatMoney, formatNumber, formatRelative } from '@/lib/format';
 import { cn } from '@/lib/cn';
 import { useStationNames } from '@/lib/use-station-names';
 import {
+  connectAdminNotificationSocket,
   fetchServerNotifications,
   markAllRead,
   parseState,
@@ -213,10 +214,13 @@ export function NotificationBell({ userId }: { userId: string }) {
   });
 
   React.useEffect(() => {
-    if (userId) {
-      void fetchServerNotifications(userId);
-    }
-  }, [userId]);
+    if (!userId) return;
+    void fetchServerNotifications(userId);
+    const disconnect = connectAdminNotificationSocket(userId, (item) => {
+      show(item);
+    });
+    return disconnect;
+  }, [userId, show]);
 
   React.useEffect(() => {
     if (!open) return;

@@ -134,18 +134,21 @@ export async function fetchServerNotifications(userId: string): Promise<void> {
 export async function recordNotification(
   userId: string,
   item: Omit<StoredNotification, 'toasted'>,
+  options?: { skipServerPost?: boolean },
 ): Promise<boolean> {
   const visible = document.visibilityState === 'visible';
 
-  // Persist to server
-  try {
-    void fetch(apiUrl('notifications'), {
-      method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify(item),
-    }).catch(() => {});
-  } catch {
-    // Network down
+  // Persist to server unless received from server socket
+  if (!options?.skipServerPost) {
+    try {
+      void fetch(apiUrl('notifications'), {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify(item),
+      }).catch(() => {});
+    } catch {
+      // Network down
+    }
   }
 
   return withLock(userId, () => {
@@ -161,6 +164,71 @@ export async function recordNotification(
     writeState(userId, state);
     return visible;
   });
+}
+
+export function connectAdminNotificationSocket(
+  userId: string,
+  onNotification?: (item: StoredNotification) => void,
+): () => void {
+  if (typeof window === 'undefined' || !userId) return () => {};
+
+  let activeSocket: WebSocket | null = null;
+  let reconnectTimer: ReturnType<typeof setTimeout> | null = null;
+
+  function connect() {
+    const loc = window.location;
+    const protocol = loc.protocol === 'https:' ? 'wss:' : 'ws:';
+    // If dev port 3001, backend is on 3000:
+    const host = loc.port === '3001' ? `${loc.hostname}:3000` : loc.host;
+    const url = `${protocol}//${host}/ws/notifications?userId=${encodeURIComponent(userId)}&role=admin`;
+
+    try {
+      const ws = new WebSocket(url);
+      activeSocket = ws;
+
+      ws.onmessage = (event) => {
+        try {
+          const payload = JSON.parse(event.data) as {
+            type: string;
+            data?: StoredNotification;
+          };
+          if (payload.type === 'notification' && payload.data) {
+            const notif = payload.data;
+            void recordNotification(userId, notif, { skipServerPost: true }).then((shouldToast) => {
+              if (shouldToast && onNotification) {
+                onNotification(notif);
+              }
+            });
+          }
+        } catch {
+          // ignore
+        }
+      };
+
+      ws.onclose = () => {
+        activeSocket = null;
+        if (reconnectTimer) clearTimeout(reconnectTimer);
+        reconnectTimer = setTimeout(connect, 4000);
+      };
+
+      ws.onerror = () => {
+        ws.close();
+      };
+    } catch {
+      if (reconnectTimer) clearTimeout(reconnectTimer);
+      reconnectTimer = setTimeout(connect, 6000);
+    }
+  }
+
+  connect();
+
+  return () => {
+    if (reconnectTimer) clearTimeout(reconnectTimer);
+    if (activeSocket) {
+      activeSocket.close();
+      activeSocket = null;
+    }
+  };
 }
 
 export function markAllRead(userId: string): void {

@@ -1,6 +1,7 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import { Plus, Trash2, Clock, Sparkles, AlertTriangle } from 'lucide-react';
 import { Button, Input } from '@/components/ui/primitives';
 import type { TariffZone } from '@/lib/types';
@@ -254,14 +255,14 @@ export function TariffZonesEditor({
             </button>
           );
         })}
-        <a
+        <Link
           href="/tariffs"
           target="_blank"
           rel="noopener noreferrer"
           className="ml-auto inline-flex items-center gap-1 text-[11px] font-medium text-[var(--color-brand)] hover:underline"
         >
           <span>Тарифын тооцоолуур ↗</span>
-        </a>
+        </Link>
       </div>
 
       {/* Validation Error Banner */}

@@ -618,79 +618,83 @@ export function TariffsView() {
 
         {/* Right Column: Total Panel */}
         <div className="lg:col-span-5">
-          <div className="rounded-2xl border border-emerald-900/30 bg-[#123829] text-white p-6 shadow-xl dark:border-emerald-800/40 dark:bg-[#0c261b]">
-            <div className="flex items-center justify-between border-b border-emerald-800/60 pb-3">
-              <h2 className="text-sm font-semibold tracking-wide uppercase text-emerald-200">
-                Нийт төлбөр
-              </h2>
-              <span className="rounded-full bg-emerald-500/20 px-2.5 py-0.5 text-[10px] font-semibold tracking-wider text-emerald-300">
-                УРЬДЧИЛСАН
-              </span>
-            </div>
-
-            {/* Huge Total */}
-            <div className="py-6">
-              <div className="text-4xl font-extrabold tracking-tight text-[#d4f29f] sm:text-5xl font-mono">
-                {formatMnt(calculation.total)}
+          <Card>
+            <CardBody className="p-5 sm:p-6 space-y-5">
+              <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-3">
+                <h2 className="text-xs font-semibold tracking-wide uppercase text-[var(--color-fg-muted)]">
+                  Нийт төлбөр
+                </h2>
+                <span className="rounded-full bg-[var(--color-surface-2)] px-2.5 py-0.5 text-[10px] font-semibold tracking-wider text-[var(--color-brand)] border border-[var(--color-border)]">
+                  УРЬДЧИЛСАН
+                </span>
               </div>
-              <p className="mt-2 text-xs text-emerald-300/80">
-                Нийт {calculation.energy.toLocaleString('mn-MN')} кВт·ц хэрэглээ ·{' '}
-                {includeVat ? 'НӨАТ 10% орсон' : 'НӨАТ-гүй'}
+
+              {/* Huge Total */}
+              <div className="py-2">
+                <div className="text-4xl font-extrabold tracking-tight text-[var(--color-fg)] sm:text-5xl font-mono">
+                  {formatMnt(calculation.total)}
+                </div>
+                <p className="mt-2 text-xs text-[var(--color-fg-muted)]">
+                  Нийт {calculation.energy.toLocaleString('mn-MN')} кВт·ц хэрэглээ ·{' '}
+                  {includeVat ? 'НӨАТ 10% орсон' : 'НӨАТ-гүй'}
+                </p>
+              </div>
+
+              {/* Summary lines */}
+              <div className="space-y-2.5 border-t border-[var(--color-border)] pt-4 text-xs">
+                <div className="flex justify-between text-[var(--color-fg-muted)]">
+                  <span>Цахилгааны төлбөр</span>
+                  <span className="font-mono font-semibold text-[var(--color-fg)]">
+                    {formatMnt(calculation.base)}
+                  </span>
+                </div>
+                <div className="flex justify-between text-[var(--color-fg-muted)]">
+                  <span>Үйлчилгээний нэмэгдэл</span>
+                  <span className="font-mono font-semibold text-[var(--color-fg)]">
+                    {formatMnt(calculation.service)}
+                  </span>
+                </div>
+                <div className="flex justify-between text-[var(--color-fg-muted)]">
+                  <span>НӨАТ {includeVat ? '(10%)' : '(тооцоогүй)'}</span>
+                  <span className="font-mono font-semibold text-[var(--color-fg)]">
+                    {formatMnt(calculation.tax)}
+                  </span>
+                </div>
+
+                {/* Average rate */}
+                <div className="mt-3 border-t border-dashed border-[var(--color-border)] pt-3 flex justify-between">
+                  <span className="font-medium text-[var(--color-fg-muted)]">Дундаж өртөг / кВт·ц</span>
+                  <span className="font-mono font-bold text-[var(--color-fg)]">
+                    {formatMnt(calculation.average)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Buttons */}
+              <div className="mt-5 space-y-2">
+                <Button
+                  variant="primary"
+                  size="md"
+                  onClick={handleSaveDraft}
+                  className="w-full justify-center text-xs font-semibold py-2.5"
+                >
+                  Тооцоог хадгалах
+                </Button>
+                <Button
+                  variant="secondary"
+                  size="md"
+                  onClick={handleReset}
+                  className="w-full justify-center text-xs font-medium py-2.5"
+                >
+                  Дахин тооцоолох
+                </Button>
+              </div>
+
+              <p className="mt-3 text-center text-[10px] text-[var(--color-fg-subtle)]">
+                {savedNote}
               </p>
-            </div>
-
-            {/* Summary lines */}
-            <div className="space-y-2.5 border-t border-emerald-800/60 pt-4 text-xs">
-              <div className="flex justify-between text-emerald-100/90">
-                <span>Цахилгааны төлбөр</span>
-                <span className="font-mono font-semibold text-white">
-                  {formatMnt(calculation.base)}
-                </span>
-              </div>
-              <div className="flex justify-between text-emerald-100/90">
-                <span>Үйлчилгээний нэмэгдэл</span>
-                <span className="font-mono font-semibold text-white">
-                  {formatMnt(calculation.service)}
-                </span>
-              </div>
-              <div className="flex justify-between text-emerald-100/90">
-                <span>НӨАТ {includeVat ? '(10%)' : '(тооцоогүй)'}</span>
-                <span className="font-mono font-semibold text-white">
-                  {formatMnt(calculation.tax)}
-                </span>
-              </div>
-
-              {/* Average rate */}
-              <div className="mt-3 border-t border-dashed border-emerald-700/60 pt-3 flex justify-between text-emerald-200">
-                <span className="font-medium">Дундаж өртөг / кВт·ц</span>
-                <span className="font-mono font-bold text-[#d4f29f]">
-                  {formatMnt(calculation.average)}
-                </span>
-              </div>
-            </div>
-
-            {/* Buttons */}
-            <div className="mt-6 space-y-2">
-              <button
-                type="button"
-                onClick={handleSaveDraft}
-                className="w-full rounded-xl bg-[#d4f29f] px-4 py-3 text-xs font-bold text-[#103023] transition hover:bg-[#c6ea8b] active:scale-[0.99] cursor-pointer shadow-md"
-              >
-                Тооцоог хадгалах
-              </button>
-              <button
-                type="button"
-                onClick={handleReset}
-                className="w-full rounded-xl border border-emerald-700/60 bg-transparent px-4 py-2.5 text-xs font-medium text-emerald-200 transition hover:bg-emerald-800/40 cursor-pointer"
-              >
-                Дахин тооцоолох
-              </button>
-            </div>
-
-            <p className="mt-4 text-center text-[10px] text-emerald-400/80">
-              {savedNote}
-            </p>
-          </div>
+            </CardBody>
+          </Card>
         </div>
       </div>
 

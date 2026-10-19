@@ -123,7 +123,7 @@ export default async function OverviewPage() {
           </div>
         </Card>
 
-        <Card className="flex flex-col">
+        <Card className="flex flex-col min-h-0 overflow-hidden">
           <CardHeader title="Шууд үйл ажиллагаа" description="CSMS-ээс шууд дамжуулж байна" />
           <LiveFeed height="h-[280px]" />
         </Card>

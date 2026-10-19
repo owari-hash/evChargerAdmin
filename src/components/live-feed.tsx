@@ -9,6 +9,7 @@ import { formatPercent, formatPower, formatRelative, formatWh, humanizeEvent } f
 import { CONNECTOR_STATUS, EVENT, MEASURAND, STOP_REASON, mn } from '@/lib/mn';
 import type { CsmsEvent } from '@/lib/types';
 import { StationName } from '@/components/station-name';
+import { cn } from '@/lib/cn';
 
 const EVENT_TONES: Record<string, Tone> = {
   'chargepoint.connected': 'ok',
@@ -82,6 +83,9 @@ function describe(event: CsmsEvent): string {
 export function LiveFeed({
   chargePointId,
   height = 'h-[420px]',
+  maxHeight,
+  className,
+  style,
   events: wanted,
   showChargePoint = true,
   /** Refresh server-rendered data when a state-changing event arrives. */
@@ -91,6 +95,9 @@ export function LiveFeed({
 }: {
   chargePointId?: string;
   height?: string;
+  maxHeight?: string | number;
+  className?: string;
+  style?: React.CSSProperties;
   events?: readonly string[];
   showChargePoint?: boolean;
   refreshOnEvent?: boolean;
@@ -99,6 +106,18 @@ export function LiveFeed({
 }) {
   const router = useRouter();
   const [paused, setPaused] = React.useState(false);
+
+  const resolvedMaxHeight = React.useMemo(() => {
+    if (maxHeight !== undefined) {
+      return typeof maxHeight === 'number' ? `${maxHeight}px` : maxHeight;
+    }
+    if (!height) return undefined;
+    const match = height.match(/^h-\[(.+)\]$/);
+    if (match) return match[1];
+    if (/^\d+$/.test(height)) return `${height}px`;
+    if (/^\d+(px|rem|em|vh|%)$/.test(height)) return height;
+    return undefined;
+  }, [height, maxHeight]);
 
   // Coalesce bursts: a busy site can emit many events per second and refreshing
   // the route on each one would thrash the server.
@@ -138,8 +157,8 @@ export function LiveFeed({
   }, [clear, externalOnClear]);
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between gap-2 border-b border-[var(--color-border)] px-4 py-2">
+    <div className={cn('flex h-full min-h-0 flex-col overflow-hidden', className)} style={style}>
+      <div className="flex shrink-0 items-center justify-between gap-2 border-b border-[var(--color-border)] px-4 py-2">
         <span className="inline-flex items-center gap-1.5 text-xs text-[var(--color-fg-muted)]">
           <Dot
             tone={paused ? 'idle' : status === 'live' ? 'ok' : status === 'connecting' ? 'warn' : 'danger'}
@@ -163,7 +182,13 @@ export function LiveFeed({
         </div>
       </div>
 
-      <ul className={`flex-1 divide-y divide-[var(--color-border)] overflow-y-auto ${height}`}>
+      <ul
+        className={cn(
+          'scroll-thin min-h-0 flex-1 divide-y divide-[var(--color-border)] overflow-y-auto overscroll-y-contain',
+          height,
+        )}
+        style={resolvedMaxHeight ? { maxHeight: resolvedMaxHeight } : undefined}
+      >
         {events.length === 0 ? (
           <li className="px-4 py-10 text-center text-xs text-[var(--color-fg-muted)]">
             {paused ? 'Урсгал түр зогссон.' : 'Үйл ажиллагаа хүлээж байна…'}

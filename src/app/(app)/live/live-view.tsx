@@ -283,7 +283,7 @@ export function LiveView() {
         </div>
 
         {/* Live Feed Stream Card */}
-        <Card className="flex flex-col">
+        <Card className="flex flex-col min-h-0 overflow-hidden">
           <CardHeader
             title="Үйл явдлын урсгал"
             description={applied ? `${applied}-аар шүүсэн` : 'Бүх цэнэглэх станц'}

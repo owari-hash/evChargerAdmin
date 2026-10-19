@@ -470,7 +470,7 @@ function OverviewTab({ detail }: { detail: ChargePointDetail }) {
         </Card>
       </div>
 
-      <Card className="flex flex-col">
+      <Card className="flex flex-col min-h-0 overflow-hidden">
         <CardHeader title="Шууд үйл ажиллагаа" description="Энэ станцаас ирж буй үйл явдал" />
         <LiveFeed
           chargePointId={detail.cpId}

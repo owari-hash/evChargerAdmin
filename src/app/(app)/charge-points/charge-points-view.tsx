@@ -222,30 +222,37 @@ export function ChargePointsView({
               ) : (
                 rows.map((cp) => (
                   <TR key={cp.id}>
-                    <TD align="left" className="whitespace-nowrap">
-                      <Link
-                        href={`/charge-points/${encodeURIComponent(cp.id)}`}
-                        className={cn(
-                          'font-medium hover:text-[var(--color-brand)] hover:underline',
-                          !cp.name?.trim() && 'font-mono',
-                        )}
-                        title={cp.name?.trim() ? cp.cpId : undefined}
-                      >
-                        {cp.name?.trim() || cp.cpId}
-                      </Link>
-                      {cp.name?.trim() ? (
-                        <p className="font-mono text-[11px] text-[var(--color-fg-subtle)]">{cp.cpId}</p>
-                      ) : null}
+                    <TD align="left">
+                      <div className="max-w-[200px]">
+                        <Link
+                          href={`/charge-points/${encodeURIComponent(cp.id)}`}
+                          className={cn(
+                            'block truncate font-medium hover:text-[var(--color-brand)] hover:underline',
+                            !cp.name?.trim() && 'font-mono',
+                          )}
+                          title={cp.name?.trim() ? `${cp.name} (${cp.cpId})` : cp.cpId}
+                        >
+                          {cp.name?.trim() || cp.cpId}
+                        </Link>
+                        {cp.name?.trim() ? (
+                          <p className="truncate font-mono text-[11px] text-[var(--color-fg-subtle)]" title={cp.cpId}>
+                            {cp.cpId}
+                          </p>
+                        ) : null}
+                      </div>
                     </TD>
                     <TD className="text-xs">
                       {cp.client ? (
-                        <Link
-                          href={`/clients/${encodeURIComponent(cp.client.id)}`}
-                          className="font-medium text-[var(--color-brand)] hover:underline inline-flex items-center gap-1"
-                        >
-                          <Building2 className="h-3 w-3 shrink-0" />
-                          <span>{cp.client.name}</span>
-                        </Link>
+                        <div className="inline-flex max-w-[180px] items-center">
+                          <Link
+                            href={`/clients/${encodeURIComponent(cp.client.id)}`}
+                            className="inline-flex max-w-full items-center gap-1.5 font-medium text-[var(--color-brand)] hover:underline"
+                            title={cp.client.name}
+                          >
+                            <Building2 className="h-3.5 w-3.5 shrink-0" />
+                            <span className="truncate">{cp.client.name}</span>
+                          </Link>
+                        </div>
                       ) : (
                         <span className="text-[var(--color-fg-subtle)]">—</span>
                       )}
@@ -270,17 +277,33 @@ export function ChargePointsView({
                       </div>
                     </TD>
                     <TD className="text-xs text-[var(--color-fg-muted)]">
-                      {cp.chargePointVendor || cp.chargePointModel
-                        ? `${cp.chargePointVendor ?? ''} ${cp.chargePointModel ?? ''}`.trim()
-                        : '—'}
+                      {cp.chargePointVendor || cp.chargePointModel ? (
+                        <div
+                          className="max-w-[150px] truncate"
+                          title={`${cp.chargePointVendor ?? ''} ${cp.chargePointModel ?? ''}`.trim()}
+                        >
+                          {`${cp.chargePointVendor ?? ''} ${cp.chargePointModel ?? ''}`.trim()}
+                        </div>
+                      ) : (
+                        '—'
+                      )}
                     </TD>
                     <TD className="font-mono text-xs text-[var(--color-fg-muted)]">
-                      {cp.firmwareVersion ?? '—'}
+                      {cp.firmwareVersion ? (
+                        <div
+                          className="max-w-[130px] truncate"
+                          title={cp.firmwareVersion}
+                        >
+                          {cp.firmwareVersion}
+                        </div>
+                      ) : (
+                        '—'
+                      )}
                     </TD>
                     <TD>
                       <RegistrationBadge status={cp.registrationStatus} />
                     </TD>
-                    <TD className="text-xs text-[var(--color-fg-muted)]">
+                    <TD className="whitespace-nowrap text-xs text-[var(--color-fg-muted)]">
                       {formatRelative(cp.lastSeenAt)}
                     </TD>
                     {canEdit ? (

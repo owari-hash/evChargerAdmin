@@ -45,14 +45,14 @@ export function StationName({
   const isMono = !cleanName && Boolean(cleanCpId);
 
   const primary = (
-    <span className={cn('font-medium', isMono && 'font-mono')}>{primaryText}</span>
+    <span className={cn('truncate font-medium', isMono && 'font-mono')}>{primaryText}</span>
   );
 
   const body =
     subText && !inline ? (
-      <span className="inline-flex flex-col leading-tight">
+      <span className="inline-flex max-w-full min-w-0 flex-col leading-tight">
         {primary}
-        <span className="font-mono text-[11px] font-normal text-[var(--color-fg-subtle)]">
+        <span className="truncate font-mono text-[11px] font-normal text-[var(--color-fg-subtle)]">
           {subText}
         </span>
       </span>
@@ -65,7 +65,7 @@ export function StationName({
   if (!link) {
     return (
       <span
-        className={cn('text-xs', className)}
+        className={cn('inline-flex max-w-full min-w-0 text-xs', className)}
         title={subText ? `${primaryText} (${subText})` : primaryText}
       >
         {body}
@@ -78,7 +78,7 @@ export function StationName({
       href={`/charge-points/${encodeURIComponent(targetLink)}`}
       title={subText ? `${primaryText} (${subText})` : primaryText}
       onClick={(e) => e.stopPropagation()}
-      className={cn('text-xs hover:text-[var(--color-brand)] hover:underline', className)}
+      className={cn('inline-flex max-w-full min-w-0 text-xs hover:text-[var(--color-brand)] hover:underline', className)}
     >
       {body}
     </Link>

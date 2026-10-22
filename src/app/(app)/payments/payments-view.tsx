@@ -126,13 +126,6 @@ export function PaymentsView({ initialQuery, initialStatus }: { initialQuery: st
 
   return (
     <div className="space-y-4">
-      <div>
-        <h1 className="text-xl font-semibold tracking-tight">Төлбөр</h1>
-        <p className="mt-1 text-sm text-[var(--color-fg-muted)]">
-          Жолооч нарын хэтэвч цэнэглэлт. «Мөнгө орсонгүй» гэвэл утасны дугаараар хайгаад «Банкнаас шалгах»-ыг дарна уу.
-        </p>
-      </div>
-
       <div className="grid gap-3 sm:grid-cols-3">
         <Stat label="Төлөгдсөн" value={formatMoney(paid?.amount ?? 0)} hint={`${formatNumber(paid?.count ?? 0)} төлбөр`} tone="ok" />
         <Stat label="Хүлээгдэж буй" value={formatNumber(pending?.count ?? 0)} hint="банкны хариу хүлээж байна" tone="warn" />

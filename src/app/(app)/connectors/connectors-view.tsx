@@ -148,20 +148,12 @@ export function ConnectorsView({
 
   return (
     <div className="space-y-4">
-      {/* Page Header */}
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <h1 className="text-xl font-bold tracking-tight text-[var(--color-fg)]">Холбогчууд</h1>
-            <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-0.5 text-xs text-[var(--color-fg-muted)]">
-              <Dot tone="ok" pulse />
-              Бодит цагийн хяналт
-            </span>
-          </div>
-          <p className="mt-0.5 text-xs text-[var(--color-fg-muted)]">
-            Цэнэглэх станцуудын бүх холбогч, бууны бодит цагийн төлөв, чадал болон ашиглалт
-          </p>
-        </div>
+      {/* Header controls */}
+      <div className="flex items-center justify-between gap-2">
+        <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-2.5 py-0.5 text-xs text-[var(--color-fg-muted)]">
+          <Dot tone="ok" pulse />
+          Бодит цагийн хяналт
+        </span>
 
         <div className="flex items-center gap-2">
           <Button

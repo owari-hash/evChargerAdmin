@@ -44,16 +44,6 @@ export function AppVersionsView({ canEdit }: { canEdit: boolean }) {
 
   return (
     <div className="space-y-5">
-      <header>
-        <h1 className="text-lg font-semibold text-[var(--color-fg)]">Апп хувилбар</h1>
-        <p className="mt-1 max-w-3xl text-sm text-[var(--color-fg-muted)]">
-          Жолоочийн гар утасны апп нээгдэх бүрт энд тохируулсан хувилбартай өөрийгөө харьцуулна.
-          Сүүлийн хувилбараас хоцорсон бол шинэчлэх санал харагдана; заавал шинэчлэх босгоос доош
-          бол аппыг үргэлжлүүлэх боломжгүй болно. Android, iOS хоёр тусдаа — дэлгүүрийн холбоос нь
-          ч, шинэчлэлт нь ч өөр өөр цагт гардаг.
-        </p>
-      </header>
-
       {isLoading ? (
         <div className="grid gap-5 xl:grid-cols-2">
           <Skeleton className="h-96" />

@@ -12,7 +12,6 @@ import {
   Eye,
   Layers,
   Play,
-  PlayCircle,
   Plug,
   RefreshCw,
   Search,
@@ -661,18 +660,8 @@ export function SimulatorView() {
 
   return (
     <div className="space-y-6 pb-12">
-      {/* Top Banner / Mode Switcher */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between border-b border-[var(--color-border)] pb-4">
-        <div>
-          <h1 className="text-xl font-bold tracking-tight text-[var(--color-fg)] flex items-center gap-2">
-            <PlayCircle className="h-6 w-6 text-[var(--color-brand)]" />
-            OCPP 1.6J Цэнэглэх Станцын Симулятор
-          </h1>
-          <p className="text-xs text-[var(--color-fg-muted)] mt-1">
-            Машины VIN, зайны багтаамж, бодит GB/T DataTransfer болон ачаалал шалгах бүрэн симулятор.
-          </p>
-        </div>
-
+      {/* Mode switcher */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-end border-b border-[var(--color-border)] pb-4">
         <div className="flex items-center gap-1.5 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-1">
           <button
             onClick={() => setActiveTab('single')}

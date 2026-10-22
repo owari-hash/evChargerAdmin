@@ -201,19 +201,11 @@ export function TariffsView() {
 
   return (
     <div className="mx-auto max-w-6xl space-y-6 pb-12 pt-2">
-      {/* Top Banner & Header */}
+      {/* Header controls */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-1 text-xs font-medium text-[var(--color-brand)]">
-            <Zap className="h-3.5 w-3.5" />
-            <span>ЭХЗХ-ны 2026 оны №350 тогтоол</span>
-          </div>
-          <h1 className="mt-2 text-2xl font-bold tracking-tight text-[var(--color-fg)] sm:text-3xl">
-            Хэрэглээгээ оруул. Төлбөрөө хар.
-          </h1>
-          <p className="mt-1 text-sm text-[var(--color-fg-muted)]">
-            Өдөр, оргил, шөнө — албан ёсны гурван тарифт тооцоолуур ба үнийн санал.
-          </p>
+        <div className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-1 text-xs font-medium text-[var(--color-brand)]">
+          <Zap className="h-3.5 w-3.5" />
+          <span>ЭХЗХ-ны 2026 оны №350 тогтоол</span>
         </div>
 
         <div className="flex items-center gap-2 self-start sm:self-auto">

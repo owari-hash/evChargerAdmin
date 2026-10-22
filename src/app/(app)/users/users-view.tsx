@@ -8,7 +8,7 @@ import { REFRESH } from '@/lib/live-query';
 import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
 import { formatDateTime, formatRelative } from '@/lib/format';
 import { USER_ROLES, type User, type UserRole } from '@/lib/types';
-import { Badge, Button, Card, CardHeader, ErrorNote, Field, Input, Select } from '@/components/ui/primitives';
+import { Badge, Button, Card, ErrorNote, Field, Input, Select } from '@/components/ui/primitives';
 import { RoleBadge } from '@/components/ui/status';
 import { ROLE, mn } from '@/lib/mn';
 import { ConfirmModal, Modal } from '@/components/ui/modal';
@@ -43,16 +43,12 @@ export function UsersView({ currentUserId }: { currentUserId: string }) {
   return (
     <>
       <Card>
-        <CardHeader
-          title="Консолын хэрэглэгчид"
-          description="Админ консолд нэвтрэх эрхтэй хэрэглэгчид ба тэдний эрх"
-          actions={
-            <Button variant="primary" size="sm" onClick={() => setCreating(true)}>
-              <Plus className="h-3.5 w-3.5" />
-              Шинэ хэрэглэгч
-            </Button>
-          }
-        />
+        <div className="flex items-center justify-end gap-2 border-b border-[var(--color-border)] px-5 py-3">
+          <Button variant="primary" size="sm" onClick={() => setCreating(true)}>
+            <Plus className="h-3.5 w-3.5" />
+            Шинэ хэрэглэгч
+          </Button>
+        </div>
         <TableWrap>
           <Table>
             <THead>

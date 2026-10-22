@@ -17,7 +17,7 @@ import {
 import { toast } from 'sonner';
 import { REFRESH } from '@/lib/live-query';
 import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
-import { Badge, Button, Card, CardHeader, EmptyState } from '@/components/ui/primitives';
+import { Badge, Button, Card, EmptyState } from '@/components/ui/primitives';
 import { ConfirmModal } from '@/components/ui/modal';
 import { Pagination } from '@/components/ui/pagination';
 import {
@@ -125,25 +125,21 @@ export function EbarimtMerchantsView({
     <div className="space-y-6">
       {/* Primary List Table */}
       <Card>
-        <CardHeader
-          title="И-Баримт тохиргоонууд"
-          description="Баримт илгээх ТТД, байршил ба орчны тохиргоо"
-          actions={
-            canEdit ? (
-              <Button
-                size="sm"
-                className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-sm"
-                onClick={() => {
-                  setEditingMerchant(null);
-                  setModalOpen(true);
-                }}
-              >
-                <Plus className="mr-1.5 h-4 w-4" />
-                И-Баримт тохиргоо нэмэх
-              </Button>
-            ) : null
-          }
-        />
+        {canEdit ? (
+          <div className="flex items-center justify-end gap-2 border-b border-[var(--color-border)] px-5 py-3">
+            <Button
+              size="sm"
+              className="bg-emerald-600 hover:bg-emerald-700 text-white font-semibold shadow-sm"
+              onClick={() => {
+                setEditingMerchant(null);
+                setModalOpen(true);
+              }}
+            >
+              <Plus className="mr-1.5 h-4 w-4" />
+              И-Баримт тохиргоо нэмэх
+            </Button>
+          </div>
+        ) : null}
         <TableWrap>
           <Table>
             <THead>

@@ -186,35 +186,18 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
 
   return (
     <div className="space-y-6">
-      {/* Page Title & Preset Filters */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="flex items-center gap-2">
-            <h1 className="text-xl font-bold tracking-tight">
-              {isClient ? `${user?.clientName ?? 'Байгууллагын'} станцын тайлан` : 'Станцын нэгдсэн тайлан'}
-            </h1>
-            <Badge tone="brand">
-              <Calculator className="mr-1 h-3 w-3" />
-              Тооцоололтой
-            </Badge>
-          </div>
-          <p className="mt-1 text-xs text-[var(--color-fg-muted)]">
-            Цэнэглэх станцуудын эрчим хүчний хэрэглээ, борлуулалтын орлого болон Eplug хураамжийн нарийвчилсан тооцоо
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={exportCsv}
-            disabled={!stations.length}
-            title="CSV татах"
-          >
-            <Download className="h-3.5 w-3.5" />
-            CSV экспорт
-          </Button>
-        </div>
+      {/* Header controls */}
+      <div className="flex flex-wrap items-center justify-end gap-2">
+        <Button
+          variant="secondary"
+          size="sm"
+          onClick={exportCsv}
+          disabled={!stations.length}
+          title="CSV татах"
+        >
+          <Download className="h-3.5 w-3.5" />
+          CSV экспорт
+        </Button>
       </div>
 
       {/* Primary KPI Grid */}

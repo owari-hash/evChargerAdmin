@@ -26,6 +26,7 @@ interface PaymentRow {
   invoiceId?: string;
   provider: 'QPAY' | 'QPAY_QUICKQR' | 'GOLOMT';
   golomtMode?: 'PAGE' | 'TOKEN';
+  golomtChannel?: 'CARD' | 'SOCIALPAY';
   purpose: 'CHARGING' | 'WALLET_TOPUP';
   status: PaymentStatus;
   amount: number;
@@ -56,7 +57,10 @@ const STATUS: Record<PaymentStatus, { label: string; tone: Tone }> = {
 };
 
 function methodLabel(p: PaymentRow): string {
-  if (p.provider === 'GOLOMT') return p.golomtMode === 'TOKEN' ? 'Хадгалсан карт' : 'Карт · Голомт';
+  if (p.provider === 'GOLOMT') {
+    if (p.golomtMode === 'TOKEN') return 'Хадгалсан карт';
+    return p.golomtChannel === 'SOCIALPAY' ? 'SocialPay' : 'Карт · Голомт';
+  }
   return 'QPay';
 }
 

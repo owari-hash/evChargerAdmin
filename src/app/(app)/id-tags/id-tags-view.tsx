@@ -284,7 +284,7 @@ export function IdTagsView({
       </Card>
 
       <IdTagModal
-        key={creating ? 'create' : (editing?.idTag ?? 'none')}
+        key={creating ? 'create' : `edit:${editing?.idTag ?? 'none'}`}
         open={creating || editing !== null}
         tag={editing}
         onClose={() => {
@@ -301,7 +301,7 @@ export function IdTagsView({
       />
 
       <AuthorizeCheckModal
-        key={checking ?? 'none'}
+        key={`check:${checking ?? 'none'}`}
         idTag={checking}
         onClose={() => setChecking(null)}
       />

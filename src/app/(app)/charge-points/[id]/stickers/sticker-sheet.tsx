@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { ArrowLeft, Printer } from 'lucide-react';
 import { withBasePath } from '@/lib/base-path';
 import { brand } from '@/lib/config';
+import { connectorLetter } from '@/lib/format';
 import type { Connector } from '@/lib/types';
 import { Button, Card, EmptyState } from '@/components/ui/primitives';
 
@@ -115,7 +116,9 @@ function Sticker({
         </div>
         <div className="shrink-0 rounded-md bg-black px-2.5 py-1 text-center">
           <p className="text-[9px] font-semibold uppercase leading-none text-white">Хошуу</p>
-          <p className="text-lg font-black leading-tight text-white">{connector.connectorId}</p>
+          <p className="text-lg font-black leading-tight text-white">
+            {connectorLetter(connector.connectorId)}
+          </p>
         </div>
       </div>
 
@@ -123,7 +126,7 @@ function Sticker({
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src={withBasePath(`/console-api/qr?data=${encodeURIComponent(connector.qrUrl ?? '')}`)}
-          alt={`Хошуу ${connector.connectorId}-ийн QR код`}
+          alt={`Хошуу ${connectorLetter(connector.connectorId)}-ийн QR код`}
           className="h-28 w-28 shrink-0"
         />
         <div className="min-w-0 text-[11px] leading-snug">

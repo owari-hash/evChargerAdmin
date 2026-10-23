@@ -6,6 +6,7 @@ import useSWR from 'swr';
 import { REFRESH } from '@/lib/live-query';
 import { apiUrl, fetcher } from '@/lib/client';
 import {
+  connectorLetter,
   formatDateTime,
   formatDuration,
   formatMoney,
@@ -186,7 +187,7 @@ export function TransactionsView({
                           cpId={tx.cpId}
                         />
                         <span className="ml-1 text-xs text-[var(--color-fg-subtle)]">
-                          #{tx.connectorId}
+                          {connectorLetter(tx.connectorId)}
                         </span>
                       </TD>
                       <TD className="text-xs">

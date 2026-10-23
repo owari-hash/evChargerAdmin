@@ -8,7 +8,7 @@ import {
   Zap,
 } from 'lucide-react';
 import { csmsSafe } from '@/lib/server-api';
-import { formatKwh, formatMoney, formatNumber, formatRelative, formatWh } from '@/lib/format';
+import { connectorLetter, formatKwh, formatMoney, formatNumber, formatRelative, formatWh } from '@/lib/format';
 import type {
   EnergySeriesPoint,
   Paginated,
@@ -177,7 +177,7 @@ export default async function OverviewPage() {
                           cpId={tx.cpId}
                         />
                         <span className="ml-1 text-xs text-[var(--color-fg-subtle)]">
-                          #{tx.connectorId}
+                          {connectorLetter(tx.connectorId)}
                         </span>
                       </TD>
                       <TD className="font-mono text-xs">{tx.idTag}</TD>

@@ -8,7 +8,7 @@ import { toast } from 'sonner';
 import { REFRESH } from '@/lib/live-query';
 import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
 import { cn } from '@/lib/cn';
-import { formatNumber, formatRelative } from '@/lib/format';
+import { connectorLetter, formatNumber, formatRelative } from '@/lib/format';
 import type { ChargePoint, Client, Paginated } from '@/lib/types';
 import {
   Button,
@@ -265,7 +265,7 @@ export function ChargePointsView({
                         {(cp.connectors ?? [])
                           .filter((c) => c.connectorId > 0)
                           .map((c) => (
-                            <span key={c.connectorId} title={`${c.connectorId} дугаар холбогч`}>
+                            <span key={c.connectorId} title={`${connectorLetter(c.connectorId)} холбогч`}>
                               <ConnectorStatusBadge status={c.status} />
                             </span>
                           ))}

@@ -23,7 +23,7 @@ import {
 import { toast } from 'sonner';
 import { REFRESH } from '@/lib/live-query';
 import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
-import { formatDateTime, formatMoney, formatNumber, formatRelative } from '@/lib/format';
+import { connectorLetter, formatDateTime, formatMoney, formatNumber, formatRelative } from '@/lib/format';
 import type { ChargePoint, Client, IdTag, Paginated } from '@/lib/types';
 import {
   Badge,
@@ -231,7 +231,7 @@ export function ClientDetailView({
                               .map((c) => (
                                 <span
                                   key={c.connectorId}
-                                  title={`${c.connectorId} дугаар холбогч`}
+                                  title={`${connectorLetter(c.connectorId)} холбогч`}
                                 >
                                   <ConnectorStatusBadge status={c.status} />
                                 </span>

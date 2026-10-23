@@ -5,7 +5,14 @@ import { useRouter } from 'next/navigation';
 import { Pause, Play, Trash2 } from 'lucide-react';
 import { Badge, Button, Dot, type Tone } from '@/components/ui/primitives';
 import { useLiveEvents } from '@/lib/use-live-events';
-import { formatPercent, formatPower, formatRelative, formatWh, humanizeEvent } from '@/lib/format';
+import {
+  connectorLetter,
+  formatPercent,
+  formatPower,
+  formatRelative,
+  formatWh,
+  humanizeEvent,
+} from '@/lib/format';
 import { CONNECTOR_STATUS, EVENT, MEASURAND, STOP_REASON, mn } from '@/lib/mn';
 import type { CsmsEvent } from '@/lib/types';
 import { StationName } from '@/components/station-name';
@@ -48,12 +55,16 @@ function describe(event: CsmsEvent): string {
   // `chargePointId` and `at` live on the envelope itself.
   const e = (event.data ?? {}) as Record<string, unknown>;
   switch (event.event) {
-    case 'connector.status':
-      return `${e.connectorId ?? '?'} холбогч → ${mn(CONNECTOR_STATUS, e.status as string)}${
+    case 'connector.status': {
+      const label = typeof e.connectorId === 'number' ? connectorLetter(e.connectorId) : '?';
+      return `${label} холбогч → ${mn(CONNECTOR_STATUS, e.status as string)}${
         e.errorCode && e.errorCode !== 'NoError' ? ` (${e.errorCode})` : ''
       }`;
-    case 'transaction.started':
-      return `#${e.transactionId ?? '?'} цэнэглэлт ${e.connectorId ?? '?'} холбогч дээр эхэллээ (карт ${e.idTag ?? '?'})`;
+    }
+    case 'transaction.started': {
+      const label = typeof e.connectorId === 'number' ? connectorLetter(e.connectorId) : '?';
+      return `#${e.transactionId ?? '?'} цэнэглэлт ${label} холбогч дээр эхэллээ (карт ${e.idTag ?? '?'})`;
+    }
     case 'transaction.stopped':
       return `#${e.transactionId ?? '?'} цэнэглэлт дуусав${e.reason ? ` — ${mn(STOP_REASON, e.reason as string)}` : ''}`;
     case 'transaction.metervalue': {

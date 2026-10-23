@@ -8,6 +8,7 @@ import { toast } from 'sonner';
 import { api, errorMessage } from '@/lib/client';
 import { REFRESH, useAutoRefresh } from '@/lib/live-query';
 import {
+  connectorLetter,
   formatDateTime,
   formatDuration,
   formatMoney,
@@ -171,7 +172,7 @@ export function TransactionView({
                   cpId={tx.cpId}
                   inline
                 />
-                {` · ${tx.connectorId} холбогч · карт `}
+                {` · ${connectorLetter(tx.connectorId)} холбогч · карт `}
                 <Link
                   href={`/id-tags?search=${encodeURIComponent(tx.idTag)}`}
                   className="font-mono hover:text-[var(--color-brand)] hover:underline"

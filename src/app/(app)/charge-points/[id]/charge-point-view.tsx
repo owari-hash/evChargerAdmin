@@ -21,6 +21,7 @@ import useSWR from 'swr';
 import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
 import { REFRESH, useAutoRefresh } from '@/lib/live-query';
 import {
+  connectorLetter,
   formatDateTime,
   formatDuration,
   formatMoney,
@@ -391,7 +392,7 @@ function OverviewTab({ detail }: { detail: ChargePointDetail }) {
                           #{tx.transactionId ?? tx.id}
                         </Link>
                       </TD>
-                      <TD className="text-xs">#{tx.connectorId}</TD>
+                      <TD className="text-xs">{connectorLetter(tx.connectorId)}</TD>
                       <TD className="font-mono text-xs">{tx.idTag}</TD>
                       <TD className="text-xs">
                         {formatWh((tx.lastMeterWh ?? tx.meterStart) - tx.meterStart)}
@@ -577,7 +578,7 @@ function ConnectorsTab({
     setBusy(true);
     try {
       await api.del(`connectors/${deleting.id}`);
-      toast.success(`Холбогч №${deleting.connectorId} устгагдлаа`);
+      toast.success(`Холбогч ${connectorLetter(deleting.connectorId)} устгагдлаа`);
       setDeleting(null);
       router.refresh();
     } catch (err) {
@@ -654,7 +655,7 @@ function ConnectorsTab({
             <div className="flex items-start justify-between gap-2">
               <div className="min-w-0">
                 <p className="text-sm font-semibold">
-                  {c.connectorId} дугаар холбогч
+                  {connectorLetter(c.connectorId)} холбогч
                   {c.label ? (
                     <span className="ml-1.5 font-normal text-[var(--color-fg-muted)]">
                       · {c.label}
@@ -684,7 +685,7 @@ function ConnectorsTab({
                 {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={withBasePath(`/console-api/qr?data=${encodeURIComponent(c.qrUrl ?? '')}`)}
-                  alt={`Холбогч ${c.connectorId}-ийн QR код`}
+                  alt={`Холбогч ${connectorLetter(c.connectorId)}-ийн QR код`}
                   className="h-20 w-20 shrink-0 rounded bg-white p-1"
                 />
                 <div className="min-w-0">
@@ -789,7 +790,7 @@ function ConnectorsTab({
             <TBody>
               {connectors.map((c) => (
                 <TR key={c.connectorId}>
-                  <TD className="font-mono text-xs">{c.connectorId}</TD>
+                  <TD className="font-mono text-xs">{connectorLetter(c.connectorId)}</TD>
                   <TD>
                     <ConnectorStatusBadge status={c.status} />
                   </TD>

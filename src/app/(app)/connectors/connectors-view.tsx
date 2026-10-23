@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { REFRESH } from '@/lib/live-query';
 import { apiUrl, fetcher } from '@/lib/client';
-import { formatNumber, formatPower, formatRelative, formatWh } from '@/lib/format';
+import { connectorLetter, formatNumber, formatPower, formatRelative, formatWh } from '@/lib/format';
 import {
   CONNECTOR_STATUSES,
   type Connector,
@@ -450,7 +450,7 @@ export function ConnectorsView({
                                 : 'bg-[var(--color-brand-soft)] text-[var(--color-brand)]',
                             )}
                           >
-                            #{c.connectorId}
+                            {c.connectorId === 0 ? '#0' : connectorLetter(c.connectorId)}
                           </span>
 
                           <div className="flex flex-col leading-tight">
@@ -579,7 +579,7 @@ export function ConnectorsView({
                             variant="ghost"
                             size="sm"
                             onClick={() => setEditing(c)}
-                            aria-label={`${c.chargePointId} станцын ${c.connectorId} дугаар холбогчийг тохируулах`}
+                            aria-label={`${c.chargePointId} станцын ${connectorLetter(c.connectorId)} холбогчийг тохируулах`}
                             className="text-xs"
                           >
                             <Pencil className="h-3.5 w-3.5" />

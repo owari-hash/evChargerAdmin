@@ -7,7 +7,7 @@ import { CalendarClock, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { REFRESH } from '@/lib/live-query';
 import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
-import { formatDateTime, formatRelative } from '@/lib/format';
+import { connectorLetter, formatDateTime, formatRelative } from '@/lib/format';
 import { useNow } from '@/lib/use-now';
 import { RESERVATION_STATES, type Paginated, type Reservation } from '@/lib/types';
 import { Button, Card, EmptyState, Input, Select } from '@/components/ui/primitives';
@@ -129,7 +129,9 @@ export function ReservationsView({ canOperate }: { canOperate: boolean }) {
                       <TD>
                         <StationName id={r.chargePointId} />
                       </TD>
-                      <TD className="font-mono text-xs">{r.connectorId}</TD>
+                      <TD className="font-mono text-xs">
+                        {r.connectorId > 0 ? connectorLetter(r.connectorId) : r.connectorId}
+                      </TD>
                       <TD className="font-mono text-xs">{r.idTag}</TD>
                       <TD className="whitespace-nowrap text-xs">
                         <span
@@ -209,7 +211,7 @@ export function ReservationsView({ canOperate }: { canOperate: boolean }) {
               <StationName id={cancelling.chargePointId} inline link={false} className="text-sm" />
             ) : null}{' '}
             станцын{' '}
-            {cancelling?.connectorId} дугаар холбогчийн захиалгыг чөлөөлнө. Холбогч бүх жолоочид
+            {cancelling ? connectorLetter(cancelling.connectorId) : ''} холбогчийн захиалгыг чөлөөлнө. Холбогч бүх жолоочид
             нээлттэй болно.
           </>
         }

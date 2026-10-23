@@ -5,7 +5,7 @@ import useSWR from 'swr';
 import { SlidersHorizontal } from 'lucide-react';
 import { REFRESH } from '@/lib/live-query';
 import { apiUrl, fetcher } from '@/lib/client';
-import { formatDateTime, formatNumber, formatRelative } from '@/lib/format';
+import { connectorLetter, formatDateTime, formatNumber, formatRelative } from '@/lib/format';
 import type { ChargingProfile, Paginated } from '@/lib/types';
 import { Badge, Card, CodeBlock, EmptyState, Input } from '@/components/ui/primitives';
 import { FilterBar, Pagination } from '@/components/ui/pagination';
@@ -104,7 +104,9 @@ export function ChargingProfilesView() {
                         <TD>
                           <StationName id={p.chargePointId} />
                         </TD>
-                        <TD className="font-mono text-xs">{p.connectorId}</TD>
+                        <TD className="font-mono text-xs">
+                          {p.connectorId > 0 ? connectorLetter(p.connectorId) : p.connectorId}
+                        </TD>
                         <TD className="text-xs">
                           {p.chargingProfilePurpose ? (
                             <Badge tone="info">{p.chargingProfilePurpose}</Badge>

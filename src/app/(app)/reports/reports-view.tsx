@@ -18,7 +18,15 @@ import {
   Zap,
 } from 'lucide-react';
 import { apiUrl, fetcher } from '@/lib/client';
-import { formatDate, formatDateTime, formatMoney, formatNumber, formatPercent, formatWh } from '@/lib/format';
+import {
+  connectorLetter,
+  formatDate,
+  formatDateTime,
+  formatMoney,
+  formatNumber,
+  formatPercent,
+  formatWh,
+} from '@/lib/format';
 import type { ChargePoint, Client, Paginated, ReportSummary, SessionUser } from '@/lib/types';
 import { Badge, Button, Card, CardHeader, Field, Select } from '@/components/ui/primitives';
 import { DateRangePicker, toIsoDate, type DateRange } from '@/components/ui/date-picker';
@@ -628,7 +636,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                     <TR key={`${c.chargePointId}-${c.connectorId}`}>
                       <TD className="font-medium">{c.stationName}</TD>
                       <TD>
-                        <Badge tone="idle">Холбогч #{c.connectorId}</Badge>
+                        <Badge tone="idle">Холбогч {connectorLetter(c.connectorId)}</Badge>
                       </TD>
                       <TD>{formatNumber(c.sessionsCount)}</TD>
                       <TD className="font-mono text-sm">{formatNumber(c.energyKwh, 2)} кВт.ц</TD>
@@ -673,7 +681,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                       <TD>
                         <div className="font-medium">{tx.stationName}</div>
                         <div className="text-[11px] text-[var(--color-fg-subtle)] font-mono">
-                          Буу #{tx.connectorId} {tx.vehicleModel ? `· ${tx.vehicleModel}` : ''}
+                          Буу {connectorLetter(tx.connectorId)} {tx.vehicleModel ? `· ${tx.vehicleModel}` : ''}
                         </div>
                       </TD>
                       <TD className="text-xs">

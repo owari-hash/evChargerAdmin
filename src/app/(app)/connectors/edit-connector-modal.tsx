@@ -4,7 +4,7 @@ import * as React from 'react';
 import { toast } from 'sonner';
 import { LockOpen, TriangleAlert } from 'lucide-react';
 import { api, errorMessage } from '@/lib/client';
-import { formatPower, formatRelative, formatWh } from '@/lib/format';
+import { connectorLetter, formatPower, formatRelative, formatWh } from '@/lib/format';
 import { Button, DataRow, ErrorNote, Field, Select } from '@/components/ui/primitives';
 import { Modal } from '@/components/ui/modal';
 import { ConnectorStatusBadge, ErrorCodeBadge } from '@/components/ui/status';
@@ -91,7 +91,7 @@ export function EditConnectorModal({
       open
       onClose={onClose}
       title="Холбогч удирдах"
-      description={`${stationLabel(connector.chargePointId)} · ${connector.connectorId} дугаар холбогч`}
+      description={`${stationLabel(connector.chargePointId)} · ${connectorLetter(connector.connectorId)} холбогч`}
       footer={
         <>
           <Button variant="ghost" onClick={onClose} disabled={saving || unlocking}>

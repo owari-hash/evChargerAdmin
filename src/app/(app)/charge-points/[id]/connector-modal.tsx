@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { toast } from 'sonner';
 import { api, errorMessage } from '@/lib/client';
+import { connectorLetter } from '@/lib/format';
 import { CONNECTOR_TYPES, type Connector, type ConnectorType } from '@/lib/types';
 import { Button, Field, Input, Select } from '@/components/ui/primitives';
 import { Modal } from '@/components/ui/modal';
@@ -87,7 +88,7 @@ export function ConnectorModal({
     <Modal
       open={open}
       onClose={onClose}
-      title={editing ? `Холбогч №${connector.connectorId}` : 'Холбогч нэмэх'}
+      title={editing ? `Холбогч ${connectorLetter(connector.connectorId)}` : 'Холбогч нэмэх'}
       description={
         editing
           ? 'OCPP-ээс ирдэггүй мэдээллийг л энд засна. Төлөв, тоолуурыг станц өөрөө мэдээлнэ.'

@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import { BatteryFull, Bell, PlugZap } from 'lucide-react';
 import { toast } from 'sonner';
 import { Button, Dot } from '@/components/ui/primitives';
-import { formatMoney, formatNumber, formatRelative } from '@/lib/format';
+import { connectorLetter, formatMoney, formatNumber, formatRelative } from '@/lib/format';
 import { cn } from '@/lib/cn';
 import { useStationNames } from '@/lib/use-station-names';
 import {
@@ -67,7 +67,11 @@ function describe(event: CsmsEvent, stationName: (id?: string) => string | undef
         key: `tx:${String(id)}:started`,
         kind: 'transaction.started',
         title: 'Цэнэглэлт эхэллээ',
-        detail: [station, data.connectorId !== undefined ? `Холбогч ${String(data.connectorId)}` : null, who || null]
+        detail: [
+          station,
+          typeof data.connectorId === 'number' ? `Холбогч ${connectorLetter(data.connectorId)}` : null,
+          who || null,
+        ]
           .filter(Boolean)
           .join(' · '),
         tone: 'brand',

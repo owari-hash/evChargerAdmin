@@ -911,3 +911,61 @@ export interface Announcement {
   createdAt: string;
   updatedAt: string;
 }
+
+
+export interface AnalyticsOverview {
+  summary: {
+    totalVisits: number;
+    uniqueVisitors: number;
+    webVisits: number;
+    appVisits: number;
+    iosVisits: number;
+    androidVisits: number;
+    todayVisits: number;
+    todayUnique: number;
+    todayWeb: number;
+    todayIos: number;
+    todayAndroid: number;
+    yesterdayVisits: number;
+    trendPct: number;
+  };
+  dailyTrend: Array<{
+    date: string;
+    total: number;
+    unique: number;
+    web: number;
+    ios: number;
+    android: number;
+  }>;
+  hourlyDistribution: Array<{
+    hour: number;
+    label: string;
+    total: number;
+    web: number;
+    app: number;
+  }>;
+  platforms: {
+    web: number;
+    ios: number;
+    android: number;
+    webPct: number;
+    iosPct: number;
+    androidPct: number;
+  };
+  devices: Array<{ name: string; count: number; pct: number }>;
+  browsers: Array<{ name: string; count: number; pct: number }>;
+  topPages: Array<{ path: string; count: number; pct: number }>;
+  recentVisits: Array<{
+    id: string;
+    timestamp: string;
+    platform: 'web' | 'ios' | 'android';
+    path: string;
+    device: string;
+    browser: string;
+    os: string;
+  }>;
+  gaConfig?: {
+    enabled: boolean;
+    measurementId?: string;
+  };
+}

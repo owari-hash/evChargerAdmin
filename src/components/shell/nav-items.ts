@@ -1,6 +1,7 @@
 import {
   Activity,
   Banknote,
+  BarChart3,
   BatteryCharging,
   Building2,
   Calculator,
@@ -55,6 +56,7 @@ export const CLIENT_NAV_SECTIONS: NavSection[] = [
     title: 'Тайлан & Тооцоо',
     items: [
       { href: '/reports', label: 'Тайлан', icon: FileSpreadsheet, prefix: true },
+      { href: '/analytics', label: 'Вэб & Апп хандалт', icon: BarChart3 },
       { href: '/settlements', label: 'Тооцоо', icon: Banknote },
       { href: '/tariffs', label: 'Цахилгааны тариф', icon: Calculator },
     ],
@@ -78,6 +80,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: '/payments', label: 'Төлбөр', icon: Wallet },
       { href: '/ebarimt', label: 'И-Баримт', icon: Receipt, prefix: true },
       { href: '/reports', label: 'Тайлан', icon: FileSpreadsheet, prefix: true },
+      { href: '/analytics', label: 'Вэб & Апп хандалт', icon: BarChart3 },
       { href: '/live', label: 'Шууд урсгал', icon: Activity },
       { href: '/simulator', label: 'OCPP Симулятор', icon: PlayCircle },
     ],

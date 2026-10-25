@@ -252,7 +252,7 @@ export function NotificationBell({ userId }: { userId: string }) {
       ) : null}
 
       {open ? (
-        <div className="absolute right-0 top-full z-40 mt-2 w-80 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-lg">
+        <div className="fixed sm:absolute right-2 sm:right-0 top-14 sm:top-full z-40 mt-1 sm:mt-2 w-[calc(100vw-1rem)] sm:w-80 max-w-sm overflow-hidden rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-lg">
           <div className="border-b border-[var(--color-border)] px-3 py-2 text-center text-xs font-semibold text-[var(--color-fg-muted)]">
             Мэдэгдлүүд
           </div>

@@ -282,6 +282,8 @@ export interface Transaction {
   closedByCsms?: boolean;
   ebarimt?: {
     receiptId?: string;
+    lottery?: string;
+    qrData?: string;
     type?: 'B2C_RECEIPT' | 'B2B_RECEIPT';
     totalAmount?: number;
     status?: 'SUCCESS' | 'FAILED' | 'PENDING' | 'REFUNDED';

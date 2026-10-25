@@ -31,7 +31,7 @@ export function CardHeader({
   return (
     <div
       className={cn(
-        'flex flex-wrap items-start justify-between gap-3 border-b border-[var(--color-border)] px-5 py-4',
+        'flex flex-wrap items-start justify-between gap-2 sm:gap-3 border-b border-[var(--color-border)] px-3.5 sm:px-5 py-3 sm:py-4',
         className,
       )}
     >
@@ -41,13 +41,13 @@ export function CardHeader({
           <p className="mt-0.5 text-xs text-[var(--color-fg-muted)]">{description}</p>
         ) : null}
       </div>
-      {actions ? <div className="flex shrink-0 items-center gap-2">{actions}</div> : null}
+      {actions ? <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">{actions}</div> : null}
     </div>
   );
 }
 
 export function CardBody({ className, ...props }: React.ComponentProps<'div'>) {
-  return <div className={cn('p-5', className)} {...props} />;
+  return <div className={cn('p-3.5 sm:p-5', className)} {...props} />;
 }
 
 /**
@@ -67,13 +67,13 @@ export function DetailHeader({
   return (
     <div
       className={cn(
-        'flex flex-wrap items-center justify-between gap-3 border-b border-[var(--color-border)] px-5 py-3.5',
+        'flex flex-wrap items-center justify-between gap-2 sm:gap-3 border-b border-[var(--color-border)] px-3.5 sm:px-5 py-3 sm:py-3.5',
         className,
       )}
     >
-      <div className="flex min-w-0 flex-wrap items-center gap-2">{leading}</div>
+      <div className="flex min-w-0 flex-wrap items-center gap-1.5 sm:gap-2">{leading}</div>
       {actions ? (
-        <div className="ml-auto flex flex-wrap items-center justify-end gap-2">{actions}</div>
+        <div className="flex flex-wrap items-center justify-start sm:justify-end gap-1.5 sm:gap-2 w-full sm:w-auto sm:ml-auto mt-1 sm:mt-0">{actions}</div>
       ) : null}
     </div>
   );
@@ -330,7 +330,7 @@ export function DataRow({
   mono?: boolean;
 }) {
   return (
-    <div className="flex items-baseline justify-between gap-4 py-1.5">
+    <div className="flex items-baseline justify-between gap-2 sm:gap-4 py-1.5 min-w-0">
       <dt className="shrink-0 text-xs text-[var(--color-fg-muted)]">{label}</dt>
       <dd
         className={cn(

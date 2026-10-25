@@ -15,7 +15,7 @@ export function Topbar({ user, onMenu }: { user: SessionUser; onMenu: () => void
   return (
     // 1fr / auto / 1fr keeps the search centred on the header itself rather than
     // on whatever is left over once the side controls have taken their space.
-    <header className="sticky top-0 z-20 grid h-14 shrink-0 grid-cols-[1fr_auto_1fr] items-center gap-3 border-b border-[var(--color-border)] bg-[var(--color-surface)]/90 px-4 backdrop-blur">
+    <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center justify-between gap-1.5 border-b border-[var(--color-border)] bg-[var(--color-surface)]/90 px-2.5 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:gap-3 sm:px-4 backdrop-blur">
       <div className="flex min-w-0 items-center justify-start">
         <Button
           variant="ghost"
@@ -28,9 +28,9 @@ export function Topbar({ user, onMenu }: { user: SessionUser; onMenu: () => void
         </Button>
       </div>
 
-      <GlobalSearch role={user.role} className="w-44 sm:w-72 md:w-96" />
+      <GlobalSearch role={user.role} className="w-28 xs:w-36 min-[380px]:w-44 sm:w-72 md:w-96" />
 
-      <div className="flex min-w-0 items-center justify-end gap-2">
+      <div className="flex min-w-0 items-center justify-end gap-1 sm:gap-2">
         {user.role === 'CLIENT' && (
           <span className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md bg-[var(--color-brand)]/10 text-[var(--color-brand)] border border-[var(--color-brand)]/20">
             {user.clientName ?? 'Харилцагч'}
@@ -45,6 +45,7 @@ export function Topbar({ user, onMenu }: { user: SessionUser; onMenu: () => void
           <Button
             variant="ghost"
             size="sm"
+            className="px-2 sm:px-3"
             onClick={() => void logout()}
             title={`${user.email} — Гарах`}
           >

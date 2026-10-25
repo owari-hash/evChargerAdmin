@@ -106,7 +106,7 @@ export function TableWrap({
         onScroll?.(e);
       }}
       className={cn(
-        'group/table scroll-thin w-full overflow-x-auto',
+        'group/table scroll-thin w-full max-w-full overflow-x-auto min-w-0',
         scroll && 'overflow-y-auto overscroll-y-contain',
         className,
       )}
@@ -146,7 +146,7 @@ export function TH({ className, ...props }: React.ComponentProps<'th'>) {
     <th
       scope="col"
       className={cn(
-        'whitespace-nowrap px-4 py-2.5 text-center text-xs font-medium text-[var(--color-fg-muted)]',
+        'whitespace-nowrap px-2.5 sm:px-4 py-2 sm:py-2.5 text-center text-xs font-medium text-[var(--color-fg-muted)]',
         className,
       )}
       {...props}
@@ -183,7 +183,7 @@ export function TD({
   return (
     <td
       className={cn(
-        'px-4 py-2.5 text-[var(--color-fg)]',
+        'px-2.5 sm:px-4 py-2 sm:py-2.5 text-[var(--color-fg)]',
         align === 'right' && 'text-right',
         align === 'center' && 'text-center',
         align === 'left' && 'text-left',

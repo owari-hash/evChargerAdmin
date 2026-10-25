@@ -43,7 +43,7 @@ export function UsersView({ currentUserId }: { currentUserId: string }) {
   return (
     <>
       <Card>
-        <div className="flex items-center justify-end gap-2 border-b border-[var(--color-border)] px-5 py-3">
+        <div className="flex items-center justify-end gap-2 border-b border-[var(--color-border)] px-3.5 sm:px-5 py-2.5 sm:py-3">
           <Button variant="primary" size="sm" onClick={() => setCreating(true)}>
             <Plus className="h-3.5 w-3.5" />
             Шинэ хэрэглэгч

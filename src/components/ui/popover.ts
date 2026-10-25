@@ -95,5 +95,5 @@ export function useAnchoredPopover({
 }
 
 export const POPOVER_PANEL =
-  'z-[60] overflow-y-auto scroll-thin rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-surface)] text-[var(--color-fg)] ' +
+  'z-[60] max-w-[calc(100vw-1rem)] overflow-y-auto scroll-thin rounded-xl border border-[var(--color-border-strong)] bg-[var(--color-surface)] text-[var(--color-fg)] ' +
   'shadow-[0_12px_32px_-8px_rgba(13,31,23,0.22)] dark:shadow-[0_16px_40px_-8px_rgba(0,0,0,0.7)] animate-in-fade';

@@ -98,19 +98,19 @@ export function TransactionsView({
             ))}
           </Select>
           <Input
-            className="w-auto min-w-[160px]"
+            className="w-full sm:w-auto min-w-0 sm:min-w-[160px]"
             placeholder="Станцын дугаар"
             value={chargePointId}
             onChange={(e) => setChargePointId(e.target.value)}
           />
           <Input
-            className="w-auto min-w-[140px]"
+            className="w-full sm:w-auto min-w-0 sm:min-w-[140px]"
             placeholder="RFID карт"
             value={idTag}
             onChange={(e) => setIdTag(e.target.value)}
           />
           <DateRangePicker
-            className="w-auto min-w-[15rem]"
+            className="w-full sm:w-auto min-w-0 sm:min-w-[15rem]"
             value={{ from, to }}
             onChange={(r) => {
               setFrom(r.from);

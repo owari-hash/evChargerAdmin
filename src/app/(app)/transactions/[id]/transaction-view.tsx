@@ -293,7 +293,7 @@ export function TransactionView({
               {tx.ebarimt?.status === 'REFUNDED'
                 ? 'Буцаагдсан'
                 : tx.ebarimt?.status === 'SUCCESS'
-                  ? `Олгосон · ${tx.ebarimt.receiptId ?? ''}`
+                  ? `Олгосон · ${tx.ebarimt.receiptId || (tx.ebarimt.lottery ? `Сугалаа: ${tx.ebarimt.lottery}` : 'Амжилттай')}`
                   : '—'}
             </DataRow>
             {tx.refund?.state === 'DONE' ? (

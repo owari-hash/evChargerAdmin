@@ -9,7 +9,7 @@ export const metadata: Metadata = { title: 'Нэвтрэх' };
 
 export default function LoginPage() {
   return (
-    <main className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-[var(--color-bg)] px-4 py-10">
+    <main className="relative flex min-h-dvh items-center justify-center overflow-hidden bg-[var(--color-bg)] px-3 sm:px-4 py-6 sm:py-10">
       <div
         aria-hidden
         className="pointer-events-none absolute left-1/2 top-0 h-[28rem] w-[36rem] -translate-x-1/2 -translate-y-1/3 rounded-full bg-[radial-gradient(circle,rgb(31_138_86/0.16),transparent_70%)]"
@@ -38,7 +38,7 @@ export default function LoginPage() {
           </p>
         </div>
 
-        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-6 shadow-lg">
+        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 sm:p-6 shadow-lg">
           <Suspense fallback={<div className="h-52" />}>
             <LoginForm />
           </Suspense>

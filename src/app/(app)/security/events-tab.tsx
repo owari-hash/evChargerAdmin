@@ -103,13 +103,13 @@ export function SecurityEventsTab({ canOperate }: { canOperate: boolean }) {
       <Card>
         <FilterBar>
           <Input
-            className="w-auto min-w-[180px]"
+            className="w-full sm:w-auto min-w-0 sm:min-w-[180px]"
             placeholder="Станцын дугаар"
             value={chargePointId}
             onChange={(e) => setChargePointId(e.target.value)}
           />
           <Input
-            className="w-auto min-w-[180px]"
+            className="w-full sm:w-auto min-w-0 sm:min-w-[180px]"
             placeholder="Үйл явдлын төрөл"
             value={type}
             onChange={(e) => {

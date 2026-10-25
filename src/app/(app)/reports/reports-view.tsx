@@ -346,7 +346,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
 
           <div className="flex flex-wrap items-center gap-3">
             <DateRangePicker
-              className="w-auto min-w-[15rem]"
+              className="w-full sm:w-auto min-w-0 sm:min-w-[15rem]"
               value={range}
               onChange={(r) => {
                 setRange(
@@ -362,7 +362,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
             <Select
               value={selectedStation}
               onChange={(e) => setSelectedStation(e.target.value)}
-              className="w-48 text-xs"
+              className="w-full sm:w-48 text-xs"
               aria-label="Станц шүүх"
             >
               <option value="all">Бүх станц</option>

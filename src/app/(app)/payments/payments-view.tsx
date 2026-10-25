@@ -134,7 +134,7 @@ export function PaymentsView({ initialQuery, initialStatus }: { initialQuery: st
 
       <Card>
         <FilterBar>
-          <div className="relative min-w-[16rem] flex-1">
+          <div className="relative min-w-0 sm:min-w-[16rem] w-full sm:w-auto flex-1">
             <Search aria-hidden className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-fg-subtle)]" />
             <Input
               className="pl-9"
@@ -175,7 +175,7 @@ export function PaymentsView({ initialQuery, initialStatus }: { initialQuery: st
             <option value="QPAY">QPay (merchant)</option>
           </Select>
           <DateRangePicker
-            className="w-auto min-w-[15rem]"
+            className="w-full sm:w-auto min-w-0 sm:min-w-[15rem]"
             value={{ from, to }}
             onChange={(r) => {
               setFrom(r.from);

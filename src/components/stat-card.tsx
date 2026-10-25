@@ -30,22 +30,22 @@ export function StatCard({
   const body = (
     <div
       className={cn(
-        'flex h-full items-start gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm transition duration-150',
+        'flex h-full items-start gap-2.5 sm:gap-3 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3 sm:p-4 shadow-sm transition duration-150',
         href && 'hover:-translate-y-0.5 hover:border-[var(--color-border-strong)] hover:shadow-md',
       )}
     >
       {Icon ? (
         <span
-          className={cn('flex h-9 w-9 shrink-0 items-center justify-center rounded-lg', ICON_TONES[tone])}
+          className={cn('flex h-8 w-8 sm:h-9 sm:w-9 shrink-0 items-center justify-center rounded-lg', ICON_TONES[tone])}
         >
-          <Icon className="h-4.5 w-4.5" />
+          <Icon className="h-4 w-4 sm:h-4.5 sm:w-4.5" />
         </span>
       ) : null}
 
-      <div className="min-w-0">
-        <p className="text-xs text-[var(--color-fg-muted)]">{label}</p>
-        <p className="mt-0.5 truncate text-xl font-semibold tracking-tight tnum">{value}</p>
-        {sub ? <p className="mt-0.5 truncate text-xs text-[var(--color-fg-subtle)]">{sub}</p> : null}
+      <div className="min-w-0 flex-1">
+        <p className="truncate text-[11px] sm:text-xs text-[var(--color-fg-muted)]">{label}</p>
+        <p className="mt-0.5 truncate text-lg sm:text-xl font-semibold tracking-tight tnum">{value}</p>
+        {sub ? <p className="mt-0.5 truncate text-[10px] sm:text-xs text-[var(--color-fg-subtle)]">{sub}</p> : null}
       </div>
     </div>
   );
@@ -67,7 +67,7 @@ export function StatCard({
  */
 export function StatGrid({
   children,
-  min = '11rem',
+  min = '10rem',
   className,
 }: {
   children: React.ReactNode;
@@ -78,10 +78,10 @@ export function StatGrid({
   return (
     <div
       className={cn(
-        'grid snap-x snap-mandatory grid-flow-col gap-3 overflow-x-auto overscroll-x-contain pb-1 [&>*]:snap-start',
+        'grid snap-x snap-mandatory grid-flow-col gap-2.5 sm:gap-3 overflow-x-auto overscroll-x-contain pb-1 [&>*]:snap-start scroll-thin',
         className,
       )}
-      style={{ gridAutoColumns: `minmax(${min}, 1fr)` }}
+      style={{ gridAutoColumns: `minmax(min(${min}, calc(100vw - 3rem)), 1fr)` }}
     >
       {children}
     </div>

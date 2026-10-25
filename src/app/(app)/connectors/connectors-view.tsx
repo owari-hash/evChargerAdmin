@@ -305,7 +305,7 @@ export function ConnectorsView({
           <div className="relative flex items-center">
             <Search className="pointer-events-none absolute left-2.5 h-3.5 w-3.5 text-[var(--color-fg-subtle)]" />
             <Input
-              className="h-8 w-60 pl-8 pr-7 text-xs"
+              className="h-8 w-full sm:w-60 pl-8 pr-7 text-xs"
               placeholder="Станцын дугаар / ID..."
               value={chargePointId}
               onChange={(e) => setChargePointId(e.target.value)}

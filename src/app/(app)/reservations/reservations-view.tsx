@@ -87,7 +87,7 @@ export function ReservationsView({ canOperate }: { canOperate: boolean }) {
             ))}
           </Select>
           <Input
-            className="w-auto min-w-[180px]"
+            className="w-full sm:w-auto min-w-0 sm:min-w-[180px]"
             placeholder="Станцын дугаар"
             value={chargePointId}
             onChange={(e) => setChargePointId(e.target.value)}

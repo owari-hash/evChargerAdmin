@@ -115,7 +115,7 @@ export function JobsView() {
       <Card>
         <FilterBar>
           <Input
-            className="w-auto min-w-[200px]"
+            className="w-full sm:w-auto min-w-0 sm:min-w-[200px]"
             placeholder="Станцын дугаар"
             value={chargePointId}
             onChange={(e) => setChargePointId(e.target.value)}

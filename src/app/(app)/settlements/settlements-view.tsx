@@ -113,7 +113,7 @@ export function SettlementsView({ canAdmin }: { canAdmin: boolean }) {
       <Card>
         <FilterBar>
           <DateRangePicker
-            className="w-auto min-w-[15rem]"
+            className="w-full sm:w-auto min-w-0 sm:min-w-[15rem]"
             value={range}
             onChange={(r) => {
               // Clearing the picker falls back to the current month: a summary

@@ -71,13 +71,13 @@ export function Pagination({
   return (
     <nav
       aria-label="Хуудаслалт"
-      className="flex flex-wrap items-center justify-between gap-3 border-t border-[var(--color-border)] px-4 py-3 text-xs text-[var(--color-fg-muted)]"
+      className="flex flex-wrap items-center justify-between gap-2 sm:gap-3 border-t border-[var(--color-border)] px-2.5 sm:px-4 py-2.5 sm:py-3 text-xs text-[var(--color-fg-muted)]"
     >
-      <span className="tnum">
+      <span className="tnum text-[11px] sm:text-xs">
         {formatNumber(total)} {label}-аас {formatNumber(first)}–{formatNumber(last)}
       </span>
 
-      <div className="flex flex-wrap items-center gap-1.5">
+      <div className="flex flex-wrap items-center gap-1 sm:gap-1.5">
         <button
           type="button"
           className={cn(PAGE_BTN, PAGE_IDLE, 'w-8 px-0')}
@@ -90,14 +90,18 @@ export function Pagination({
 
         {pageWindow(page, pages).map((p, i) =>
           p === 'gap' ? (
-            <span key={`gap-${i}`} className="inline-flex h-8 w-6 items-center justify-center" aria-hidden>
+            <span key={`gap-${i}`} className="hidden sm:inline-flex h-8 w-6 items-center justify-center" aria-hidden>
               …
             </span>
           ) : (
             <button
               key={p}
               type="button"
-              className={cn(PAGE_BTN, p === page ? PAGE_ACTIVE : PAGE_IDLE)}
+              className={cn(
+                PAGE_BTN,
+                p === page ? PAGE_ACTIVE : PAGE_IDLE,
+                Math.abs(p - page) > 1 && p !== 1 && p !== pages && 'hidden sm:inline-flex',
+              )}
               onClick={() => p !== page && onPageChange(p)}
               aria-label={`${formatNumber(p)}-р хуудас`}
               aria-current={p === page ? 'page' : undefined}
@@ -139,7 +143,7 @@ export function Pagination({
 /** Filter row that sits directly above a table. */
 export function FilterBar({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex flex-wrap items-center gap-2 border-b border-[var(--color-border)] px-4 py-3">
+    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 border-b border-[var(--color-border)] px-2.5 sm:px-4 py-2.5 sm:py-3">
       {children}
     </div>
   );
@@ -153,5 +157,5 @@ export function FilterBar({ children }: { children: React.ReactNode }) {
  */
 export function FilterActions({ children }: { children?: React.ReactNode }) {
   if (!children) return null;
-  return <div className="ml-auto flex shrink-0 flex-wrap items-center justify-end gap-2">{children}</div>;
+  return <div className="flex shrink-0 flex-wrap items-center justify-start sm:justify-end gap-1.5 sm:gap-2 w-full sm:w-auto sm:ml-auto">{children}</div>;
 }

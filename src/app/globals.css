@@ -72,6 +72,13 @@
     border-color: var(--color-border);
   }
 
+  html,
+  body {
+    overflow-x: clip;
+    min-width: 0;
+    max-width: 100vw;
+  }
+
   html {
     color-scheme: light;
   }

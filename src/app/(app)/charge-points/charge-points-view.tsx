@@ -131,7 +131,7 @@ export function ChargePointsView({
     <>
       <Card>
         <FilterBar>
-          <div className="relative min-w-[220px] flex-1">
+          <div className="relative min-w-0 sm:min-w-[220px] w-full sm:w-auto flex-1">
             <Search className="pointer-events-none absolute left-2.5 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[var(--color-fg-subtle)]" />
             <Input
               className="pl-8"

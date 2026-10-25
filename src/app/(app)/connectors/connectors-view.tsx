@@ -503,7 +503,7 @@ export function ConnectorsView({
 
                         {/* 3. Холбогч № (Pill badge like: A CCS2 60 кВт) */}
                         <TD>
-                          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                          <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                             <span className="font-bold">{letter}</span>
                             <span>{c.connectorType || 'CCS2'}</span>
                             <span className="text-[10px] opacity-80">{powerText}</span>
@@ -586,9 +586,9 @@ export function ConnectorsView({
                             variant="ghost"
                             size="sm"
                             onClick={() => setEditing(c)}
-                            className="text-xs h-7 text-emerald-500 hover:text-emerald-400 font-medium"
+                            className="text-xs h-6 px-2 text-emerald-500 hover:text-emerald-400 font-medium"
                           >
-                            <Pencil className="h-3.5 w-3.5 mr-1" />
+                            <Pencil className="h-3 w-3 mr-1" />
                             Дэлгэрэнгүй
                           </Button>
                         </TD>

@@ -530,15 +530,15 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                 <Table>
                   <THead>
                     <tr>
-                      <TH className="w-10 text-center py-2 px-2">№</TH>
-                      <TH className="text-left py-2 px-3">Станц / Байршил</TH>
-                      <TH className="text-right py-2 px-3">Сеанс</TH>
-                      <TH className="text-right py-2 px-3">Эрчим хүч (кВтц)</TH>
-                      <TH className="text-right py-2 px-3">Тариф (₮/кВтц)</TH>
-                      <TH className="text-right py-2 px-3">Борлуулалт (₮)</TH>
-                      <TH className="text-right py-2 px-3">Шимтгэл (₮)</TH>
-                      <TH className="text-right py-2 px-3">Цэвэр орлого (₮)</TH>
-                      <TH className="text-center py-2 px-3">Тооцох томьёо</TH>
+                      <TH className="w-10 text-center">№</TH>
+                      <TH className="text-left">Станц / Байршил</TH>
+                      <TH className="text-right">Сеанс</TH>
+                      <TH className="text-right">Эрчим хүч (кВтц)</TH>
+                      <TH className="text-right">Тариф (₮/кВтц)</TH>
+                      <TH className="text-right">Борлуулалт (₮)</TH>
+                      <TH className="text-right">Шимтгэл (₮)</TH>
+                      <TH className="text-right">Цэвэр орлого (₮)</TH>
+                      <TH className="text-center">Тооцох томьёо</TH>
                     </tr>
                   </THead>
                   <TBody>
@@ -567,12 +567,12 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                               onClick={() => toggleStationExpand(s.chargePointId)}
                             >
                               {/* Row Number */}
-                              <TD className="w-10 text-center font-mono text-xs text-[var(--color-fg-subtle)] py-1.5 px-2">
+                              <TD className="w-10 text-center font-mono text-xs text-[var(--color-fg-subtle)]">
                                 {idx + 1}
                               </TD>
 
                               {/* Station / Location (Only name, left-aligned, start from the same position) */}
-                              <TD align="left" className="py-1.5 px-3">
+                              <TD align="left">
                                 <div className="flex items-center gap-1.5 text-left">
                                   <button
                                     type="button"
@@ -595,29 +595,29 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                               </TD>
 
                               {/* Sessions Count */}
-                              <TD className="text-right font-medium py-1.5 px-3">
+                              <TD className="text-right font-medium">
                                 <span className="inline-flex items-center justify-center rounded-full bg-[var(--color-surface-2)] px-2 py-0.5 text-xs font-semibold text-[var(--color-fg)]">
                                   {formatNumber(s.sessionsCount)}
                                 </span>
                               </TD>
 
                               {/* Energy (kWh) */}
-                              <TD className="text-right font-mono text-xs py-1.5 px-3">
+                              <TD className="text-right font-mono text-xs">
                                 {formatNumber(s.energyKwh, 2)} кВтц
                               </TD>
 
                               {/* Tariff */}
-                              <TD className="text-right font-mono text-xs text-[var(--color-fg-muted)] py-1.5 px-3">
+                              <TD className="text-right font-mono text-xs text-[var(--color-fg-muted)]">
                                 {s.tariffPerKwh ? `${formatNumber(s.tariffPerKwh)} ₮` : 'Хуваарьт'}
                               </TD>
 
                               {/* Gross (Each station's own charged amount!) */}
-                              <TD className="text-right font-mono text-xs font-semibold text-[var(--color-fg)] py-1.5 px-3">
+                              <TD className="text-right font-mono text-xs font-semibold text-[var(--color-fg)]">
                                 {formatMoney(s.gross)}
                               </TD>
 
                               {/* Fee Amount (Each station's own fee) */}
-                              <TD className="text-right font-mono text-xs text-blue-500 py-1.5 px-3">
+                              <TD className="text-right font-mono text-xs text-blue-500">
                                 {formatMoney(s.feeAmount)}
                                 <span className="text-[10px] text-[var(--color-fg-subtle)] ml-1">
                                   ({s.feePercent}%)
@@ -625,12 +625,12 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                               </TD>
 
                               {/* Net Revenue (Each station's own client net) */}
-                              <TD className="text-right font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400 py-1.5 px-3">
+                              <TD className="text-right font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
                                 {formatMoney(s.clientNet)}
                               </TD>
 
                               {/* Calculation Formula */}
-                              <TD className="text-center text-[10px] font-mono text-[var(--color-fg-muted)] py-1.5 px-3">
+                              <TD className="text-center text-[10px] font-mono text-[var(--color-fg-muted)]">
                                 <span className="rounded bg-[var(--color-surface-2)] px-1.5 py-0.5 border border-[var(--color-border)]">
                                   {formatMoney(s.gross)} - {formatMoney(s.feeAmount)} = {formatMoney(s.clientNet)}
                                 </span>
@@ -883,12 +883,12 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
             <Table>
               <THead>
                 <tr>
-                  <TH className="text-left py-2 px-3">Огноо</TH>
-                  <TH className="text-right py-2 px-3">Цэнэглэлтийн тоо</TH>
-                  <TH className="text-right py-2 px-3">Эрчим хүч (кВтц)</TH>
-                  <TH className="text-right py-2 px-3">Борлуулалт (₮)</TH>
-                  <TH className="text-right py-2 px-3">Шимтгэл (₮)</TH>
-                  <TH className="text-right py-2 px-3">Цэвэр орлого (₮)</TH>
+                  <TH className="text-left">Огноо</TH>
+                  <TH className="text-right">Цэнэглэлтийн тоо</TH>
+                  <TH className="text-right">Эрчим хүч (кВтц)</TH>
+                  <TH className="text-right">Борлуулалт (₮)</TH>
+                  <TH className="text-right">Шимтгэл (₮)</TH>
+                  <TH className="text-right">Цэвэр орлого (₮)</TH>
                 </tr>
               </THead>
               <TBody>
@@ -899,12 +899,12 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                 ) : (
                   daily.map((d) => (
                     <TR key={d.date}>
-                      <TD align="left" className="font-mono font-medium py-1.5 px-3 text-xs">{formatDate(d.date)}</TD>
-                      <TD className="text-right font-medium py-1.5 px-3 text-xs">{formatNumber(d.sessionsCount)}</TD>
-                      <TD className="text-right font-mono text-xs py-1.5 px-3">{formatNumber(d.energyKwh, 2)} кВтц</TD>
-                      <TD className="text-right font-mono text-xs font-semibold text-[var(--color-fg)] py-1.5 px-3">{formatMoney(d.gross)}</TD>
-                      <TD className="text-right font-mono text-xs text-blue-500 py-1.5 px-3">{formatMoney(d.fee)}</TD>
-                      <TD className="text-right font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400 py-1.5 px-3">
+                      <TD align="left" className="font-mono font-medium text-xs">{formatDate(d.date)}</TD>
+                      <TD className="text-right font-medium text-xs">{formatNumber(d.sessionsCount)}</TD>
+                      <TD className="text-right font-mono text-xs">{formatNumber(d.energyKwh, 2)} кВтц</TD>
+                      <TD className="text-right font-mono text-xs font-semibold text-[var(--color-fg)]">{formatMoney(d.gross)}</TD>
+                      <TD className="text-right font-mono text-xs text-blue-500">{formatMoney(d.fee)}</TD>
+                      <TD className="text-right font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
                         {formatMoney(d.net)}
                       </TD>
                     </TR>
@@ -921,13 +921,13 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
             <Table>
               <THead>
                 <tr>
-                  <TH className="text-left py-2 px-3">Станц</TH>
-                  <TH className="text-center py-2 px-3">Холбогч</TH>
-                  <TH className="text-right py-2 px-3">Цэнэглэлт</TH>
-                  <TH className="text-right py-2 px-3">Эрчим хүч (кВтц)</TH>
-                  <TH className="text-right py-2 px-3">Борлуулалт (₮)</TH>
-                  <TH className="text-right py-2 px-3">Шимтгэл (₮)</TH>
-                  <TH className="text-right py-2 px-3">Цэвэр орлого (₮)</TH>
+                  <TH className="text-left">Станц</TH>
+                  <TH className="text-center">Холбогч</TH>
+                  <TH className="text-right">Цэнэглэлт</TH>
+                  <TH className="text-right">Эрчим хүч (кВтц)</TH>
+                  <TH className="text-right">Борлуулалт (₮)</TH>
+                  <TH className="text-right">Шимтгэл (₮)</TH>
+                  <TH className="text-right">Цэвэр орлого (₮)</TH>
                 </tr>
               </THead>
               <TBody>
@@ -938,15 +938,15 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                 ) : (
                   connectors.map((c) => (
                     <TR key={`${c.chargePointId}-${c.connectorId}`}>
-                      <TD align="left" className="font-medium py-1.5 px-3 text-xs">{c.stationName}</TD>
-                      <TD className="py-1.5 px-3">
+                      <TD align="left" className="font-medium text-xs">{c.stationName}</TD>
+                      <TD>
                         <Badge tone="idle" className="text-[10px] py-0 px-1.5">Буу {connectorLetter(c.connectorId)}</Badge>
                       </TD>
-                      <TD className="text-right font-medium py-1.5 px-3 text-xs">{formatNumber(c.sessionsCount)}</TD>
-                      <TD className="text-right font-mono text-xs py-1.5 px-3">{formatNumber(c.energyKwh, 2)} кВтц</TD>
-                      <TD className="text-right font-mono text-xs font-semibold text-[var(--color-fg)] py-1.5 px-3">{formatMoney(c.gross)}</TD>
-                      <TD className="text-right font-mono text-xs text-blue-500 py-1.5 px-3">{formatMoney(c.fee)}</TD>
-                      <TD className="text-right font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400 py-1.5 px-3">
+                      <TD className="text-right font-medium text-xs">{formatNumber(c.sessionsCount)}</TD>
+                      <TD className="text-right font-mono text-xs">{formatNumber(c.energyKwh, 2)} кВтц</TD>
+                      <TD className="text-right font-mono text-xs font-semibold text-[var(--color-fg)]">{formatMoney(c.gross)}</TD>
+                      <TD className="text-right font-mono text-xs text-blue-500">{formatMoney(c.fee)}</TD>
+                      <TD className="text-right font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
                         {formatMoney(c.net)}
                       </TD>
                     </TR>
@@ -963,14 +963,14 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
             <Table>
               <THead>
                 <tr>
-                  <TH className="w-20 text-center py-2 px-3">Сеанс #</TH>
-                  <TH className="text-left py-2 px-3">Станц / Холбогч</TH>
-                  <TH className="text-left py-2 px-3">Хугацаа</TH>
-                  <TH className="text-right py-2 px-3">Хэрэглээ</TH>
-                  <TH className="text-right py-2 px-3">Тариф</TH>
-                  <TH className="text-right py-2 px-3 font-semibold">Борлуулалт</TH>
-                  <TH className="text-right py-2 px-3 text-blue-500">Шимтгэл</TH>
-                  <TH className="text-right py-2 px-3 font-bold text-emerald-600 dark:text-emerald-400">Цэвэр орлого</TH>
+                  <TH className="w-20 text-center">Сеанс #</TH>
+                  <TH className="text-left">Станц / Холбогч</TH>
+                  <TH className="text-left">Хугацаа</TH>
+                  <TH className="text-right">Хэрэглээ</TH>
+                  <TH className="text-right">Тариф</TH>
+                  <TH className="text-right font-semibold">Борлуулалт</TH>
+                  <TH className="text-right text-blue-500">Шимтгэл</TH>
+                  <TH className="text-right font-bold text-emerald-600 dark:text-emerald-400">Цэвэр орлого</TH>
                 </tr>
               </THead>
               <TBody>
@@ -981,37 +981,37 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                 ) : (
                   sessions.map((tx) => (
                     <TR key={tx.id}>
-                      <TD className="font-mono text-xs font-bold text-emerald-500 py-1.5 px-3 text-center">
+                      <TD className="font-mono text-xs font-bold text-emerald-500 text-center">
                         <Link href={`/transactions/${tx.id}`} className="hover:underline">
                           #{tx.id}
                         </Link>
                       </TD>
-                      <TD align="left" className="py-1.5 px-3">
+                      <TD align="left">
                         <div className="font-medium text-xs text-[var(--color-fg)]">{tx.stationName}</div>
                         <div className="text-[10px] text-[var(--color-fg-subtle)] font-mono">
                           Буу {connectorLetter(tx.connectorId)} {tx.vehicleModel ? `· ${tx.vehicleModel}` : ''}
                         </div>
                       </TD>
-                      <TD align="left" className="text-xs py-1.5 px-3">
+                      <TD align="left" className="text-xs">
                         <div>{formatDateTime(tx.startTimestamp)}</div>
                         <div className="text-[10px] text-[var(--color-fg-subtle)]">
                           {formatDateTime(tx.stopTimestamp)}
                         </div>
                       </TD>
-                      <TD className="text-right font-mono text-xs py-1.5 px-3">{formatNumber(tx.energyKwh, 2)} кВтц</TD>
-                      <TD className="text-right text-xs font-mono text-[var(--color-fg-muted)] py-1.5 px-3">
+                      <TD className="text-right font-mono text-xs">{formatNumber(tx.energyKwh, 2)} кВтц</TD>
+                      <TD className="text-right text-xs font-mono text-[var(--color-fg-muted)]">
                         {tx.tariffPerKwh ? `${formatMoney(tx.tariffPerKwh)}/кВтц` : '—'}
                       </TD>
-                      <TD className="text-right font-mono text-xs font-semibold text-[var(--color-fg)] py-1.5 px-3">
+                      <TD className="text-right font-mono text-xs font-semibold text-[var(--color-fg)]">
                         {formatMoney(tx.cost)}
                       </TD>
-                      <TD className="text-right font-mono text-xs text-blue-500 py-1.5 px-3">
+                      <TD className="text-right font-mono text-xs text-blue-500">
                         {formatMoney(tx.feeAmount)}
                         <span className="text-[10px] text-[var(--color-fg-subtle)] ml-1">
                           ({tx.feePercent}%)
                         </span>
                       </TD>
-                      <TD className="text-right font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400 py-1.5 px-3">
+                      <TD className="text-right font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
                         {formatMoney(tx.clientNet)}
                       </TD>
                     </TR>

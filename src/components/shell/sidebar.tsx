@@ -51,10 +51,10 @@ export function Sidebar({
             <Logo />
             <div className="min-w-0">
               <div className="truncate text-[15px] font-semibold leading-5 tracking-tight text-[var(--color-fg)]">
-                {brand.name}
+                Eplug
               </div>
               <div className="truncate text-[11px] font-medium leading-4 tracking-wide text-[var(--color-fg-subtle)]">
-                OCPP 1.6J удирдлага
+                Удирдлагын систем
               </div>
             </div>
           </Link>

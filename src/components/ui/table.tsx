@@ -146,7 +146,7 @@ export function TH({ className, ...props }: React.ComponentProps<'th'>) {
     <th
       scope="col"
       className={cn(
-        'whitespace-nowrap px-2.5 sm:px-4 py-2 sm:py-2.5 text-center text-xs font-medium text-[var(--color-fg-muted)] border-r border-[var(--color-border)] last:border-r-0',
+        'whitespace-nowrap px-2.5 py-1.5 text-center text-xs font-medium text-[var(--color-fg-muted)] border-r border-[var(--color-border)] last:border-r-0 leading-normal',
         className,
       )}
       {...props}
@@ -183,7 +183,7 @@ export function TD({
   return (
     <td
       className={cn(
-        'px-2.5 sm:px-4 py-2 sm:py-2.5 text-[var(--color-fg)] border-r border-[var(--color-border)] last:border-r-0',
+        'px-2.5 py-1.5 text-xs text-[var(--color-fg)] border-r border-[var(--color-border)] last:border-r-0 leading-normal',
         align === 'right' && 'text-right',
         align === 'center' && 'text-center',
         align === 'left' && 'text-left',
@@ -209,8 +209,8 @@ export function TableLoading({ colSpan, rows = 5 }: { colSpan: number; rows?: nu
     <>
       {Array.from({ length: rows }).map((_, i) => (
         <tr key={i}>
-          <td colSpan={colSpan} className="px-4 py-3">
-            <div className="h-4 w-full animate-pulse rounded bg-[var(--color-surface-2)]" />
+          <td colSpan={colSpan} className="px-2.5 py-1.5">
+            <div className="h-3.5 w-full animate-pulse rounded bg-[var(--color-surface-2)]" />
           </td>
         </tr>
       ))}

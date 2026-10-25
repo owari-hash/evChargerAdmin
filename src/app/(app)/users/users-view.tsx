@@ -202,7 +202,7 @@ function UserModal({
   onSaved,
 }: {
   open: boolean;
-  user: User | null;
+  user: ManagedUser | null;
   isSelf: boolean;
   onClose: () => void;
   onSaved: () => void;

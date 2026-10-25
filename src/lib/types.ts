@@ -1067,3 +1067,16 @@ export interface DriverDetailResponse {
     cost: number;
   }>;
 }
+
+export interface ContactInfo {
+  phone: string;
+  email: string;
+  address?: string;
+  facebookUrl?: string;
+  facebookName?: string;
+  instagramUrl?: string;
+  instagramName?: string;
+  logoDownloadUrl?: string;
+  updatedAt?: string;
+  updatedBy?: string;
+}

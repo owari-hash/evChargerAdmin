@@ -197,6 +197,7 @@ const MENU_KEYWORDS: Record<string, string[]> = {
     'app', 'version', 'update', 'android', 'ios', 'store', 'build', 'release', 'app version',
   ],
   '/system': ['систем', 'тохиргоо', 'орчин', 'system', 'settings', 'config', 'tohirgoo'],
+  '/contact': ['холбоо барих', 'утас', 'и-мэйл', 'сошиал', 'фэйсбүүк', 'инстаграм', 'хөл', 'contact', 'phone', 'email', 'social', 'facebook', 'instagram', 'footer'],
 };
 
 const MENU_ENTRIES: SearchEntry[] = NAV_SECTIONS.flatMap((section) =>

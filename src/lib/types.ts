@@ -919,6 +919,20 @@ export interface AppReleasePreview {
   forceUpdate: boolean;
 }
 
+/** Санал хүсэлт from a driver (kiosk footer or app). */
+export interface Feedback {
+  id: string;
+  message: string;
+  phone?: string;
+  userId?: string;
+  userName?: string;
+  source: 'web' | 'app';
+  status: 'new' | 'done';
+  handledBy?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Announcement {
   id: string;
   title: string;

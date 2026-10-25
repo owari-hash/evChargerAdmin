@@ -969,3 +969,83 @@ export interface AnalyticsOverview {
     measurementId?: string;
   };
 }
+
+
+export interface DriverListItem {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  vehicleBrand: string;
+  vehicleModel: string;
+  ebarimtCustomerNo: string;
+  isActive: boolean;
+  isInternal: boolean;
+  idTag: string | null;
+  wallet: {
+    balance: number;
+    totalToppedUp: number;
+    totalSpent: number;
+    status: string;
+  };
+  rfidCardsCount: number;
+  sessionsCount: number;
+  totalEnergyKwh: number;
+  createdAt: string;
+  lastLoginAt: string | null;
+}
+
+export interface DriverDetailResponse {
+  driver: {
+    id: string;
+    name: string;
+    phone: string;
+    email: string;
+    vehicleBrand: string;
+    vehicleModel: string;
+    ebarimtCustomerNo: string;
+    isActive: boolean;
+    isInternal: boolean;
+    idTag: string | null;
+    locale: string;
+    createdAt: string;
+    updatedAt: string;
+    lastLoginAt: string | null;
+  };
+  wallet: {
+    balance: number;
+    currency: string;
+    status: string;
+    totalToppedUp: number;
+    totalSpent: number;
+    lastTopUpAt?: string;
+    lastSpendAt?: string;
+  };
+  rfidCards: Array<{
+    idTag: string;
+    label: string;
+    status: string;
+    expiryDate?: string;
+    isInternal?: boolean;
+    isPrimary?: boolean;
+    createdAt?: string;
+  }>;
+  stats: {
+    totalSessions: number;
+    totalEnergyWh: number;
+    totalEnergyKwh: number;
+    totalCost: number;
+  };
+  recentSessions: Array<{
+    id: number;
+    stationName: string;
+    connectorId: number;
+    idTag: string;
+    status: string;
+    startTimestamp: string;
+    stopTimestamp?: string;
+    energyWh: number;
+    energyKwh: number;
+    cost: number;
+  }>;
+}

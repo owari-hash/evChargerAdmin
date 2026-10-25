@@ -157,6 +157,10 @@ const MENU_KEYWORDS: Record<string, string[]> = {
     'цэнэглэлт', 'гүйлгээ', 'сешн', 'түүх', 'transaction', 'session', 'tsenegllelt', 'guilgee',
   ],
   '/live': ['шууд', 'урсгал', 'лог', 'event', 'live', 'stream', 'shuud'],
+  '/drivers': [
+    'жолооч', 'хэрэглэгч', 'утас', 'хэтэвч', 'үлдэгдэл', 'карт', 'rfid', 'машин', 'тээврийн хэрэгсэл',
+    'driver', 'drivers', 'wallet', 'balance', 'jolooch', 'user', 'users',
+  ],
   '/id-tags': ['карт', 'rfid', 'таг', 'нфс', 'tag', 'card', 'kart'],
   '/reservations': ['захиалга', 'урьдчилсан', 'reservation', 'booking', 'zahialga'],
   '/clients': [

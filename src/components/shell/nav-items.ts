@@ -64,7 +64,7 @@ export const CLIENT_NAV_SECTIONS: NavSection[] = [
   {
     title: 'Хандалт',
     items: [
-      { href: '/id-tags', label: 'Дотоод карт', icon: CreditCard, prefix: true },
+      { href: '/drivers', label: 'Жолооч', icon: Users, prefix: true },
     ],
   },
 ];
@@ -88,7 +88,7 @@ export const NAV_SECTIONS: NavSection[] = [
   {
     title: 'Хандалт',
     items: [
-      { href: '/id-tags', label: 'RFID карт', icon: CreditCard, prefix: true },
+      { href: '/drivers', label: 'Жолооч', icon: Users, prefix: true },
       { href: '/reservations', label: 'Захиалга', icon: CalendarClock },
     ],
   },

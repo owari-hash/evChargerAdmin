@@ -528,12 +528,12 @@ export function TariffsView() {
 
                 {showBreakdown && (
                   <div className="overflow-x-auto rounded-xl border border-[var(--color-border)]">
-                    <table className="w-full text-left text-xs">
+                    <table className="w-full text-left text-xs border-collapse">
                       <thead className="bg-[var(--color-surface-2)] text-[11px] font-semibold text-[var(--color-fg-muted)]">
                         <tr>
-                          <th className="px-3.5 py-2.5">Тариф</th>
-                          <th className="px-3 py-2.5 text-right">кВт·ц</th>
-                          <th className="px-3 py-2.5 text-right">Нэгж үнэ</th>
+                          <th className="px-3.5 py-2.5 border-r border-[var(--color-border)]">Тариф</th>
+                          <th className="px-3 py-2.5 text-right border-r border-[var(--color-border)]">кВт·ц</th>
+                          <th className="px-3 py-2.5 text-right border-r border-[var(--color-border)]">Нэгж үнэ</th>
                           <th className="px-3.5 py-2.5 text-right">Дүн</th>
                         </tr>
                       </thead>
@@ -541,13 +541,13 @@ export function TariffsView() {
                         {isThreeRate ? (
                           <>
                             <tr>
-                              <td className="px-3.5 py-2.5 font-medium text-[var(--color-fg)]">
+                              <td className="px-3.5 py-2.5 font-medium text-[var(--color-fg)] border-r border-[var(--color-border)]">
                                 Өдрийн (06:00–17:00)
                               </td>
-                              <td className="px-3 py-2.5 text-right font-mono text-[var(--color-fg)]">
+                              <td className="px-3 py-2.5 text-right font-mono text-[var(--color-fg)] border-r border-[var(--color-border)]">
                                 {calculation.q[0]}
                               </td>
-                              <td className="px-3 py-2.5 text-right font-mono text-[var(--color-fg-muted)]">
+                              <td className="px-3 py-2.5 text-right font-mono text-[var(--color-fg-muted)] border-r border-[var(--color-border)]">
                                 {cat.dayRate} ₮
                               </td>
                               <td className="px-3.5 py-2.5 text-right font-mono font-semibold text-[var(--color-fg)]">
@@ -555,7 +555,7 @@ export function TariffsView() {
                               </td>
                             </tr>
                             <tr>
-                              <td className="px-3.5 py-2.5 font-medium text-orange-600 dark:text-orange-400">
+                              <td className="px-3.5 py-2.5 font-medium text-orange-600 dark:text-orange-400 border-r border-[var(--color-border)]">
                                 Оргил (17:00–22:00)
                               </td>
                               <td className="px-3 py-2.5 text-right font-mono text-[var(--color-fg)]">
@@ -569,7 +569,7 @@ export function TariffsView() {
                               </td>
                             </tr>
                             <tr>
-                              <td className="px-3.5 py-2.5 font-medium text-emerald-600 dark:text-emerald-400">
+                              <td className="px-3.5 py-2.5 font-medium text-emerald-600 dark:text-emerald-400 border-r border-[var(--color-border)]">
                                 Шөнийн (22:00–06:00)
                               </td>
                               <td className="px-3 py-2.5 text-right font-mono text-[var(--color-fg)]">

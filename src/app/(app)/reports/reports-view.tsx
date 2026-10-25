@@ -665,25 +665,25 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                                         <table className="w-full text-left text-xs border-collapse">
                                           <thead>
                                             <tr className="border-b border-[var(--color-border)] text-[11px] text-[var(--color-fg-subtle)] font-medium">
-                                              <th className="py-2 pr-3 w-10 text-center">№</th>
-                                              <th className="py-2 px-3">Сеанс ID</th>
-                                              <th className="py-2 px-3">Холбогч</th>
-                                              <th className="py-2 px-3">Машин / Карт</th>
-                                              <th className="py-2 px-3">Эхэлсэн хугацаа</th>
-                                              <th className="py-2 px-3 text-right">Эрчим хүч</th>
-                                              <th className="py-2 px-3 text-right">Тариф</th>
-                                              <th className="py-2 px-3 text-right font-semibold">Борлуулалт</th>
-                                              <th className="py-2 px-3 text-right text-blue-500">Шимтгэл</th>
+                                              <th className="py-2 pr-3 w-10 text-center border-r border-[var(--color-border)]">№</th>
+                                              <th className="py-2 px-3 border-r border-[var(--color-border)]">Сеанс ID</th>
+                                              <th className="py-2 px-3 border-r border-[var(--color-border)]">Холбогч</th>
+                                              <th className="py-2 px-3 border-r border-[var(--color-border)]">Машин / Карт</th>
+                                              <th className="py-2 px-3 border-r border-[var(--color-border)]">Эхэлсэн хугацаа</th>
+                                              <th className="py-2 px-3 text-right border-r border-[var(--color-border)]">Эрчим хүч</th>
+                                              <th className="py-2 px-3 text-right border-r border-[var(--color-border)]">Тариф</th>
+                                              <th className="py-2 px-3 text-right font-semibold border-r border-[var(--color-border)]">Борлуулалт</th>
+                                              <th className="py-2 px-3 text-right text-blue-500 border-r border-[var(--color-border)]">Шимтгэл</th>
                                               <th className="py-2 pl-3 text-right font-bold text-emerald-600 dark:text-emerald-400">Цэвэр орлого</th>
                                             </tr>
                                           </thead>
                                           <tbody className="divide-y divide-[var(--color-border)]">
                                             {stationSessions.map((tx, sIdx) => (
                                               <tr key={tx.id} className="hover:bg-[var(--color-surface-2)]/40 transition-colors">
-                                                <td className="py-2 pr-3 text-center font-mono text-[11px] text-[var(--color-fg-subtle)]">
+                                                <td className="py-2 pr-3 text-center font-mono text-[11px] text-[var(--color-fg-subtle)] border-r border-[var(--color-border)]">
                                                   {sIdx + 1}
                                                 </td>
-                                                <td className="py-2 px-3 font-mono font-semibold text-emerald-500">
+                                                <td className="py-2 px-3 font-mono font-semibold text-emerald-500 border-r border-[var(--color-border)]">
                                                   <Link
                                                     href={`/transactions/${tx.id}`}
                                                     className="hover:underline"
@@ -692,27 +692,27 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                                                     #{tx.id}
                                                   </Link>
                                                 </td>
-                                                <td className="py-2 px-3">
+                                                <td className="py-2 px-3 border-r border-[var(--color-border)]">
                                                   <span className="inline-flex items-center gap-1 rounded bg-[var(--color-surface-2)] px-1.5 py-0.5 font-mono text-[11px] font-medium text-[var(--color-fg)]">
                                                     Буу {connectorLetter(tx.connectorId)}
                                                   </span>
                                                 </td>
-                                                <td className="py-2 px-3 text-[11px] text-[var(--color-fg-muted)]">
+                                                <td className="py-2 px-3 text-[11px] text-[var(--color-fg-muted)] border-r border-[var(--color-border)]">
                                                   {tx.vehicleModel || tx.idTag || '—'}
                                                 </td>
-                                                <td className="py-2 px-3 text-[11px] text-[var(--color-fg-muted)]">
+                                                <td className="py-2 px-3 text-[11px] text-[var(--color-fg-muted)] border-r border-[var(--color-border)]">
                                                   {formatDateTime(tx.startTimestamp)}
                                                 </td>
-                                                <td className="py-2 px-3 text-right font-mono text-xs">
+                                                <td className="py-2 px-3 text-right font-mono text-xs border-r border-[var(--color-border)]">
                                                   {formatNumber(tx.energyKwh, 2)} кВтц
                                                 </td>
-                                                <td className="py-2 px-3 text-right font-mono text-[11px] text-[var(--color-fg-subtle)]">
+                                                <td className="py-2 px-3 text-right font-mono text-[11px] text-[var(--color-fg-subtle)] border-r border-[var(--color-border)]">
                                                   {tx.tariffPerKwh ? `${formatNumber(tx.tariffPerKwh)}₮` : '—'}
                                                 </td>
-                                                <td className="py-2 px-3 text-right font-mono text-xs font-semibold text-[var(--color-fg)]">
+                                                <td className="py-2 px-3 text-right font-mono text-xs font-semibold text-[var(--color-fg)] border-r border-[var(--color-border)]">
                                                   {formatMoney(tx.cost)}
                                                 </td>
-                                                <td className="py-2 px-3 text-right font-mono text-xs text-blue-500">
+                                                <td className="py-2 px-3 text-right font-mono text-xs text-blue-500 border-r border-[var(--color-border)]">
                                                   {formatMoney(tx.feeAmount)}
                                                 </td>
                                                 <td className="py-2 pl-3 text-right font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">

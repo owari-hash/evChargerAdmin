@@ -166,7 +166,7 @@ export function TransactionsView({
           <Table>
             <THead>
               <tr>
-                <TH className="w-12 text-center border-r border-[var(--color-border)]">№</TH>
+                <TH className="w-12 text-center">№</TH>
                 <TH>Цэнэглэлт ID</TH>
                 <TH>Төлөв</TH>
                 <TH>Цэнэглэх станц</TH>
@@ -205,7 +205,7 @@ export function TransactionsView({
                           'bg-emerald-500/10 hover:bg-emerald-500/15 border-l-4 border-l-emerald-500 shadow-[inset_0_0_20px_rgba(16,185,129,0.12)]',
                       )}
                     >
-                      <TD align="center" className="text-xs text-[var(--color-fg-muted)] border-r border-[var(--color-border)] font-mono">
+                      <TD align="center" className="text-xs text-[var(--color-fg-muted)] font-mono">
                         {num}
                       </TD>
                       <TD>

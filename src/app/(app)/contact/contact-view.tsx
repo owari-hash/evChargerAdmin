@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import useSWR from 'swr';
-import { Download, Facebook, Instagram, Mail, Phone, PhoneCall, RefreshCw, Save } from 'lucide-react';
+import { Download, Facebook, Instagram, Mail, Phone, PhoneCall, Save } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
 import { formatDateTime } from '@/lib/format';

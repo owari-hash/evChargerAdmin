@@ -17,12 +17,12 @@ export function Sidebar({
   open,
   onClose,
 }: {
-  user: SessionUser;
+  user: SessionUser & { allowedMenus?: string[] };
   open: boolean;
   onClose: () => void;
 }) {
   const pathname = usePathname();
-  const sections = visibleSections(user.role);
+  const sections = visibleSections(user.role, user.allowedMenus);
 
   return (
     <>

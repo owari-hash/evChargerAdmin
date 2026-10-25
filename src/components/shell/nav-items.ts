@@ -118,7 +118,36 @@ export const NAV_SECTIONS: NavSection[] = [
 
 const RANK: Record<UserRole, number> = { CLIENT: 0, VIEWER: 1, OPERATOR: 2, ADMIN: 3 };
 
-export function visibleSections(role: UserRole): NavSection[] {
+export interface ManageableMenu {
+  href: string;
+  label: string;
+  section: 'Үйл ажиллагаа' | 'Хандалт';
+}
+
+export const MANAGEABLE_MENUS: ManageableMenu[] = [
+  // Үйл ажиллагаа
+  { href: '/', label: 'Ерөнхий тойм', section: 'Үйл ажиллагаа' },
+  { href: '/charge-points', label: 'Цэнэглэх станц', section: 'Үйл ажиллагаа' },
+  { href: '/connectors', label: 'Холбогч', section: 'Үйл ажиллагаа' },
+  { href: '/transactions', label: 'Цэнэглэлт', section: 'Үйл ажиллагаа' },
+  { href: '/payments', label: 'Төлбөр', section: 'Үйл ажиллагаа' },
+  { href: '/ebarimt', label: 'И-Баримт', section: 'Үйл ажиллагаа' },
+  { href: '/reports', label: 'Тайлан', section: 'Үйл ажиллагаа' },
+  { href: '/live', label: 'Шууд урсгал', section: 'Үйл ажиллагаа' },
+  { href: '/simulator', label: 'OCPP Симулятор', section: 'Үйл ажиллагаа' },
+  // Хандалт
+  { href: '/drivers', label: 'Жолооч', section: 'Хандалт' },
+  { href: '/reservations', label: 'Захиалга', section: 'Хандалт' },
+];
+
+export function visibleSections(role: UserRole, allowedMenus?: string[]): NavSection[] {
+  if (allowedMenus && allowedMenus.length > 0) {
+    const allowedSet = new Set(allowedMenus);
+    return NAV_SECTIONS.map((section) => ({
+      ...section,
+      items: section.items.filter((item) => allowedSet.has(item.href)),
+    })).filter((section) => section.items.length > 0);
+  }
   if (role === 'CLIENT') {
     return CLIENT_NAV_SECTIONS;
   }

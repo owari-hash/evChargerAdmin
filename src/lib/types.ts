@@ -109,14 +109,16 @@ export interface SessionUser {
   role: UserRole;
   clientId?: string;
   clientName?: string;
+  allowedMenus?: string[];
 }
 
 export interface User extends SessionUser {
   name?: string;
   clientId?: string;
-  client?: { id: string; name: string };
+  client?: { id: string; name: string; businessRegister?: string };
   isActive: boolean;
   lastLoginAt?: string;
+  allowedMenus?: string[];
   createdAt: string;
   updatedAt: string;
 }

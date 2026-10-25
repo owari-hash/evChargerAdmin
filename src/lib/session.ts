@@ -62,6 +62,7 @@ export function readPrincipal(token: string): SessionUser | null {
       role: claims.role,
       clientId: claims.clientId,
       clientName: claims.clientName,
+      allowedMenus: claims.allowedMenus,
     };
   } catch {
     return null;

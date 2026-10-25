@@ -297,6 +297,7 @@ export interface Transaction {
     state?: 'PENDING' | 'DONE';
     amount?: number;
     reason?: string;
+    accountNumber?: string;
     refundedBy?: string;
     refundedAt?: string;
     ebarimtReturned?: boolean;

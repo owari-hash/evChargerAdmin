@@ -70,6 +70,7 @@ export function TransactionView({
   const [meterStop, setMeterStop] = React.useState('');
   const [refundOpen, setRefundOpen] = React.useState(false);
   const [refundReason, setRefundReason] = React.useState('');
+  const [refundAccount, setRefundAccount] = React.useState('');
 
   const id = tx.transactionId ?? tx.id;
   const isActive = tx.status === 'Active';
@@ -132,12 +133,16 @@ export function TransactionView({
   async function refund() {
     setBusy(true);
     try {
-      const res = await api.post<Transaction>(`transactions/${id}/refund`, { reason: refundReason.trim() });
+      const res = await api.post<Transaction>(`transactions/${id}/refund`, {
+        reason: refundReason.trim(),
+        accountNumber: refundAccount.trim() || undefined,
+      });
       toast.success(
         `${formatMoney(res.refund?.amount ?? 0)} хэтэвчинд буцаалаа${res.refund?.ebarimtReturned ? ', е-баримт буцаагдсан' : ''}.`,
       );
       setRefundOpen(false);
       setRefundReason('');
+      setRefundAccount('');
       router.refresh();
     } catch (err) {
       toast.error(errorMessage(err));
@@ -299,6 +304,9 @@ export function TransactionView({
             {tx.refund?.state === 'DONE' ? (
               <>
                 <DataRow label="Буцаасан дүн">{formatMoney(tx.refund.amount ?? 0)}</DataRow>
+                {tx.refund.accountNumber ? (
+                  <DataRow label="Шилжүүлсэн данс">{tx.refund.accountNumber}</DataRow>
+                ) : null}
                 <DataRow label="Буцаалтын шалтгаан">{tx.refund.reason ?? '—'}</DataRow>
                 <DataRow label="Буцаасан">
                   {`${formatDateTime(tx.refund.refundedAt)} · ${tx.refund.refundedBy ?? '—'}`}
@@ -438,6 +446,14 @@ export function TransactionView({
               : ''}{' '}
             Энэ үйлдлийг буцаах боломжгүй.
           </p>
+          <Field label="Шилжүүлсэн дансны дугаар (сонголттой)" hint="Мэдэгдэл SMS болон түүхэнд бичигдэнэ.">
+            <Input
+              value={refundAccount}
+              onChange={(e) => setRefundAccount(e.target.value)}
+              placeholder="Жишээ: 5025753481"
+              maxLength={50}
+            />
+          </Field>
           <Field label="Шалтгаан" hint="Хэтэвчийн хуулга болон аудитад хадгалагдана.">
             <Input
               value={refundReason}

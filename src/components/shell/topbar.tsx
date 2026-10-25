@@ -5,6 +5,7 @@ import { LogOut, Menu, Moon, Sun } from 'lucide-react';
 import { Button, Dot } from '@/components/ui/primitives';
 import { GlobalSearch } from './global-search';
 import { NotificationBell } from './notification-bell';
+import { LiveChargingButton } from './live-charging-button';
 import { logout } from '@/lib/client';
 import { useLiveStreamEvents, useLiveStreamStatus } from './live-stream';
 import { useLiveRevalidation } from '@/lib/live-query';
@@ -36,6 +37,7 @@ export function Topbar({ user, onMenu }: { user: SessionUser; onMenu: () => void
             {user.clientName ?? 'Харилцагч'}
           </span>
         )}
+        <LiveChargingButton />
         <LiveIndicator />
         <span data-tour="notifications" className="inline-flex">
           <NotificationBell userId={user.id} />

@@ -3,6 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import useSWR from 'swr';
+import { Zap } from 'lucide-react';
 import { REFRESH } from '@/lib/live-query';
 import { apiUrl, fetcher } from '@/lib/client';
 import {
@@ -22,6 +23,7 @@ import { FilterBar, Pagination } from '@/components/ui/pagination';
 import { TRANSACTION_STATUS, mn } from '@/lib/mn';
 import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty, TableLoading } from '@/components/ui/table';
 import { StationName } from '@/components/station-name';
+import { cn } from '@/lib/cn';
 
 function toStartOfDayIso(dateStr: string): string {
   if (!dateStr) return '';
@@ -172,8 +174,8 @@ export function TransactionsView({
                 <TH>Эхэлсэн</TH>
                 <TH>Үргэлжилсэн</TH>
                 <TH>Эрчим хүч</TH>
-                <TH>Чадал</TH>
-                <TH>Төлбөр</TH>
+                <TH>Чадал / SoC</TH>
+                <TH className="text-right">Төлбөр</TH>
                 <TH>Зогссон шалтгаан</TH>
               </tr>
             </THead>
@@ -188,25 +190,52 @@ export function TransactionsView({
                 rows.map((tx, idx) => {
                   const num = (page - 1) * limit + idx + 1;
                   const id = tx.transactionId ?? tx.id;
+                  const isActive = tx.status === 'Active';
                   const energyWh =
-                    tx.status === 'Active'
+                    isActive
                       ? (tx.lastMeterWh ?? tx.meterStart) - tx.meterStart
                       : tx.energyWh;
+
                   return (
-                    <TR key={id}>
+                    <TR
+                      key={id}
+                      className={cn(
+                        'transition-all',
+                        isActive &&
+                          'bg-emerald-500/10 hover:bg-emerald-500/15 border-l-4 border-l-emerald-500 shadow-[inset_0_0_20px_rgba(16,185,129,0.12)]',
+                      )}
+                    >
                       <TD align="center" className="text-xs text-[var(--color-fg-muted)] border-r border-[var(--color-border)] font-mono">
                         {num}
                       </TD>
                       <TD>
-                        <Link
-                          href={`/transactions/${id}`}
-                          className="font-mono text-xs font-medium text-[var(--color-brand)] hover:underline"
-                        >
-                          #{id}
-                        </Link>
+                        <div className="flex items-center gap-1.5">
+                          {isActive ? (
+                            <span className="relative flex h-2 w-2 shrink-0">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                            </span>
+                          ) : null}
+                          <Link
+                            href={`/transactions/${id}`}
+                            className={cn(
+                              'font-mono text-xs hover:underline',
+                              isActive ? 'text-emerald-500 font-bold' : 'text-[var(--color-brand)] font-medium',
+                            )}
+                          >
+                            #{id}
+                          </Link>
+                        </div>
                       </TD>
                       <TD>
-                        <TransactionStatusBadge status={tx.status} />
+                        {isActive ? (
+                          <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/15 border border-emerald-500/30 px-2.5 py-0.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 shadow-sm whitespace-nowrap">
+                            <Zap className="h-3.5 w-3.5 fill-current text-emerald-500 animate-pulse" />
+                            Цэнэглэж байна
+                          </span>
+                        ) : (
+                          <TransactionStatusBadge status={tx.status} />
+                        )}
                       </TD>
                       <TD align="left" className="whitespace-nowrap">
                         <StationName
@@ -231,16 +260,55 @@ export function TransactionsView({
                       <TD className="whitespace-nowrap text-xs text-[var(--color-fg-muted)]">
                         {formatDateTime(tx.startTimestamp)}
                       </TD>
-                      <TD className="text-xs">
+                      <TD className="text-xs font-mono">
                         {formatDuration(tx.startTimestamp, tx.stopTimestamp)}
                       </TD>
-                      <TD className="text-xs font-medium">
+                      <TD className="text-xs font-medium font-mono">
                         {formatWh(energyWh)}
                       </TD>
                       <TD className="text-xs">
-                        {tx.status === 'Active' ? formatPower(tx.lastPowerW) : '—'}
+                        {isActive ? (
+                          <div className="flex flex-col gap-1">
+                            {tx.lastPowerW != null && tx.lastPowerW > 0 ? (
+                              <span className="font-mono text-xs font-bold text-emerald-500 inline-flex items-center gap-1">
+                                <Zap className="h-3 w-3 animate-pulse fill-current" />
+                                {formatPower(tx.lastPowerW)}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-emerald-500 font-semibold inline-flex items-center gap-1">
+                                <Zap className="h-3 w-3 animate-pulse fill-current" />
+                                Цэнэглэж байна
+                              </span>
+                            )}
+
+                            {tx.lastSocPercent != null ? (
+                              <div className="flex items-center gap-1.5" title={`Батарейн цэнэг: ${tx.lastSocPercent}%`}>
+                                <div className="h-1.5 w-14 overflow-hidden rounded-full bg-[var(--color-surface-2)] border border-[var(--color-border)]">
+                                  <div
+                                    className="h-full bg-emerald-500 transition-all duration-500"
+                                    style={{ width: `${Math.min(100, Math.max(0, tx.lastSocPercent))}%` }}
+                                  />
+                                </div>
+                                <span className="font-mono text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                                  {tx.lastSocPercent}%
+                                </span>
+                              </div>
+                            ) : null}
+                          </div>
+                        ) : (
+                          <div className="flex flex-col gap-0.5 text-xs">
+                            <span className="text-[var(--color-fg-muted)] font-mono">
+                              {tx.lastPowerW ? formatPower(tx.lastPowerW) : '—'}
+                            </span>
+                            {tx.lastSocPercent != null ? (
+                              <span className="font-mono text-[10px] text-[var(--color-fg-subtle)]">
+                                SoC: {tx.lastSocPercent}%
+                              </span>
+                            ) : null}
+                          </div>
+                        )}
                       </TD>
-                      <TD align="right" className="text-xs">
+                      <TD align="right" className="text-xs font-mono font-semibold">
                         {tx.cost != null ? formatMoney(tx.cost) : '—'}
                       </TD>
                       <TD className="text-xs text-[var(--color-fg-muted)]">{tx.stopReason ?? '—'}</TD>

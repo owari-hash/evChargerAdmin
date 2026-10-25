@@ -10,7 +10,6 @@ import {
   ShieldCheck,
   Zap,
   CreditCard,
-  Calculator,
   Download,
   Search,
   Calendar,
@@ -18,12 +17,7 @@ import {
   ChevronRight,
   Plug,
   TrendingUp,
-  Info,
-  Minus,
-  Equal,
-  CheckCircle2,
   X,
-  Clock,
 } from 'lucide-react';
 import { apiUrl, fetcher } from '@/lib/client';
 import {
@@ -229,18 +223,18 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
   }
 
   return (
-    <div className="space-y-5">
-      {/* 1. Header Title & Range Controls matching Image 1 */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 shadow-sm">
-            <BarChart3 className="h-6 w-6" />
+    <div className="space-y-3.5 sm:space-y-4">
+      {/* 1. Header Title & Range Controls */}
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2.5">
+          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 shadow-sm">
+            <BarChart3 className="h-5 w-5" />
           </div>
           <div>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--color-fg)]">
+            <h1 className="text-lg sm:text-xl font-bold tracking-tight text-[var(--color-fg)]">
               Орлого, тайлан
             </h1>
-            <p className="text-xs sm:text-sm text-[var(--color-fg-muted)]">
+            <p className="text-xs text-[var(--color-fg-muted)]">
               Цэнэглэлтийн орлого, Eplug шимтгэл болон цэвэр орлогын тайлан
             </p>
           </div>
@@ -293,198 +287,121 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
         </div>
       </div>
 
-      {/* 2. 5 Stat Cards in horizontal row matching Image 1 */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+      {/* 2. Compact 5 Stat Cards in horizontal row */}
+      <div className="grid grid-cols-2 gap-2 sm:gap-2.5 lg:grid-cols-5">
         {/* Card 1: Нийт борлуулалт (брутто) */}
-        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-[var(--color-fg-muted)]">
+        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-2.5 sm:p-3 shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between gap-1.5">
+            <span className="text-[11px] sm:text-xs font-medium text-[var(--color-fg-muted)] truncate">
               Нийт борлуулалт (брутто)
             </span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500">
-              <Coins className="h-4 w-4" />
+            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-emerald-500/10 text-emerald-500">
+              <Coins className="h-3.5 w-3.5" />
             </div>
           </div>
-          <div className="mt-3">
-            <div className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--color-fg)] tnum font-mono">
+          <div className="mt-1.5">
+            <div className="text-base sm:text-lg font-bold tracking-tight text-[var(--color-fg)] tnum font-mono truncate">
               {formatMoney(totals?.gross)}
             </div>
-            <div className="mt-1 flex items-center gap-1 text-[11px] font-medium text-emerald-500">
+            <div className="mt-0.5 flex items-center gap-1 text-[10px] sm:text-[11px] font-medium text-emerald-500 truncate">
               <span className="inline-flex items-center">↑ 12.5%</span>
-              <span className="text-[var(--color-fg-subtle)] font-normal">Өмнөх хугацаатай харьцуулахад</span>
+              <span className="text-[var(--color-fg-subtle)] font-normal truncate">Өмнөх хугацаатай харьцуулахад</span>
             </div>
           </div>
         </div>
 
         {/* Card 2: Хэрэглэгчийн цэвэр орлого */}
-        <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 shadow-sm flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+        <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-2.5 sm:p-3 shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between gap-1.5">
+            <span className="text-[11px] sm:text-xs font-semibold text-emerald-600 dark:text-emerald-400 truncate">
               Хэрэглэгчийн цэвэр орлого
             </span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-500">
-              <User className="h-4 w-4" />
+            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-emerald-500/15 text-emerald-500">
+              <User className="h-3.5 w-3.5" />
             </div>
           </div>
-          <div className="mt-3">
-            <div className="text-xl sm:text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 tnum font-mono">
+          <div className="mt-1.5">
+            <div className="text-base sm:text-lg font-bold tracking-tight text-emerald-600 dark:text-emerald-400 tnum font-mono truncate">
               {formatMoney(totals?.net)}
             </div>
-            <div className="mt-1 flex items-center gap-1 text-[11px] font-medium text-emerald-500">
+            <div className="mt-0.5 flex items-center gap-1 text-[10px] sm:text-[11px] font-medium text-emerald-500 truncate">
               <span className="inline-flex items-center">↑ 8.2%</span>
-              <span className="text-[var(--color-fg-subtle)] font-normal">Өмнөх хугацаатай харьцуулахад</span>
+              <span className="text-[var(--color-fg-subtle)] font-normal truncate">Өмнөх хугацаатай харьцуулахад</span>
             </div>
           </div>
         </div>
 
         {/* Card 3: Eplug үйлчилгээний шимтгэл */}
-        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-[var(--color-fg-muted)]">
+        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-2.5 sm:p-3 shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between gap-1.5">
+            <span className="text-[11px] sm:text-xs font-medium text-[var(--color-fg-muted)] truncate">
               Eplug үйлчилгээний шимтгэл
             </span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500">
-              <ShieldCheck className="h-4 w-4" />
+            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-blue-500/10 text-blue-500">
+              <ShieldCheck className="h-3.5 w-3.5" />
             </div>
           </div>
-          <div className="mt-3">
-            <div className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--color-fg)] tnum font-mono">
+          <div className="mt-1.5">
+            <div className="text-base sm:text-lg font-bold tracking-tight text-[var(--color-fg)] tnum font-mono truncate">
               {formatMoney(totals?.fee)}
             </div>
-            <div className="mt-1 text-[11px] text-[var(--color-fg-muted)]">
+            <div className="mt-0.5 text-[10px] sm:text-[11px] text-[var(--color-fg-muted)] truncate">
               <span className="font-semibold text-blue-500">{avgFeePercent}%</span> Үйлчилгээний хувь
             </div>
           </div>
         </div>
 
         {/* Card 4: Нийлүүлсэн эрчим хүч */}
-        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-[var(--color-fg-muted)]">
+        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-2.5 sm:p-3 shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between gap-1.5">
+            <span className="text-[11px] sm:text-xs font-medium text-[var(--color-fg-muted)] truncate">
               Нийлүүлсэн эрчим хүч
             </span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500">
-              <Zap className="h-4 w-4" />
+            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-amber-500/10 text-amber-500">
+              <Zap className="h-3.5 w-3.5" />
             </div>
           </div>
-          <div className="mt-3">
-            <div className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--color-fg)] tnum font-mono">
+          <div className="mt-1.5">
+            <div className="text-base sm:text-lg font-bold tracking-tight text-[var(--color-fg)] tnum font-mono truncate">
               {formatNumber(totals?.energyKwh, 2)} кВтц
             </div>
-            <div className="mt-1 flex items-center gap-1 text-[11px] font-medium text-emerald-500">
+            <div className="mt-0.5 flex items-center gap-1 text-[10px] sm:text-[11px] font-medium text-emerald-500 truncate">
               <span className="inline-flex items-center">↑ 15.3%</span>
-              <span className="text-[var(--color-fg-subtle)] font-normal">Өмнөх хугацаатай харьцуулахад</span>
+              <span className="text-[var(--color-fg-subtle)] font-normal truncate">Өмнөх хугацаатай харьцуулахад</span>
             </div>
           </div>
         </div>
 
         {/* Card 5: Төлбөрийн үлдэгдэл */}
-        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm flex flex-col justify-between col-span-2 sm:col-span-1">
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-[var(--color-fg-muted)]">
+        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-2.5 sm:p-3 shadow-sm flex flex-col justify-between col-span-2 lg:col-span-1">
+          <div className="flex items-center justify-between gap-1.5">
+            <span className="text-[11px] sm:text-xs font-medium text-[var(--color-fg-muted)] truncate">
               Төлбөрийн үлдэгдэл
             </span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-500/10 text-purple-500">
-              <CreditCard className="h-4 w-4" />
+            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-purple-500/10 text-purple-500">
+              <CreditCard className="h-3.5 w-3.5" />
             </div>
           </div>
-          <div className="mt-3">
-            <div className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--color-fg)] tnum font-mono">
+          <div className="mt-1.5">
+            <div className="text-base sm:text-lg font-bold tracking-tight text-[var(--color-fg)] tnum font-mono truncate">
               {formatMoney(totals?.outstanding ?? totals?.net ?? 0)}
             </div>
-            <div className="mt-1 text-[11px] text-emerald-500 font-medium">
+            <div className="mt-0.5 text-[10px] sm:text-[11px] text-emerald-500 font-medium truncate">
               Шилжүүлэх боломжтой
             </div>
           </div>
         </div>
       </div>
 
-      {/* 3. Formula Banner matching Image 1: "Тооцох томьёо" */}
-      <Card className="p-4 sm:p-5 border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-[var(--color-border)] pb-4">
-          <div className="flex items-center gap-2.5">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500">
-              <Calculator className="h-4 w-4" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-bold text-[var(--color-fg)]">Тооцох томьёо</span>
-                <span className="rounded bg-[var(--color-surface-2)] px-2 py-0.5 text-[11px] font-medium text-[var(--color-fg-muted)]">
-                  Станцын цэвэр орлого тооцох аргачлал
-                </span>
-              </div>
-            </div>
-          </div>
-
-          <div className="text-xs text-[var(--color-fg-muted)] flex flex-wrap items-center gap-y-1 gap-x-4">
-            <span>• Станцын эзэмшигчийн тохируулсан тарифаар бодогдсон дүн</span>
-            <span>• Гэрээний дагуу тооцогдох шимтгэлийг автоматаар суутгана</span>
-            <span>• Сар бүрийн тооцооны дагуу цэвэр орлого дансанд шилжинэ</span>
-          </div>
-        </div>
-
-        {/* 3 Calculation Blocks */}
-        <div className="mt-4 flex flex-col md:flex-row items-center justify-between gap-3">
-          {/* Block 1: Нийт борлуулалт */}
-          <div className="w-full md:flex-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)]/60 p-3.5 text-center sm:text-left">
-            <span className="text-[11px] font-semibold text-[var(--color-fg-muted)] uppercase tracking-wider">
-              Нийт борлуулалт (брутто)
-            </span>
-            <div className="mt-1 font-mono text-base font-bold text-[var(--color-fg)]">
-              {formatMoney(totals?.gross)}
-            </div>
-            <p className="mt-1 text-[11px] text-[var(--color-fg-subtle)]">
-              Станцаар хийгдсэн нийт төлбөр
-            </p>
-          </div>
-
-          {/* Minus operator */}
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface-2)] border border-[var(--color-border)] text-[var(--color-fg-muted)]">
-            <Minus className="h-3.5 w-3.5" />
-          </div>
-
-          {/* Block 2: Eplug шимтгэл */}
-          <div className="w-full md:flex-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)]/60 p-3.5 text-center sm:text-left">
-            <span className="text-[11px] font-semibold text-blue-500 uppercase tracking-wider">
-              Eplug үйлчилгээний шимтгэл
-            </span>
-            <div className="mt-1 font-mono text-base font-bold text-blue-500">
-              {formatMoney(totals?.fee)}
-            </div>
-            <p className="mt-1 text-[11px] text-[var(--color-fg-subtle)]">
-              Үйлчилгээний хураамж ({avgFeePercent}%)
-            </p>
-          </div>
-
-          {/* Equal operator */}
-          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface-2)] border border-[var(--color-border)] text-[var(--color-fg-muted)]">
-            <Equal className="h-3.5 w-3.5" />
-          </div>
-
-          {/* Block 3: Харилцагчийн цэвэр орлого */}
-          <div className="w-full md:flex-1 rounded-xl border-2 border-emerald-500/40 bg-emerald-500/10 p-3.5 text-center sm:text-left shadow-sm">
-            <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
-              Хэрэглэгчийн цэвэр орлого
-            </span>
-            <div className="mt-1 font-mono text-base font-bold text-emerald-600 dark:text-emerald-400">
-              {formatMoney(totals?.net)}
-            </div>
-            <p className="mt-1 text-[11px] text-emerald-600/80 dark:text-emerald-400/80">
-              Станц эзэмшигчид шилжих дүн
-            </p>
-          </div>
-        </div>
-      </Card>
-
-      {/* 4. Tabs & Sub-filter Bar */}
+      {/* 3. Tabs & Table Card directly below resized dashboard */}
       <Card>
-        {/* Navigation Tabs matching Image 1 */}
+        {/* Navigation Tabs */}
         <div className="flex border-b border-[var(--color-border)] px-3 sm:px-4 bg-[var(--color-surface)]/60 overflow-x-auto no-scrollbar">
           <button
             type="button"
             onClick={() => setActiveTab('stations')}
             className={cn(
-              'py-3 px-3.5 text-xs font-medium border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap',
+              'py-2.5 px-3 text-xs font-medium border-b-2 transition-colors flex items-center gap-1.5 whitespace-nowrap',
               activeTab === 'stations'
                 ? 'border-emerald-500 text-emerald-500 font-semibold'
                 : 'border-transparent text-[var(--color-fg-muted)] hover:text-[var(--color-fg)]',
@@ -497,7 +414,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
             type="button"
             onClick={() => setActiveTab('daily')}
             className={cn(
-              'py-3 px-3.5 text-xs font-medium border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap',
+              'py-2.5 px-3 text-xs font-medium border-b-2 transition-colors flex items-center gap-1.5 whitespace-nowrap',
               activeTab === 'daily'
                 ? 'border-emerald-500 text-emerald-500 font-semibold'
                 : 'border-transparent text-[var(--color-fg-muted)] hover:text-[var(--color-fg)]',
@@ -510,7 +427,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
             type="button"
             onClick={() => setActiveTab('connectors')}
             className={cn(
-              'py-3 px-3.5 text-xs font-medium border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap',
+              'py-2.5 px-3 text-xs font-medium border-b-2 transition-colors flex items-center gap-1.5 whitespace-nowrap',
               activeTab === 'connectors'
                 ? 'border-emerald-500 text-emerald-500 font-semibold'
                 : 'border-transparent text-[var(--color-fg-muted)] hover:text-[var(--color-fg)]',
@@ -523,7 +440,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
             type="button"
             onClick={() => setActiveTab('sessions')}
             className={cn(
-              'py-3 px-3.5 text-xs font-medium border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap',
+              'py-2.5 px-3 text-xs font-medium border-b-2 transition-colors flex items-center gap-1.5 whitespace-nowrap',
               activeTab === 'sessions'
                 ? 'border-emerald-500 text-emerald-500 font-semibold'
                 : 'border-transparent text-[var(--color-fg-muted)] hover:text-[var(--color-fg)]',
@@ -535,8 +452,8 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
         </div>
 
         {/* Sub-toolbar: Search, Date quick chips, and CSV Export */}
-        <div className="p-3 sm:p-4 border-b border-[var(--color-border)] flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-[16rem]">
+        <div className="p-2.5 sm:p-3 border-b border-[var(--color-border)] flex flex-wrap items-center justify-between gap-2.5">
+          <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[16rem]">
             {/* Search Box */}
             <div className="relative flex-1 min-w-[14rem] max-w-sm">
               <Search className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--color-fg-subtle)]" />
@@ -613,15 +530,15 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                 <Table>
                   <THead>
                     <tr>
-                      <TH className="w-12 text-center">№</TH>
-                      <TH>Станц / Байршил</TH>
-                      <TH className="text-right">Сеанс</TH>
-                      <TH className="text-right">Эрчим хүч (кВтц)</TH>
-                      <TH className="text-right">Тариф (₮/кВтц)</TH>
-                      <TH className="text-right">Борлуулалт (₮)</TH>
-                      <TH className="text-right">Шимтгэл (₮)</TH>
-                      <TH className="text-right">Цэвэр орлого (₮)</TH>
-                      <TH>Тооцох томьёо</TH>
+                      <TH className="w-10 text-center py-2 px-2">№</TH>
+                      <TH className="text-left py-2 px-3">Станц / Байршил</TH>
+                      <TH className="text-right py-2 px-3">Сеанс</TH>
+                      <TH className="text-right py-2 px-3">Эрчим хүч (кВтц)</TH>
+                      <TH className="text-right py-2 px-3">Тариф (₮/кВтц)</TH>
+                      <TH className="text-right py-2 px-3">Борлуулалт (₮)</TH>
+                      <TH className="text-right py-2 px-3">Шимтгэл (₮)</TH>
+                      <TH className="text-right py-2 px-3">Цэвэр орлого (₮)</TH>
+                      <TH className="text-center py-2 px-3">Тооцох томьёо</TH>
                     </tr>
                   </THead>
                   <TBody>
@@ -650,59 +567,57 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                               onClick={() => toggleStationExpand(s.chargePointId)}
                             >
                               {/* Row Number */}
-                              <TD className="w-12 text-center font-mono text-xs text-[var(--color-fg-subtle)]">
+                              <TD className="w-10 text-center font-mono text-xs text-[var(--color-fg-subtle)] py-1.5 px-2">
                                 {idx + 1}
                               </TD>
 
-                              {/* Station & Location */}
-                              <TD>
-                                <div className="flex items-center gap-2">
+                              {/* Station / Location (Only name, left-aligned, start from the same position) */}
+                              <TD align="left" className="py-1.5 px-3">
+                                <div className="flex items-center gap-1.5 text-left">
                                   <button
                                     type="button"
-                                    className="p-1 rounded text-[var(--color-fg-subtle)] hover:text-[var(--color-fg)]"
+                                    className="p-0.5 rounded text-[var(--color-fg-subtle)] hover:text-[var(--color-fg)] shrink-0"
                                     aria-label="Сеансуудыг дэлгэрүүлэх"
                                   >
                                     {isExpanded ? (
-                                      <ChevronDown className="h-4 w-4 text-emerald-500" />
+                                      <ChevronDown className="h-3.5 w-3.5 text-emerald-500" />
                                     ) : (
-                                      <ChevronRight className="h-4 w-4" />
+                                      <ChevronRight className="h-3.5 w-3.5" />
                                     )}
                                   </button>
-                                  <div>
-                                    <div className="font-semibold text-[var(--color-fg)]">
-                                      {s.name}
-                                    </div>
-                                    <div className="text-[11px] text-[var(--color-fg-subtle)] font-mono">
-                                      {s.cpId} {s.address ? `· ${s.address}` : ''}
-                                    </div>
-                                  </div>
+                                  <span
+                                    className="font-medium text-xs text-[var(--color-fg)] truncate"
+                                    title={s.address ? `${s.name} (${s.address})` : s.name}
+                                  >
+                                    {s.name}
+                                  </span>
                                 </div>
                               </TD>
 
                               {/* Sessions Count */}
-                              <TD className="text-right font-medium">
+                              <TD className="text-right font-medium py-1.5 px-3">
                                 <span className="inline-flex items-center justify-center rounded-full bg-[var(--color-surface-2)] px-2 py-0.5 text-xs font-semibold text-[var(--color-fg)]">
                                   {formatNumber(s.sessionsCount)}
                                 </span>
                               </TD>
 
                               {/* Energy (kWh) */}
-                              <TD className="text-right font-mono text-xs">
+                              <TD className="text-right font-mono text-xs py-1.5 px-3">
                                 {formatNumber(s.energyKwh, 2)} кВтц
                               </TD>
 
                               {/* Tariff */}
-                              <TD className="text-right font-mono text-xs text-[var(--color-fg-muted)]">
+                              <TD className="text-right font-mono text-xs text-[var(--color-fg-muted)] py-1.5 px-3">
                                 {s.tariffPerKwh ? `${formatNumber(s.tariffPerKwh)} ₮` : 'Хуваарьт'}
                               </TD>
 
                               {/* Gross (Each station's own charged amount!) */}
-                              <TD className="text-right font-mono text-xs font-semibold text-[var(--color-fg)]">
+                              <TD className="text-right font-mono text-xs font-semibold text-[var(--color-fg)] py-1.5 px-3">
                                 {formatMoney(s.gross)}
                               </TD>
 
                               {/* Fee Amount (Each station's own fee) */}
-                              <TD className="text-right font-mono text-xs text-blue-500">
+                              <TD className="text-right font-mono text-xs text-blue-500 py-1.5 px-3">
                                 {formatMoney(s.feeAmount)}
                                 <span className="text-[10px] text-[var(--color-fg-subtle)] ml-1">
                                   ({s.feePercent}%)
@@ -710,13 +625,13 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                               </TD>
 
                               {/* Net Revenue (Each station's own client net) */}
-                              <TD className="text-right font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                              <TD className="text-right font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400 py-1.5 px-3">
                                 {formatMoney(s.clientNet)}
                               </TD>
 
                               {/* Calculation Formula */}
-                              <TD className="text-[11px] font-mono text-[var(--color-fg-muted)]">
-                                <span className="rounded bg-[var(--color-surface-2)] px-2 py-0.5 border border-[var(--color-border)]">
+                              <TD className="text-center text-[10px] font-mono text-[var(--color-fg-muted)] py-1.5 px-3">
+                                <span className="rounded bg-[var(--color-surface-2)] px-1.5 py-0.5 border border-[var(--color-border)]">
                                   {formatMoney(s.gross)} - {formatMoney(s.feeAmount)} = {formatMoney(s.clientNet)}
                                 </span>
                               </TD>
@@ -840,17 +755,14 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                       key={s.chargePointId}
                       className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3.5 shadow-sm space-y-3"
                     >
-                      {/* Top Header: Index, Station Name, Address */}
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex items-center gap-2">
-                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface-2)] text-xs font-mono font-bold text-[var(--color-fg)]">
+                      {/* Top Header: Index, Station Name */}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface-2)] text-xs font-mono font-bold text-[var(--color-fg)]">
                             {idx + 1}
                           </span>
-                          <div>
-                            <div className="font-semibold text-sm text-[var(--color-fg)]">{s.name}</div>
-                            <div className="text-[11px] font-mono text-[var(--color-fg-subtle)]">
-                              {s.cpId} {s.address ? `· ${s.address}` : ''}
-                            </div>
+                          <div className="font-semibold text-xs sm:text-sm text-[var(--color-fg)] truncate">
+                            {s.name}
                           </div>
                         </div>
                       </div>
@@ -971,12 +883,12 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
             <Table>
               <THead>
                 <tr>
-                  <TH>Огноо</TH>
-                  <TH className="text-right">Цэнэглэлтийн тоо</TH>
-                  <TH className="text-right">Эрчим хүч (кВтц)</TH>
-                  <TH className="text-right">Борлуулалт (₮)</TH>
-                  <TH className="text-right">Шимтгэл (₮)</TH>
-                  <TH className="text-right">Цэвэр орлого (₮)</TH>
+                  <TH className="text-left py-2 px-3">Огноо</TH>
+                  <TH className="text-right py-2 px-3">Цэнэглэлтийн тоо</TH>
+                  <TH className="text-right py-2 px-3">Эрчим хүч (кВтц)</TH>
+                  <TH className="text-right py-2 px-3">Борлуулалт (₮)</TH>
+                  <TH className="text-right py-2 px-3">Шимтгэл (₮)</TH>
+                  <TH className="text-right py-2 px-3">Цэвэр орлого (₮)</TH>
                 </tr>
               </THead>
               <TBody>
@@ -987,12 +899,12 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                 ) : (
                   daily.map((d) => (
                     <TR key={d.date}>
-                      <TD className="font-mono font-medium">{formatDate(d.date)}</TD>
-                      <TD className="text-right font-medium">{formatNumber(d.sessionsCount)}</TD>
-                      <TD className="text-right font-mono text-xs">{formatNumber(d.energyKwh, 2)} кВтц</TD>
-                      <TD className="text-right font-mono text-xs font-semibold text-[var(--color-fg)]">{formatMoney(d.gross)}</TD>
-                      <TD className="text-right font-mono text-xs text-blue-500">{formatMoney(d.fee)}</TD>
-                      <TD className="text-right font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                      <TD align="left" className="font-mono font-medium py-1.5 px-3 text-xs">{formatDate(d.date)}</TD>
+                      <TD className="text-right font-medium py-1.5 px-3 text-xs">{formatNumber(d.sessionsCount)}</TD>
+                      <TD className="text-right font-mono text-xs py-1.5 px-3">{formatNumber(d.energyKwh, 2)} кВтц</TD>
+                      <TD className="text-right font-mono text-xs font-semibold text-[var(--color-fg)] py-1.5 px-3">{formatMoney(d.gross)}</TD>
+                      <TD className="text-right font-mono text-xs text-blue-500 py-1.5 px-3">{formatMoney(d.fee)}</TD>
+                      <TD className="text-right font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400 py-1.5 px-3">
                         {formatMoney(d.net)}
                       </TD>
                     </TR>
@@ -1009,13 +921,13 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
             <Table>
               <THead>
                 <tr>
-                  <TH>Станц</TH>
-                  <TH>Холбогч</TH>
-                  <TH className="text-right">Цэнэглэлт</TH>
-                  <TH className="text-right">Эрчим хүч (кВтц)</TH>
-                  <TH className="text-right">Борлуулалт (₮)</TH>
-                  <TH className="text-right">Шимтгэл (₮)</TH>
-                  <TH className="text-right">Цэвэр орлого (₮)</TH>
+                  <TH className="text-left py-2 px-3">Станц</TH>
+                  <TH className="text-center py-2 px-3">Холбогч</TH>
+                  <TH className="text-right py-2 px-3">Цэнэглэлт</TH>
+                  <TH className="text-right py-2 px-3">Эрчим хүч (кВтц)</TH>
+                  <TH className="text-right py-2 px-3">Борлуулалт (₮)</TH>
+                  <TH className="text-right py-2 px-3">Шимтгэл (₮)</TH>
+                  <TH className="text-right py-2 px-3">Цэвэр орлого (₮)</TH>
                 </tr>
               </THead>
               <TBody>
@@ -1026,15 +938,15 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                 ) : (
                   connectors.map((c) => (
                     <TR key={`${c.chargePointId}-${c.connectorId}`}>
-                      <TD className="font-medium">{c.stationName}</TD>
-                      <TD>
-                        <Badge tone="idle">Буу {connectorLetter(c.connectorId)}</Badge>
+                      <TD align="left" className="font-medium py-1.5 px-3 text-xs">{c.stationName}</TD>
+                      <TD className="py-1.5 px-3">
+                        <Badge tone="idle" className="text-[10px] py-0 px-1.5">Буу {connectorLetter(c.connectorId)}</Badge>
                       </TD>
-                      <TD className="text-right font-medium">{formatNumber(c.sessionsCount)}</TD>
-                      <TD className="text-right font-mono text-xs">{formatNumber(c.energyKwh, 2)} кВтц</TD>
-                      <TD className="text-right font-mono text-xs font-semibold text-[var(--color-fg)]">{formatMoney(c.gross)}</TD>
-                      <TD className="text-right font-mono text-xs text-blue-500">{formatMoney(c.fee)}</TD>
-                      <TD className="text-right font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                      <TD className="text-right font-medium py-1.5 px-3 text-xs">{formatNumber(c.sessionsCount)}</TD>
+                      <TD className="text-right font-mono text-xs py-1.5 px-3">{formatNumber(c.energyKwh, 2)} кВтц</TD>
+                      <TD className="text-right font-mono text-xs font-semibold text-[var(--color-fg)] py-1.5 px-3">{formatMoney(c.gross)}</TD>
+                      <TD className="text-right font-mono text-xs text-blue-500 py-1.5 px-3">{formatMoney(c.fee)}</TD>
+                      <TD className="text-right font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400 py-1.5 px-3">
                         {formatMoney(c.net)}
                       </TD>
                     </TR>
@@ -1051,14 +963,14 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
             <Table>
               <THead>
                 <tr>
-                  <TH className="w-20">Сеанс #</TH>
-                  <TH>Станц / Холбогч</TH>
-                  <TH>Хугацаа</TH>
-                  <TH className="text-right">Хэрэглээ</TH>
-                  <TH className="text-right">Тариф</TH>
-                  <TH className="text-right font-semibold">Борлуулалт</TH>
-                  <TH className="text-right text-blue-500">Шимтгэл</TH>
-                  <TH className="text-right font-bold text-emerald-600 dark:text-emerald-400">Цэвэр орлого</TH>
+                  <TH className="w-20 text-center py-2 px-3">Сеанс #</TH>
+                  <TH className="text-left py-2 px-3">Станц / Холбогч</TH>
+                  <TH className="text-left py-2 px-3">Хугацаа</TH>
+                  <TH className="text-right py-2 px-3">Хэрэглээ</TH>
+                  <TH className="text-right py-2 px-3">Тариф</TH>
+                  <TH className="text-right py-2 px-3 font-semibold">Борлуулалт</TH>
+                  <TH className="text-right py-2 px-3 text-blue-500">Шимтгэл</TH>
+                  <TH className="text-right py-2 px-3 font-bold text-emerald-600 dark:text-emerald-400">Цэвэр орлого</TH>
                 </tr>
               </THead>
               <TBody>
@@ -1069,37 +981,37 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                 ) : (
                   sessions.map((tx) => (
                     <TR key={tx.id}>
-                      <TD className="font-mono text-xs font-bold text-emerald-500">
+                      <TD className="font-mono text-xs font-bold text-emerald-500 py-1.5 px-3 text-center">
                         <Link href={`/transactions/${tx.id}`} className="hover:underline">
                           #{tx.id}
                         </Link>
                       </TD>
-                      <TD>
-                        <div className="font-medium text-[var(--color-fg)]">{tx.stationName}</div>
-                        <div className="text-[11px] text-[var(--color-fg-subtle)] font-mono">
+                      <TD align="left" className="py-1.5 px-3">
+                        <div className="font-medium text-xs text-[var(--color-fg)]">{tx.stationName}</div>
+                        <div className="text-[10px] text-[var(--color-fg-subtle)] font-mono">
                           Буу {connectorLetter(tx.connectorId)} {tx.vehicleModel ? `· ${tx.vehicleModel}` : ''}
                         </div>
                       </TD>
-                      <TD className="text-xs">
+                      <TD align="left" className="text-xs py-1.5 px-3">
                         <div>{formatDateTime(tx.startTimestamp)}</div>
-                        <div className="text-[11px] text-[var(--color-fg-subtle)]">
+                        <div className="text-[10px] text-[var(--color-fg-subtle)]">
                           {formatDateTime(tx.stopTimestamp)}
                         </div>
                       </TD>
-                      <TD className="text-right font-mono text-xs">{formatNumber(tx.energyKwh, 2)} кВтц</TD>
-                      <TD className="text-right text-xs font-mono text-[var(--color-fg-muted)]">
+                      <TD className="text-right font-mono text-xs py-1.5 px-3">{formatNumber(tx.energyKwh, 2)} кВтц</TD>
+                      <TD className="text-right text-xs font-mono text-[var(--color-fg-muted)] py-1.5 px-3">
                         {tx.tariffPerKwh ? `${formatMoney(tx.tariffPerKwh)}/кВтц` : '—'}
                       </TD>
-                      <TD className="text-right font-mono text-xs font-semibold text-[var(--color-fg)]">
+                      <TD className="text-right font-mono text-xs font-semibold text-[var(--color-fg)] py-1.5 px-3">
                         {formatMoney(tx.cost)}
                       </TD>
-                      <TD className="text-right font-mono text-xs text-blue-500">
+                      <TD className="text-right font-mono text-xs text-blue-500 py-1.5 px-3">
                         {formatMoney(tx.feeAmount)}
                         <span className="text-[10px] text-[var(--color-fg-subtle)] ml-1">
                           ({tx.feePercent}%)
                         </span>
                       </TD>
-                      <TD className="text-right font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                      <TD className="text-right font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400 py-1.5 px-3">
                         {formatMoney(tx.clientNet)}
                       </TD>
                     </TR>

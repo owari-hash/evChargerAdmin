@@ -209,84 +209,88 @@ export function ContactView({ canEdit }: { canEdit: boolean }) {
                   </span>
                 </div>
 
-                {/* Mock Footer matching user screenshot */}
-                <div className="overflow-hidden rounded-2xl bg-[#084742] text-white shadow-xl ring-1 ring-black/10">
-                  <div className="p-6 sm:p-8">
-                    <div className="grid grid-cols-1 gap-8 sm:grid-cols-3">
+                {/* Mock Footer matching kiosk */}
+                <div className="overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg)] shadow-sm">
+                  <div className="p-5 sm:p-6">
+                    <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
                       {/* Brand column */}
-                      <div className="space-y-4">
-                        <h4 className="text-base font-semibold text-white/95">Eplug</h4>
-                        <div className="flex size-14 items-center justify-center rounded-2xl bg-white p-2 shadow-md">
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2.5">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src="/eplug-mark.png"
                             alt="Logo"
-                            className="size-full rounded-xl object-contain"
+                            className="size-8 rounded-xl object-contain shadow-sm"
                           />
+                          <h4 className="text-base font-bold tracking-tight text-[var(--color-fg)]">Eplug</h4>
                         </div>
-                        <div className="flex flex-wrap items-center gap-2 pt-2">
-                          <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-3 py-1.5 text-xs font-medium text-white/90 backdrop-blur-sm">
-                            <Download className="size-3.5" />
+                        <div className="flex flex-wrap items-center gap-2 pt-0.5">
+                          <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-1 text-xs font-medium text-[var(--color-fg)]">
+                            <Download className="size-3.5 text-[var(--color-fg-muted)]" />
                             Лого татах
                           </span>
                         </div>
                       </div>
 
                       {/* Social column */}
-                      <div className="space-y-4">
-                        <h4 className="text-sm font-semibold text-white/80">Сошиал хаяг</h4>
-                        <div className="space-y-3">
+                      <div className="space-y-3">
+                        <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--color-fg-muted)]">
+                          Сошиал хаяг
+                        </h4>
+                        <div className="space-y-2.5">
                           <div className="flex items-center justify-between gap-3">
                             <div className="text-right sm:text-left">
-                              <p className="text-[11px] text-white/60">Facebook</p>
-                              <p className="text-xs font-medium text-white/95">
+                              <p className="text-[11px] font-medium text-[var(--color-fg-muted)]">Facebook</p>
+                              <p className="text-xs font-semibold text-[var(--color-fg)]">
                                 {facebookName || 'Eplug.mn'}
                               </p>
                             </div>
-                            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white backdrop-blur-sm">
-                              <Facebook className="size-4" />
+                            <div className="flex size-8 shrink-0 items-center justify-center rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] text-[var(--color-fg-muted)]">
+                              <Facebook className="size-3.5" />
                             </div>
                           </div>
 
                           <div className="flex items-center justify-between gap-3">
                             <div className="text-right sm:text-left">
-                              <p className="text-[11px] text-white/60">Instagram</p>
-                              <p className="text-xs font-medium text-white/95">
+                              <p className="text-[11px] font-medium text-[var(--color-fg-muted)]">Instagram</p>
+                              <p className="text-xs font-semibold text-[var(--color-fg)]">
                                 {instagramName || 'Eplug.mn'}
                               </p>
                             </div>
-                            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white backdrop-blur-sm">
-                              <Instagram className="size-4" />
+                            <div className="flex size-8 shrink-0 items-center justify-center rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] text-[var(--color-fg-muted)]">
+                              <Instagram className="size-3.5" />
                             </div>
                           </div>
                         </div>
                       </div>
 
                       {/* Contact column */}
-                      <div className="space-y-4">
-                        <h4 className="text-sm font-semibold text-white/80">Холбоо барих</h4>
-                        <div className="space-y-3">
+                      <div className="space-y-3">
+                        <h4 className="text-xs font-semibold uppercase tracking-wider text-[var(--color-fg-muted)]">
+                          Холбоо барих
+                        </h4>
+                        <div className="space-y-2.5">
                           <div className="flex items-center justify-between gap-3">
                             <div className="text-right sm:text-left">
-                              <p className="text-[11px] text-white/60">Утас</p>
-                              <p className="text-xs font-medium text-white/95">
+                              <p className="text-[11px] font-medium text-[var(--color-fg-muted)]">Утас</p>
+                              <p className="text-xs font-semibold text-[var(--color-fg)]">
                                 {phone || '+976 7777 4242, 8888 5516'}
                               </p>
                             </div>
-                            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white backdrop-blur-sm">
-                              <Phone className="size-4" />
+                            <div className="flex size-8 shrink-0 items-center justify-center rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] text-[var(--color-fg-muted)]">
+                              <Phone className="size-3.5" />
                             </div>
                           </div>
 
                           <div className="flex items-center justify-between gap-3">
                             <div className="text-right sm:text-left">
-                              <p className="text-[11px] text-white/60">И-мэйл</p>
-                              <p className="text-xs font-medium text-white/95">
+                              <p className="text-[11px] font-medium text-[var(--color-fg-muted)]">И-мэйл</p>
+                              <p className="text-xs font-semibold text-[var(--color-fg)]">
                                 {email || 'contact@eplug.mn'}
                               </p>
                             </div>
-                            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-white/10 text-white backdrop-blur-sm">
-                              <Mail className="size-4" />
+                            <div className="flex size-8 shrink-0 items-center justify-center rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] text-[var(--color-fg-muted)]">
+                              <Mail className="size-3.5" />
                             </div>
                           </div>
                         </div>
@@ -295,7 +299,7 @@ export function ContactView({ canEdit }: { canEdit: boolean }) {
                   </div>
 
                   {/* Bottom bar */}
-                  <div className="border-t border-white/10 bg-black/10 px-6 py-4 text-xs text-white/60 sm:px-8">
+                  <div className="border-t border-[var(--color-border)] bg-[var(--color-surface-muted)]/50 px-5 py-3 text-xs text-[var(--color-fg-muted)] sm:px-6">
                     <div className="flex flex-col items-center justify-between gap-2 sm:flex-row">
                       <p>© {new Date().getFullYear()} Eplug. Бүх эрх хуулиар хамгаалагдсан.</p>
                       <div className="flex items-center gap-4">

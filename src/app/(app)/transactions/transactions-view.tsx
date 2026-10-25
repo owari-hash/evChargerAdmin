@@ -16,29 +16,52 @@ import {
 } from '@/lib/format';
 import { TRANSACTION_STATUSES, type Paginated, type Transaction } from '@/lib/types';
 import { Button, Card, Input, Select } from '@/components/ui/primitives';
-import { DateRangePicker } from '@/components/ui/date-picker';
+import { DateRangePicker, toIsoDate } from '@/components/ui/date-picker';
 import { TransactionStatusBadge } from '@/components/ui/status';
 import { FilterBar, Pagination } from '@/components/ui/pagination';
 import { TRANSACTION_STATUS, mn } from '@/lib/mn';
 import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty, TableLoading } from '@/components/ui/table';
 import { StationName } from '@/components/station-name';
 
+function toStartOfDayIso(dateStr: string): string {
+  if (!dateStr) return '';
+  if (dateStr.includes('T')) return new Date(dateStr).toISOString();
+  const [y, m, d] = dateStr.split('-').map(Number);
+  if (!y || !m || !d) return '';
+  return new Date(y, m - 1, d, 0, 0, 0, 0).toISOString();
+}
+
+function toEndOfDayIso(dateStr: string): string {
+  if (!dateStr) return '';
+  if (dateStr.includes('T')) return new Date(dateStr).toISOString();
+  const [y, m, d] = dateStr.split('-').map(Number);
+  if (!y || !m || !d) return '';
+  return new Date(y, m - 1, d, 23, 59, 59, 999).toISOString();
+}
+
 export function TransactionsView({
   canOperate,
   initialStatus,
   initialChargePointId,
   initialIdTag,
+  initialFrom,
+  initialTo,
 }: {
   canOperate: boolean;
   initialStatus: string;
   initialChargePointId: string;
   initialIdTag: string;
+  initialFrom?: string;
+  initialTo?: string;
 }) {
   const [status, setStatus] = React.useState(initialStatus);
   const [chargePointId, setChargePointId] = React.useState(initialChargePointId);
   const [idTag, setIdTag] = React.useState(initialIdTag);
-  const [from, setFrom] = React.useState('');
-  const [to, setTo] = React.useState('');
+
+  // Default to today's date if no date filter is passed in URL
+  const todayIso = React.useMemo(() => toIsoDate(new Date()), []);
+  const [from, setFrom] = React.useState(initialFrom !== undefined ? initialFrom : todayIso);
+  const [to, setTo] = React.useState(initialTo !== undefined ? initialTo : todayIso);
   const [page, setPage] = React.useState(1);
   const [limit, setLimit] = React.useState(50);
 
@@ -52,11 +75,11 @@ export function TransactionsView({
   }, [chargePointId, idTag]);
 
   const key = apiUrl('transactions', {
-    status,
-    chargePointId: debounced.chargePointId,
-    idTag: debounced.idTag,
-    from: from ? new Date(from).toISOString() : '',
-    to: to ? new Date(to).toISOString() : '',
+    status: status || undefined,
+    chargePointId: debounced.chargePointId || undefined,
+    idTag: debounced.idTag || undefined,
+    from: toStartOfDayIso(from) || undefined,
+    to: toEndOfDayIso(to) || undefined,
     page,
     limit,
   });
@@ -141,7 +164,8 @@ export function TransactionsView({
           <Table>
             <THead>
               <tr>
-                <TH>Цэнэглэлт</TH>
+                <TH className="w-12 text-center border-r border-[var(--color-border)]">№</TH>
+                <TH>Цэнэглэлт ID</TH>
                 <TH>Төлөв</TH>
                 <TH>Цэнэглэх станц</TH>
                 <TH>Карт</TH>
@@ -155,13 +179,14 @@ export function TransactionsView({
             </THead>
             <TBody>
               {isLoading && !data ? (
-                <TableLoading colSpan={10} />
+                <TableLoading colSpan={11} />
               ) : error ? (
-                <TableEmpty colSpan={10}>Цэнэглэлтийг ачаалж чадсангүй.</TableEmpty>
+                <TableEmpty colSpan={11}>Цэнэглэлтийг ачаалж чадсангүй.</TableEmpty>
               ) : rows.length === 0 ? (
-                <TableEmpty colSpan={10}>Энэ шүүлтүүрт тохирох цэнэглэлт алга.</TableEmpty>
+                <TableEmpty colSpan={11}>Энэ шүүлтүүрт тохирох цэнэглэлт алга.</TableEmpty>
               ) : (
-                rows.map((tx) => {
+                rows.map((tx, idx) => {
+                  const num = (page - 1) * limit + idx + 1;
                   const id = tx.transactionId ?? tx.id;
                   const energyWh =
                     tx.status === 'Active'
@@ -169,6 +194,9 @@ export function TransactionsView({
                       : tx.energyWh;
                   return (
                     <TR key={id}>
+                      <TD align="center" className="text-xs text-[var(--color-fg-muted)] border-r border-[var(--color-border)] font-mono">
+                        {num}
+                      </TD>
                       <TD>
                         <Link
                           href={`/transactions/${id}`}

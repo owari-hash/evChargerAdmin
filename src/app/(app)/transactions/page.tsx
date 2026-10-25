@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 export default async function TransactionsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; chargePointId?: string; idTag?: string }>;
+  searchParams: Promise<{ status?: string; chargePointId?: string; idTag?: string; from?: string; to?: string }>;
 }) {
   const params = await searchParams;
   const user = await getSessionUser();
@@ -19,6 +19,8 @@ export default async function TransactionsPage({
       initialStatus={params.status ?? ''}
       initialChargePointId={params.chargePointId ?? ''}
       initialIdTag={params.idTag ?? ''}
+      initialFrom={params.from}
+      initialTo={params.to}
     />
   );
 }

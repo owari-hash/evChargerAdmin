@@ -120,7 +120,10 @@ export function IdTagModal({
       onSaved();
       onClose();
     } catch (err) {
-      setError(errorMessage(err));
+      const message = errorMessage(err);
+      setError(message);
+      // The note inside the modal can sit out of view on a long form.
+      toast.error(message);
     } finally {
       setSaving(false);
     }

@@ -7,7 +7,7 @@ import { RefreshCw, Search } from 'lucide-react';
 import { REFRESH } from '@/lib/live-query';
 import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
 import { formatDateTime, formatMoney, formatNumber } from '@/lib/format';
-import { Badge, Button, Card, Input, Select, type Tone } from '@/components/ui/primitives';
+import { Badge, Button, Card, Dot, Input, Select, type Tone } from '@/components/ui/primitives';
 import { DateRangePicker } from '@/components/ui/date-picker';
 import { FilterBar, Pagination } from '@/components/ui/pagination';
 import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty, TableLoading } from '@/components/ui/table';
@@ -126,10 +126,25 @@ export function PaymentsView({ initialQuery, initialStatus }: { initialQuery: st
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-3 sm:grid-cols-3">
-        <Stat label="Төлөгдсөн" value={formatMoney(paid?.amount ?? 0)} hint={`${formatNumber(paid?.count ?? 0)} төлбөр`} tone="ok" />
-        <Stat label="Хүлээгдэж буй" value={formatNumber(pending?.count ?? 0)} hint="банкны хариу хүлээж байна" tone="warn" />
-        <Stat label="Амжилтгүй" value={formatNumber(failed?.count ?? 0)} hint="карт татгалзсан эсвэл алдаа" tone="danger" />
+      <div className="grid gap-2.5 sm:gap-3 grid-cols-1 sm:grid-cols-3">
+        <Stat
+          label="Төлөгдсөн"
+          value={formatMoney(paid?.amount ?? 0)}
+          hint={`${formatNumber(paid?.count ?? 0)} төлбөр амжилттай`}
+          tone="ok"
+        />
+        <Stat
+          label="Хүлээгдэж буй"
+          value={`${formatNumber(pending?.count ?? 0)} гүйлгээ`}
+          hint="Банкны хариу хүлээж байна"
+          tone="warn"
+        />
+        <Stat
+          label="Амжилтгүй"
+          value={`${formatNumber(failed?.count ?? 0)} гүйлгээ`}
+          hint="Карт татгалзсан эсвэл алдаа"
+          tone="danger"
+        />
       </div>
 
       <Card>
@@ -304,12 +319,19 @@ export function PaymentsView({ initialQuery, initialStatus }: { initialQuery: st
 
 function Stat({ label, value, hint, tone }: { label: string; value: string; hint: string; tone: Tone }) {
   return (
-    <Card className="p-4">
-      <div className="flex items-center justify-between">
-        <p className="text-xs text-[var(--color-fg-muted)]">{label}</p>
-        <Badge tone={tone}>{hint}</Badge>
+    <Card className="min-w-0 max-w-full overflow-hidden p-3.5 sm:p-4">
+      <div className="flex items-center justify-between gap-1.5 min-w-0">
+        <span className="inline-flex items-center gap-1.5 min-w-0">
+          <Dot tone={tone} pulse={tone === 'warn'} />
+          <p className="text-xs font-semibold text-[var(--color-fg-muted)] truncate">{label}</p>
+        </span>
       </div>
-      <p className="mt-2 text-2xl font-semibold tabular-nums tracking-tight">{value}</p>
+      <p className="mt-1.5 truncate text-xl sm:text-2xl font-bold tabular-nums tracking-tight text-[var(--color-fg)]">
+        {value}
+      </p>
+      <p className="mt-0.5 truncate text-[11px] text-[var(--color-fg-subtle)]" title={hint}>
+        {hint}
+      </p>
     </Card>
   );
 }

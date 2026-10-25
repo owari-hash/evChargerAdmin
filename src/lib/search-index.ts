@@ -171,6 +171,10 @@ const MENU_KEYWORDS: Record<string, string[]> = {
   ],
   '/jobs': ['программ', 'firmware', 'лог', 'диагностик', 'шинэчлэл', 'job', 'log', 'programm'],
   '/merchants': ['qpay', 'мерчант', 'төлбөр', 'данс', 'merchant', 'payment', 'merchant id'],
+  '/ebarimt': [
+    'и-баримт', 'ебаримт', 'баримт', 'сугалаа', 'буцаах', 'буцаалт', 'ддтд', 'нөат',
+    'ebarimt', 'receipt', 'lottery', 'ddtd', 'vat', 'refund', 'tax',
+  ],
   '/ebarimt-merchants': [
     'ебаримт', 'и-баримт', 'баримт', 'татвар', 'тин', 'нөат', 'ebarimt', 'tin', 'vat', 'tax',
   ],
@@ -574,6 +578,15 @@ const FUNCTION_ENTRIES: SearchEntry[] = [
     hint: 'Нэхэмжлэх энэ мерчантаар үүснэ',
     keywords: ['идэвхтэй', 'сонгох', 'qpay', 'active', 'select', 'idevhtei'],
     minRole: 'ADMIN',
+  },
+  {
+    id: 'fn:ebarimt-return',
+    kind: 'function',
+    label: 'И-Баримт буцаах (устгах) ба жагсаалт',
+    href: '/ebarimt',
+    icon: Receipt,
+    section: 'И-Баримт',
+    keywords: ['и-баримт', 'буцаах', 'буцаалт', 'устгах', 'сугалаа', 'ддтд', 'ebarimt', 'refund', 'void'],
   },
   {
     id: 'fn:ebarimt-merchant',

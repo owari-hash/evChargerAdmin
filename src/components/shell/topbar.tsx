@@ -15,8 +15,8 @@ export function Topbar({ user, onMenu }: { user: SessionUser; onMenu: () => void
   return (
     // 1fr / auto / 1fr keeps the search centred on the header itself rather than
     // on whatever is left over once the side controls have taken their space.
-    <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center justify-between gap-1.5 border-b border-[var(--color-border)] bg-[var(--color-surface)]/90 px-2.5 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:gap-3 sm:px-4 backdrop-blur">
-      <div className="flex min-w-0 items-center justify-start">
+    <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center justify-between gap-1.5 border-b border-[var(--color-border)] bg-[var(--color-surface)]/90 px-2 sm:px-4 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:gap-3 backdrop-blur">
+      <div className="flex shrink-0 items-center justify-start">
         <Button
           variant="ghost"
           size="icon"
@@ -28,9 +28,9 @@ export function Topbar({ user, onMenu }: { user: SessionUser; onMenu: () => void
         </Button>
       </div>
 
-      <GlobalSearch role={user.role} className="w-28 xs:w-36 min-[380px]:w-44 sm:w-72 md:w-96" />
+      <GlobalSearch role={user.role} className="flex-1 min-w-0 max-w-[145px] xs:max-w-[180px] sm:max-w-none sm:w-72 md:w-96" />
 
-      <div className="flex min-w-0 items-center justify-end gap-1 sm:gap-2">
+      <div className="flex shrink-0 items-center justify-end gap-1 sm:gap-2">
         {user.role === 'CLIENT' && (
           <span className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md bg-[var(--color-brand)]/10 text-[var(--color-brand)] border border-[var(--color-brand)]/20">
             {user.clientName ?? 'Харилцагч'}
@@ -40,17 +40,17 @@ export function Topbar({ user, onMenu }: { user: SessionUser; onMenu: () => void
         <span data-tour="notifications" className="inline-flex">
           <NotificationBell userId={user.id} />
         </span>
-        <div data-tour="account" className="flex items-center gap-1">
+        <div data-tour="account" className="flex items-center gap-0.5 sm:gap-1">
           <ThemeToggle />
           <Button
             variant="ghost"
-            size="sm"
-            className="px-2 sm:px-3"
+            size="icon"
+            className="sm:h-8 sm:w-auto sm:px-2.5 sm:gap-1.5"
             onClick={() => void logout()}
             title={`${user.email} — Гарах`}
           >
-            <LogOut className="h-3.5 w-3.5" />
-            <span className="hidden sm:inline">Гарах</span>
+            <LogOut className="h-4 w-4 sm:h-3.5 sm:w-3.5" />
+            <span className="hidden sm:inline text-xs font-medium">Гарах</span>
           </Button>
         </div>
       </div>

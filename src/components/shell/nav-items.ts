@@ -13,6 +13,7 @@ import {
   LayoutDashboard,
   Megaphone,
   Plug,
+  Receipt,
   PlayCircle,
   Settings,
   Smartphone,
@@ -47,6 +48,7 @@ export const CLIENT_NAV_SECTIONS: NavSection[] = [
       { href: '/charge-points', label: 'Цэнэглэх станц', icon: Zap, prefix: true },
       { href: '/connectors', label: 'Холбогч', icon: Plug },
       { href: '/transactions', label: 'Цэнэглэлт', icon: BatteryCharging, prefix: true },
+      { href: '/ebarimt', label: 'И-Баримт', icon: Receipt, prefix: true },
     ],
   },
   {
@@ -74,6 +76,7 @@ export const NAV_SECTIONS: NavSection[] = [
       { href: '/connectors', label: 'Холбогч', icon: Plug },
       { href: '/transactions', label: 'Цэнэглэлт', icon: BatteryCharging, prefix: true },
       { href: '/payments', label: 'Төлбөр', icon: Wallet },
+      { href: '/ebarimt', label: 'И-Баримт', icon: Receipt, prefix: true },
       { href: '/reports', label: 'Тайлан', icon: FileSpreadsheet, prefix: true },
       { href: '/live', label: 'Шууд урсгал', icon: Activity },
       { href: '/simulator', label: 'OCPP Симулятор', icon: PlayCircle },

@@ -9,7 +9,7 @@ export function Card({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
       className={cn(
-        'rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm',
+        'rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm min-w-0 max-w-full overflow-hidden',
         className,
       )}
       {...props}

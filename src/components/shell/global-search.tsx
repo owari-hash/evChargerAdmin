@@ -151,7 +151,7 @@ export function GlobalSearch({ role, className }: { role: UserRole; className?: 
           }}
           onFocus={() => setOpen(true)}
           onKeyDown={onKeyDown}
-          placeholder="Цэс, үйлдэл хайх…"
+          placeholder="Цэс хайх…"
           aria-label="Цэс, үйлдэл хайх"
           role="combobox"
           aria-expanded={open}
@@ -166,12 +166,9 @@ export function GlobalSearch({ role, className }: { role: UserRole; className?: 
       {open ? (
         <div
           className={cn(
-            'absolute top-full z-40 mt-2 flex max-h-[min(70vh,28rem)] flex-col overflow-hidden',
+            'fixed sm:absolute top-14 sm:top-full z-40 mt-1 sm:mt-2 flex max-h-[min(70vh,28rem)] flex-col overflow-hidden',
             'rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-2xl',
-            // Narrow fields get a dropdown wider than themselves, centred under
-            // the input; from sm up it simply matches the field.
-            'left-1/2 w-[min(88vw,26rem)] -translate-x-1/2',
-            'sm:left-0 sm:right-0 sm:w-auto sm:translate-x-0',
+            'left-2 right-2 sm:left-0 sm:right-0 sm:w-auto sm:translate-x-0',
           )}
         >
           {flat.length === 0 ? (

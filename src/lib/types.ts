@@ -1082,3 +1082,18 @@ export interface ContactInfo {
   updatedAt?: string;
   updatedBy?: string;
 }
+
+/** Санал хүсэлт from a driver (kiosk footer or app). */
+export interface Feedback {
+  id: string;
+  message: string;
+  phone?: string | null;
+  userId?: string | null;
+  userName?: string | null;
+  source: 'web' | 'app';
+  status: 'new' | 'done';
+  handledBy?: string | null;
+  smsDeliveredTo?: string[];
+  createdAt: string;
+  updatedAt?: string;
+}

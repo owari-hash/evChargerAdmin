@@ -2,28 +2,42 @@
 
 import * as React from 'react';
 import useSWR from 'swr';
-import { CheckCircle2, MessageSquareText, Phone, RefreshCw, Send } from 'lucide-react';
+import {
+  Check,
+  CheckCircle2,
+  MessageSquareText,
+  Phone,
+  RefreshCw,
+  RotateCcw,
+  Send,
+  Trash2,
+} from 'lucide-react';
 import { toast } from 'sonner';
+import { REFRESH } from '@/lib/live-query';
 import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
 import { formatDateTime } from '@/lib/format';
-import { Badge, Button, Card, Input, Select } from '@/components/ui/primitives';
-import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty, TableLoading } from '@/components/ui/table';
+import type { Feedback } from '@/lib/types';
+import { Badge, Button, Card, Input } from '@/components/ui/primitives';
+import {
+  Table,
+  TableWrap,
+  TBody,
+  TD,
+  TH,
+  THead,
+  TR,
+  TableEmpty,
+  TableLoading,
+} from '@/components/ui/table';
+import { ConfirmModal } from '@/components/ui/modal';
 import { FilterActions, FilterBar, Pagination } from '@/components/ui/pagination';
 import { PageGuide } from '@/components/shell/page-guide';
 
-interface FeedbackItem {
-  id: string;
-  phone: string | null;
-  message: string;
-  source: string;
-  status: 'NEW' | 'READ' | 'RESOLVED';
-  smsDeliveredTo: string[];
-  createdAt: string;
-}
-
 interface FeedbackResponse {
-  items: FeedbackItem[];
+  data: Feedback[];
+  items?: Feedback[];
   total: number;
+  unread: number;
   page: number;
   limit: number;
   totalPages: number;
@@ -39,41 +53,58 @@ const GUIDE_STEPS = [
     body: 'Шинэ санал хүсэлт ирэх бүрд системийн тохиргоот 3 дугаарт (88887207, 95393408, 99246123) "sanal huselt irlee." гэсэн SMS автоматаар очно.',
   },
   {
-    title: 'Төлөв шинэчлэх',
-    body: 'Ирсэн санал хүсэлттэй танилцаж жолоочтой холбогдон шийдвэрлэсний дараа "Уншсан", "Шийдвэрлэсэн" төлөвт шилжүүлж хөтөлнө.',
+    title: 'Төлөв шинэчлэх & устгах',
+    body: 'Ирсэн санал хүсэлттэй танилцаж жолоочтой холбогдон шийдвэрлэсний дараа "Шийдсэн" төлөвт шилжүүлэх эсвэл шаардлагагүй бол устгаж цэгцэлнэ.',
   },
 ];
 
 export function FeedbackView({ canEdit }: { canEdit: boolean }) {
   const [page, setPage] = React.useState(1);
   const [limit, setLimit] = React.useState(20);
-  const [status, setStatus] = React.useState<string>('');
+  const [status, setStatus] = React.useState<'all' | 'new' | 'done'>('all');
   const [search, setSearch] = React.useState<string>('');
-  const [updatingId, setUpdatingId] = React.useState<string | null>(null);
+  const [busyId, setBusyId] = React.useState<string | null>(null);
+  const [deleting, setDeleting] = React.useState<Feedback | null>(null);
 
   const queryParams: Record<string, unknown> = { page, limit };
-  if (status) queryParams.status = status;
+  if (status !== 'all') queryParams.status = status;
   if (search.trim()) queryParams.search = search.trim();
 
   const key = apiUrl('feedback', queryParams);
   const { data, error, isLoading, mutate } = useSWR<FeedbackResponse>(key, fetcher, {
-    refreshInterval: 10000,
+    refreshInterval: REFRESH.config,
     keepPreviousData: true,
   });
 
-  const rows = data?.items ?? [];
+  const rows = data?.data ?? data?.items ?? [];
   const total = data?.total ?? 0;
+  const unread = data?.unread ?? 0;
 
-  async function updateStatus(id: string, newStatus: 'NEW' | 'READ' | 'RESOLVED') {
-    setUpdatingId(id);
+  async function setStatusDone(f: Feedback, done: boolean) {
+    setBusyId(f.id);
     try {
-      await api.patch(`feedback/${id}`, { status: newStatus });
-      toast.success('Төлөв амжилттай шинэчлэгдлээ');
+      await api.patch(`feedback/${f.id}`, { status: done ? 'done' : 'new' });
+      toast.success(done ? 'Шийдвэрлэсэн гэж тэмдэглэлээ' : 'Шинэ төлөвт шилжүүллээ');
       await mutate();
     } catch (err) {
       toast.error(errorMessage(err));
     } finally {
-      setUpdatingId(null);
+      setBusyId(null);
+    }
+  }
+
+  async function handleDelete() {
+    if (!deleting) return;
+    setBusyId(deleting.id);
+    try {
+      await api.del(`feedback/${deleting.id}`);
+      toast.success('Санал хүсэлт устгагдлаа');
+      setDeleting(null);
+      await mutate();
+    } catch (err) {
+      toast.error(errorMessage(err));
+    } finally {
+      setBusyId(null);
     }
   }
 
@@ -114,7 +145,58 @@ export function FeedbackView({ canEdit }: { canEdit: boolean }) {
 
       <Card>
         <FilterBar>
-          <div className="flex flex-wrap items-center gap-2.5 flex-1">
+          {/* Status Tabs */}
+          <div className="flex flex-wrap items-center gap-1 rounded-xl bg-surface-muted p-1 text-xs">
+            <button
+              type="button"
+              onClick={() => {
+                setStatus('all');
+                setPage(1);
+              }}
+              className={`rounded-lg px-3 py-1.5 font-medium transition ${
+                status === 'all'
+                  ? 'bg-surface text-foreground shadow-sm'
+                  : 'text-muted hover:text-foreground'
+              }`}
+            >
+              Бүгд
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setStatus('new');
+                setPage(1);
+              }}
+              className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 font-medium transition ${
+                status === 'new'
+                  ? 'bg-surface text-foreground shadow-sm'
+                  : 'text-muted hover:text-foreground'
+              }`}
+            >
+              <span>Шинэ</span>
+              {unread > 0 && (
+                <span className="rounded-full bg-amber-500/20 px-1.5 py-0.2 text-[10px] font-bold text-amber-600 dark:text-amber-400">
+                  {unread}
+                </span>
+              )}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setStatus('done');
+                setPage(1);
+              }}
+              className={`rounded-lg px-3 py-1.5 font-medium transition ${
+                status === 'done'
+                  ? 'bg-surface text-foreground shadow-sm'
+                  : 'text-muted hover:text-foreground'
+              }`}
+            >
+              Шийдсэн
+            </button>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-2.5 flex-1 max-w-sm">
             <Input
               placeholder="Утас, санал хүсэлтийн утгаар хайх..."
               value={search}
@@ -122,21 +204,8 @@ export function FeedbackView({ canEdit }: { canEdit: boolean }) {
                 setSearch(e.target.value);
                 setPage(1);
               }}
-              className="w-64 max-w-full text-xs"
+              className="w-full text-xs"
             />
-            <Select
-              value={status}
-              onChange={(e) => {
-                setStatus(e.target.value);
-                setPage(1);
-              }}
-              className="text-xs w-40"
-            >
-              <option value="">Бүх төлөв</option>
-              <option value="NEW">Шинэ</option>
-              <option value="READ">Уншсан</option>
-              <option value="RESOLVED">Шийдвэрлэсэн</option>
-            </Select>
           </div>
 
           <FilterActions>
@@ -157,7 +226,7 @@ export function FeedbackView({ canEdit }: { canEdit: boolean }) {
             <THead>
               <TR>
                 <TH>Огноо</TH>
-                <TH>Утас</TH>
+                <TH>Жолооч / Утас</TH>
                 <TH className="min-w-[280px]">Санал хүсэлт</TH>
                 <TH>Эх сурвалж</TH>
                 <TH>SMS очсон</TH>
@@ -178,23 +247,31 @@ export function FeedbackView({ canEdit }: { canEdit: boolean }) {
                     <TD className="text-xs text-muted whitespace-nowrap">
                       {formatDateTime(row.createdAt)}
                     </TD>
-                    <TD className="whitespace-nowrap font-mono text-xs font-semibold">
+                    <TD className="whitespace-nowrap text-xs">
+                      {row.userName && (
+                        <div className="font-semibold text-foreground">{row.userName}</div>
+                      )}
                       {row.phone ? (
                         <a
                           href={`tel:${row.phone}`}
-                          className="inline-flex items-center gap-1.5 text-brand hover:underline"
+                          className="inline-flex items-center gap-1 font-mono text-brand hover:underline"
                         >
                           <Phone className="size-3 text-muted" />
                           <span>{row.phone}</span>
                         </a>
                       ) : (
-                        <span className="text-muted">Тодорхойгүй</span>
+                        <span className="text-muted">Зочин (утасгүй)</span>
                       )}
                     </TD>
                     <TD>
                       <p className="text-xs text-foreground whitespace-pre-wrap leading-relaxed">
                         {row.message}
                       </p>
+                      {row.handledBy && (
+                        <p className="mt-1 text-[11px] text-muted">
+                          Шийдвэрлэсэн: {row.handledBy}
+                        </p>
+                      )}
                     </TD>
                     <TD className="text-xs text-muted whitespace-nowrap">
                       <span className="uppercase tracking-wider font-mono text-[11px]">
@@ -218,50 +295,50 @@ export function FeedbackView({ canEdit }: { canEdit: boolean }) {
                       )}
                     </TD>
                     <TD className="whitespace-nowrap">
-                      {row.status === 'NEW' ? (
-                        <Badge tone="warn">Шинэ</Badge>
-                      ) : row.status === 'READ' ? (
-                        <Badge tone="info">Уншсан</Badge>
+                      {row.status === 'done' ? (
+                        <Badge tone="ok">Шийдсэн</Badge>
                       ) : (
-                        <Badge tone="ok">Шийдвэрлэсэн</Badge>
+                        <Badge tone="warn">Шинэ</Badge>
                       )}
                     </TD>
                     {canEdit && (
                       <TD className="text-right whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-1.5">
-                          {row.status === 'NEW' && (
+                        <div className="flex items-center justify-end gap-1">
+                          {row.status === 'new' ? (
                             <Button
-                              size="sm"
                               variant="secondary"
-                              className="text-xs h-7 px-2"
-                              disabled={updatingId === row.id}
-                              onClick={() => void updateStatus(row.id, 'READ')}
-                            >
-                              Уншсан
-                            </Button>
-                          )}
-                          {row.status !== 'RESOLVED' && (
-                            <Button
                               size="sm"
-                              variant="secondary"
+                              disabled={busyId === row.id}
+                              onClick={() => void setStatusDone(row, true)}
+                              title="Шийдвэрлэсэн болгох"
                               className="text-xs h-7 px-2 text-emerald-600 dark:text-emerald-400"
-                              disabled={updatingId === row.id}
-                              onClick={() => void updateStatus(row.id, 'RESOLVED')}
                             >
-                              Шийдвэрлэсэн
+                              <Check className="size-3.5 mr-1" />
+                              <span>Шийдсэн</span>
                             </Button>
-                          )}
-                          {row.status === 'RESOLVED' && (
+                          ) : (
                             <Button
-                              size="sm"
                               variant="ghost"
+                              size="sm"
+                              disabled={busyId === row.id}
+                              onClick={() => void setStatusDone(row, false)}
+                              title="Шинэ болгох"
                               className="text-xs h-7 px-2 text-muted"
-                              disabled={updatingId === row.id}
-                              onClick={() => void updateStatus(row.id, 'NEW')}
                             >
-                              Дахин нээх
+                              <RotateCcw className="size-3.5 mr-1" />
+                              <span>Шинэ</span>
                             </Button>
                           )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            disabled={busyId === row.id}
+                            onClick={() => setDeleting(row)}
+                            title="Устгах"
+                            className="text-xs h-7 px-2 text-rose-600 dark:text-rose-400 hover:bg-rose-500/10"
+                          >
+                            <Trash2 className="size-3.5" />
+                          </Button>
                         </div>
                       </TD>
                     )}
@@ -280,6 +357,17 @@ export function FeedbackView({ canEdit }: { canEdit: boolean }) {
           onLimitChange={setLimit}
         />
       </Card>
+
+      <ConfirmModal
+        open={deleting !== null}
+        onClose={() => setDeleting(null)}
+        onConfirm={() => void handleDelete()}
+        loading={busyId !== null && busyId === deleting?.id}
+        tone="danger"
+        title="Санал хүсэлт устгах уу?"
+        confirmLabel="Устгах"
+        message={deleting ? <span className="line-clamp-3">{deleting.message}</span> : null}
+      />
     </div>
   );
 }

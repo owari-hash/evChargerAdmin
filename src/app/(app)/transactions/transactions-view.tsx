@@ -269,10 +269,9 @@ export function TransactionsView({
 
       {rows.length > 0 ? (
         <p className="mt-3 text-xs text-[var(--color-fg-subtle)]">
-          This page: {formatWh(totals.energyWh)} delivered
-          {totals.cost > 0 ? ` · ${formatMoney(totals.cost)} billed` : ''} across{' '}
-          {formatNumber(rows.length)} of {formatNumber(data?.total ?? 0)} sessions.
-          {canOperate ? ' Open a session to stop or force-close it.' : ''}
+          Энэ хуудсанд: Нийт {formatWh(totals.energyWh)} олгосон
+          {totals.cost > 0 ? ` · ${formatMoney(totals.cost)} тооцогдсон` : ''} ({formatNumber(data?.total ?? 0)} цэнэглэлтээс {formatNumber(rows.length)}-г харуулж байна).
+          {canOperate ? ' Цэнэглэлтийг зогсоох эсвэл албадан дуусгах бол тухайн цэнэглэлт дээр дарж нээнэ үү.' : ''}
         </p>
       ) : null}
     </>

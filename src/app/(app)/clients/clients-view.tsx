@@ -10,6 +10,7 @@ import {
   Phone,
   Plus,
   Search,
+  Shield,
   Trash2,
   Zap,
 } from 'lucide-react';
@@ -37,7 +38,8 @@ import {
   THead,
   TR,
 } from '@/components/ui/table';
-import { ConfirmModal } from '@/components/ui/modal';
+import { ConfirmModal, Modal } from '@/components/ui/modal';
+import { MANAGEABLE_MENUS } from '@/components/shell/nav-items';
 import { FilterActions, FilterBar, Pagination } from '@/components/ui/pagination';
 import { PageGuide } from '@/components/shell/page-guide';
 import { ClientModal } from './client-modal';
@@ -73,6 +75,7 @@ export function ClientsView({
   const [modalOpen, setModalOpen] = React.useState(false);
   const [editingClient, setEditingClient] = React.useState<Client | null>(null);
   const [deletingClient, setDeletingClient] = React.useState<Client | null>(null);
+  const [permissionClient, setPermissionClient] = React.useState<Client | null>(null);
   const [deleting, setDeleting] = React.useState(false);
 
   React.useEffect(() => {
@@ -170,9 +173,7 @@ export function ClientsView({
                 <TH>Хаяг</TH>
                 <TH>Төлөв</TH>
                 {canEdit || canDelete ? (
-                  <TH>
-                    <span className="sr-only">Үйлдэл</span>
-                  </TH>
+                  <TH className="text-center">Үйлдлүүд</TH>
                 ) : null}
               </tr>
             </THead>
@@ -268,11 +269,24 @@ export function ClientsView({
                             <Button
                               variant="ghost"
                               size="sm"
+                              onClick={() => setPermissionClient(c)}
+                              aria-label={`${c.name} цэс хандах эрх`}
+                              title="Цэс хандах эрх"
+                              className="text-[var(--color-brand)] hover:bg-[var(--color-brand-soft)]"
+                            >
+                              <Shield className="h-3.5 w-3.5" />
+                            </Button>
+                          ) : null}
+                          {canEdit ? (
+                            <Button
+                              variant="ghost"
+                              size="sm"
                               onClick={() => {
                                 setEditingClient(c);
                                 setModalOpen(true);
                               }}
                               aria-label={`${c.name} засах`}
+                              title="Засах"
                             >
                               <Edit2 className="h-3.5 w-3.5" />
                             </Button>
@@ -321,6 +335,14 @@ export function ClientsView({
         />
       ) : null}
 
+      {permissionClient ? (
+        <ClientPermissionModal
+          client={permissionClient}
+          onClose={() => setPermissionClient(null)}
+          onSaved={() => void mutate()}
+        />
+      ) : null}
+
       <ConfirmModal
         open={deletingClient !== null}
         onClose={() => setDeletingClient(null)}
@@ -347,5 +369,177 @@ export function ClientsView({
         }
       />
     </>
+  );
+}
+
+function ClientPermissionModal({
+  client,
+  onClose,
+  onSaved,
+}: {
+  client: Client;
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [saving, setSaving] = React.useState(false);
+  const [allowedMenus, setAllowedMenus] = React.useState<string[]>(() => {
+    if (client.allowedMenus && client.allowedMenus.length > 0) {
+      return [...client.allowedMenus];
+    }
+    // Default to all manageable menus
+    return MANAGEABLE_MENUS.map((m) => m.href);
+  });
+
+  const opMenus = MANAGEABLE_MENUS.filter((m) => m.section === 'Үйл ажиллагаа');
+  const accessMenus = MANAGEABLE_MENUS.filter((m) => m.section === 'Хандалт');
+
+  const toggleMenu = (href: string) => {
+    setAllowedMenus((prev) =>
+      prev.includes(href) ? prev.filter((h) => h !== href) : [...prev, href],
+    );
+  };
+
+  const selectAll = () => {
+    setAllowedMenus(MANAGEABLE_MENUS.map((m) => m.href));
+  };
+
+  const selectNone = () => {
+    setAllowedMenus([]);
+  };
+
+  const selectOperationsOnly = () => {
+    setAllowedMenus(opMenus.map((m) => m.href));
+  };
+
+  async function handleSave() {
+    setSaving(true);
+    try {
+      const id = client.id || client._id;
+      await api.patch(`clients/${encodeURIComponent(id!)}`, {
+        allowedMenus,
+      });
+      toast.success(`"${client.name}" харилцагчийн цэс хандах эрх хадгалагдлаа`);
+      onSaved();
+      onClose();
+    } catch (err) {
+      toast.error(errorMessage(err));
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Modal
+      open
+      onClose={onClose}
+      size="lg"
+      title={
+        <div className="flex items-center gap-2">
+          <Shield className="h-5 w-5 text-[var(--color-brand)]" />
+          <span>Цэс хандах эрхийн тохиргоо</span>
+        </div>
+      }
+      description={
+        <span>
+          <strong className="text-[var(--color-fg)]">{client.name}</strong> харилцагчийн админ системд хандах боломжтой цэсүүдийг чеклэж тохируулна уу.
+        </span>
+      }
+      footer={
+        <div className="flex items-center justify-between w-full">
+          <div className="text-xs text-[var(--color-fg-muted)]">
+            Сонгогдсон: <strong className="text-[var(--color-brand)]">{allowedMenus.length}</strong> / {MANAGEABLE_MENUS.length}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" onClick={onClose} disabled={saving}>
+              Болих
+            </Button>
+            <Button variant="primary" onClick={() => void handleSave()} loading={saving}>
+              Хадгалах
+            </Button>
+          </div>
+        </div>
+      }
+    >
+      <div className="space-y-4 py-2">
+        <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--color-border)] pb-2.5">
+          <div className="text-xs text-[var(--color-fg-muted)]">
+            Харилцагчийн нэвтрэх хэрэглэгчид зөвхөн энд чеклэсэн цэсүүд харагдана.
+          </div>
+          <div className="flex items-center gap-1.5">
+            <Button variant="ghost" size="sm" type="button" onClick={selectAll} className="text-xs h-7 px-2">
+              Бүгд
+            </Button>
+            <Button variant="ghost" size="sm" type="button" onClick={selectOperationsOnly} className="text-xs h-7 px-2">
+              Үйл ажиллагаа
+            </Button>
+            <Button variant="ghost" size="sm" type="button" onClick={selectNone} className="text-xs h-7 px-2 text-[var(--color-fg-subtle)]">
+              Арилгах
+            </Button>
+          </div>
+        </div>
+
+        {/* Үйл ажиллагаа Group */}
+        <div>
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-fg-subtle)] mb-2">
+            Үйл ажиллагаа
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {opMenus.map((item) => {
+              const checked = allowedMenus.includes(item.href);
+              return (
+                <label
+                  key={item.href}
+                  className={`flex items-center gap-2.5 rounded-lg border px-3 py-2 text-xs transition-colors cursor-pointer select-none ${
+                    checked
+                      ? 'border-[var(--color-brand)]/40 bg-[var(--color-brand-soft)]/40 font-medium text-[var(--color-fg)]'
+                      : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg-muted)] hover:bg-[var(--color-surface-2)]'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-[var(--color-border)] accent-[var(--color-brand)]"
+                    checked={checked}
+                    onChange={() => toggleMenu(item.href)}
+                  />
+                  <span className="truncate">{item.label}</span>
+                  <span className="ml-auto font-mono text-[10px] text-[var(--color-fg-subtle)]">{item.href}</span>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Хандалт Group */}
+        <div className="pt-1">
+          <p className="text-[11px] font-semibold uppercase tracking-wider text-[var(--color-fg-subtle)] mb-2">
+            Хандалт
+          </p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {accessMenus.map((item) => {
+              const checked = allowedMenus.includes(item.href);
+              return (
+                <label
+                  key={item.href}
+                  className={`flex items-center gap-2.5 rounded-lg border px-3 py-2 text-xs transition-colors cursor-pointer select-none ${
+                    checked
+                      ? 'border-[var(--color-brand)]/40 bg-[var(--color-brand-soft)]/40 font-medium text-[var(--color-fg)]'
+                      : 'border-[var(--color-border)] bg-[var(--color-surface)] text-[var(--color-fg-muted)] hover:bg-[var(--color-surface-2)]'
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-[var(--color-border)] accent-[var(--color-brand)]"
+                    checked={checked}
+                    onChange={() => toggleMenu(item.href)}
+                  />
+                  <span className="truncate">{item.label}</span>
+                  <span className="ml-auto font-mono text-[10px] text-[var(--color-fg-subtle)]">{item.href}</span>
+                </label>
+              );
+            })}
+          </div>
+        </div>
+      </div>
+    </Modal>
   );
 }

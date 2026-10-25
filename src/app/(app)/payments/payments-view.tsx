@@ -56,6 +56,10 @@ const STATUS: Record<PaymentStatus, { label: string; tone: Tone }> = {
   FAILED: { label: 'Амжилтгүй', tone: 'danger' },
 };
 
+function isUuid(val?: string): boolean {
+  return Boolean(val && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val.trim()));
+}
+
 function methodLabel(p: PaymentRow): string {
   if (p.provider === 'GOLOMT') {
     if (p.golomtMode === 'TOKEN') return 'Хадгалсан карт';
@@ -182,9 +186,9 @@ export function PaymentsView({ initialQuery, initialStatus }: { initialQuery: st
               setProvider(e.target.value);
               setPage(1);
             }}
-            aria-label="Төлөх арга"
+            aria-label="Төлбөрийн хэлбэр"
           >
-            <option value="">Бүх арга</option>
+            <option value="">Бүх хэлбэр</option>
             <option value="GOLOMT">Карт · Голомт</option>
             <option value="QPAY_QUICKQR">QPay</option>
             <option value="QPAY">QPay (merchant)</option>
@@ -223,7 +227,7 @@ export function PaymentsView({ initialQuery, initialStatus }: { initialQuery: st
               <tr>
                 <TH>Огноо</TH>
                 <TH>Жолооч</TH>
-                <TH>Арга</TH>
+                <TH>Хэлбэр</TH>
                 <TH>Дүн</TH>
                 <TH>Төлөв</TH>
                 <TH>Хэтэвч</TH>
@@ -242,7 +246,8 @@ export function PaymentsView({ initialQuery, initialStatus }: { initialQuery: st
                 </TableEmpty>
               ) : (
                 rows.map((p) => {
-                  const card = p.payments?.find((x) => x.paymentWallet)?.paymentWallet;
+                  const rawWallet = p.payments?.find((x) => x.paymentWallet)?.paymentWallet;
+                  const card = p.provider === 'GOLOMT' && rawWallet && !isUuid(rawWallet) ? rawWallet : null;
                   return (
                     <TR key={p.id}>
                       <TD className="whitespace-nowrap text-xs text-[var(--color-fg-muted)]">

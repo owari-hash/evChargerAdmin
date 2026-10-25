@@ -649,6 +649,7 @@ export interface Client {
   description?: string | null;
   isActive: boolean;
   loginAccount?: ClientLoginAccount | null;
+  allowedMenus?: string[];
   /** Eplug service fee (0–100) on this client's stations. Unset = network default. */
   feePercent?: number | null;
   /** Receipts for this client's stations are issued under this merchant. Unset = network default. */
@@ -678,6 +679,7 @@ export interface ClientInput {
   address?: string | null;
   description?: string | null;
   isActive?: boolean;
+  allowedMenus?: string[];
   feePercent?: number | null;
   ebarimtMerchantId?: string | null;
   payoutAccount?: PayoutAccount | null;

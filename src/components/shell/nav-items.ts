@@ -14,10 +14,7 @@ import {
   LayoutDashboard,
   Megaphone,
   MessageSquareText,
-<<<<<<< HEAD
   PhoneCall,
-=======
->>>>>>> a6b40fb8ed753193d57cf3dff6d63c8bd0d007b8
   Plug,
   Receipt,
   PlayCircle,
@@ -102,12 +99,8 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: '/clients', label: 'Харилцагч', icon: Building2, minRole: 'OPERATOR', prefix: true },
       { href: '/announcements', label: 'Мэдээ', icon: Megaphone, minRole: 'OPERATOR' },
-<<<<<<< HEAD
-            { href: '/feedback', label: 'Санал хүсэлт', icon: MessageSquareText, minRole: 'OPERATOR' },
-{ href: '/contact', label: 'Холбоо барих', icon: PhoneCall, minRole: 'OPERATOR' },
-=======
       { href: '/feedback', label: 'Санал хүсэлт', icon: MessageSquareText, minRole: 'OPERATOR' },
->>>>>>> a6b40fb8ed753193d57cf3dff6d63c8bd0d007b8
+      { href: '/contact', label: 'Холбоо барих', icon: PhoneCall, minRole: 'OPERATOR' },
       { href: '/settlements', label: 'Тооцоо', icon: Banknote, minRole: 'OPERATOR' },
       { href: '/charging-profiles', label: 'Ухаалаг цэнэглэлт', icon: SlidersHorizontal },
       { href: '/jobs', label: 'Программ хангамж ба лог', icon: Cpu },

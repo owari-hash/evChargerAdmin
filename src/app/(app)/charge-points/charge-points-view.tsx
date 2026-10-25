@@ -125,7 +125,22 @@ export function ChargePointsView({
   });
 
   const rows = data?.data ?? [];
-  const columns = canEdit ? 9 : 8;
+  const columns = canEdit ? 10 : 9;
+  const [togglingId, setTogglingId] = React.useState<string | null>(null);
+
+  /** «Kiosk-д харуулах»: off hides the station from the kiosk and app lists. */
+  async function toggleKiosk(cp: ChargePoint, next: boolean) {
+    setTogglingId(cp.id);
+    try {
+      await api.patch(`charge-points/${cp.id}`, { showOnKiosk: next });
+      toast.success(next ? 'Kiosk-д харагдана' : 'Kiosk-оос нууглаа');
+      await mutate();
+    } catch (err) {
+      toast.error(errorMessage(err));
+    } finally {
+      setTogglingId(null);
+    }
+  }
 
   return (
     <>
@@ -203,6 +218,7 @@ export function ChargePointsView({
                 <TH>Программ</TH>
                 <TH>Бүртгэл</TH>
                 <TH>Сүүлд холбогдсон</TH>
+                <TH title="Kiosk вэб болон аппын станцын жагсаалт, газрын зурагт харуулах эсэх">Kiosk-д</TH>
                 {canEdit ? (
                   <TH>
                     <span className="sr-only">Үйлдэл</span>
@@ -305,6 +321,13 @@ export function ChargePointsView({
                     </TD>
                     <TD className="whitespace-nowrap text-xs text-[var(--color-fg-muted)]">
                       {formatRelative(cp.lastSeenAt)}
+                    </TD>
+                    <TD>
+                      <KioskToggle
+                        on={cp.showOnKiosk !== false}
+                        disabled={!canEdit || togglingId === cp.id}
+                        onChange={(next) => void toggleKiosk(cp, next)}
+                      />
                     </TD>
                     {canEdit ? (
                       <TD>
@@ -430,5 +453,39 @@ export function ChargePointsView({
         }
       />
     </>
+  );
+}
+
+/** A small on/off switch for the «Kiosk-д» column. */
+function KioskToggle({
+  on,
+  disabled,
+  onChange,
+}: {
+  on: boolean;
+  disabled?: boolean;
+  onChange: (next: boolean) => void;
+}) {
+  return (
+    <button
+      type="button"
+      role="switch"
+      aria-checked={on}
+      aria-label={on ? 'Kiosk-д харагдаж байна' : 'Kiosk-д харагдахгүй'}
+      title={on ? 'Kiosk-д харагдаж байна' : 'Kiosk-д харагдахгүй'}
+      disabled={disabled}
+      onClick={() => onChange(!on)}
+      className={cn(
+        'relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition disabled:opacity-50',
+        on ? 'bg-[var(--color-brand)]' : 'bg-[var(--color-border)]',
+      )}
+    >
+      <span
+        className={cn(
+          'inline-block size-4 rounded-full bg-white shadow transition-transform',
+          on ? 'translate-x-[18px]' : 'translate-x-0.5',
+        )}
+      />
+    </button>
   );
 }

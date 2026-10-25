@@ -15,13 +15,15 @@ import { ConfirmModal, Modal } from '@/components/ui/modal';
 import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty, TableLoading } from '@/components/ui/table';
 import { MANAGEABLE_MENUS } from '@/components/shell/nav-items';
 
+export type ManagedUser = User & { allowedMenus?: string[] };
+
 export function UsersView({ currentUserId }: { currentUserId: string }) {
-  const { data, error, isLoading, mutate } = useSWR<User[]>(apiUrl('auth/users'), fetcher, {
+  const { data, error, isLoading, mutate } = useSWR<ManagedUser[]>(apiUrl('auth/users'), fetcher, {
     refreshInterval: REFRESH.config,
   });
   const [creating, setCreating] = React.useState(false);
-  const [editing, setEditing] = React.useState<User | null>(null);
-  const [deleting, setDeleting] = React.useState<User | null>(null);
+  const [editing, setEditing] = React.useState<ManagedUser | null>(null);
+  const [deleting, setDeleting] = React.useState<ManagedUser | null>(null);
   const [busy, setBusy] = React.useState(false);
 
   const users = data ?? [];

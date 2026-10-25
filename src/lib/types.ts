@@ -707,6 +707,19 @@ export interface StationReportRow {
     netFormula: string;
     summaryDisplay: string;
   };
+  sessions?: Array<{
+    id: number;
+    connectorId: number;
+    idTag?: string;
+    vehicleModel?: string;
+    startTimestamp: string;
+    stopTimestamp?: string;
+    energyKwh: number;
+    tariffPerKwh?: number;
+    cost: number;
+    feeAmount: number;
+    clientNet: number;
+  }>;
 }
 
 export interface DailyReportRow {

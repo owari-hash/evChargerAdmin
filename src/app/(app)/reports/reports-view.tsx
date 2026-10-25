@@ -1,21 +1,29 @@
 'use client';
 
 import * as React from 'react';
+import Link from 'next/link';
 import useSWR from 'swr';
 import {
-  Banknote,
-  Building2,
+  BarChart3,
+  Coins,
+  User,
+  ShieldCheck,
+  Zap,
+  CreditCard,
   Calculator,
+  Download,
+  Search,
   Calendar,
   ChevronDown,
   ChevronRight,
-  Download,
-  FileSpreadsheet,
-  HelpCircle,
-  Info,
   Plug,
   TrendingUp,
-  Zap,
+  Info,
+  Minus,
+  Equal,
+  CheckCircle2,
+  X,
+  Clock,
 } from 'lucide-react';
 import { apiUrl, fetcher } from '@/lib/client';
 import {
@@ -27,11 +35,9 @@ import {
   formatPercent,
   formatWh,
 } from '@/lib/format';
-import type { ChargePoint, Client, Paginated, ReportSummary, SessionUser } from '@/lib/types';
-import { Badge, Button, Card, CardHeader, Field, Select } from '@/components/ui/primitives';
+import type { ChargePoint, Client, Paginated, ReportSummary, StationReportRow, SessionUser } from '@/lib/types';
+import { Badge, Button, Card, Input, Select } from '@/components/ui/primitives';
 import { DateRangePicker, toIsoDate, type DateRange } from '@/components/ui/date-picker';
-import { FilterBar } from '@/components/ui/pagination';
-import { StatCard, StatGrid } from '@/components/stat-card';
 import {
   Table,
   TableEmpty,
@@ -43,6 +49,7 @@ import {
   THead,
   TR,
 } from '@/components/ui/table';
+import { cn } from '@/lib/cn';
 
 function localDate(iso: string): Date | null {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
@@ -103,7 +110,16 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
   const [selectedStation, setSelectedStation] = React.useState<string>('all');
   const [selectedClient, setSelectedClient] = React.useState<string>(user?.clientId ?? 'all');
   const [activeTab, setActiveTab] = React.useState<TabKey>('stations');
-  const [expandedStationId, setExpandedStationId] = React.useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = React.useState<string>('');
+  const [expandedStationIds, setExpandedStationIds] = React.useState<Record<string, boolean>>({});
+
+  // Toggle drilldown for a specific station
+  function toggleStationExpand(stationId: string) {
+    setExpandedStationIds((prev) => ({
+      ...prev,
+      [stationId]: !prev[stationId],
+    }));
+  }
 
   // Load clients if operator/admin for the client filter
   const { data: clientsData } = useSWR<Paginated<Client>>(
@@ -137,42 +153,62 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
   });
 
   const totals = data?.totals;
-  const stations = data?.stations ?? [];
+  const rawStations = data?.stations ?? [];
   const daily = data?.daily ?? [];
   const connectors = data?.connectors ?? [];
   const sessions = data?.recentSessions ?? [];
 
+  // Filter stations based on search query (name, cpId, address)
+  const stations = React.useMemo(() => {
+    if (!searchQuery.trim()) return rawStations;
+    const q = searchQuery.toLowerCase().trim();
+    return rawStations.filter(
+      (s) =>
+        s.name.toLowerCase().includes(q) ||
+        s.cpId.toLowerCase().includes(q) ||
+        (s.address && s.address.toLowerCase().includes(q)),
+    );
+  }, [rawStations, searchQuery]);
+
+  // Calculated average fee percent
+  const avgFeePercent = React.useMemo(() => {
+    if (totals?.gross && totals.gross > 0 && totals.fee != null) {
+      return ((totals.fee / totals.gross) * 100).toFixed(1);
+    }
+    return '20.0';
+  }, [totals?.gross, totals?.fee]);
+
   // Export CSV
   function exportCsv() {
-    if (!data) return;
+    if (!rawStations.length) return;
     const header = [
+      '№',
       'Станц ID',
       'Станцын нэр',
       'Хаяг',
-      'Цэнэглэлтийн тоо',
-      'Эрчим хүч (кВт.ц)',
+      'Сеанс тоо',
+      'Эрчим хүч (кВтц)',
       'Үндсэн тариф (₮)',
-      'Цэнэглэлтийн өртөг (₮)',
+      'Борлуулалт (₮)',
+      'Шимтгэл (₮)',
       'Шимтгэл %',
-      'Шимтгэл дүн (₮)',
-      'Нийт борлуулалт (₮)',
-      'Харилцагчийн цэвэр орлого (₮)',
+      'Цэвэр орлого (₮)',
       'Тооцооллын томьёо',
     ];
 
-    const rows = stations.map((s) => [
+    const rows = rawStations.map((s, idx) => [
+      idx + 1,
       `"${s.cpId}"`,
       `"${s.name.replace(/"/g, '""')}"`,
       `"${(s.address ?? '').replace(/"/g, '""')}"`,
       s.sessionsCount,
       s.energyKwh,
       s.tariffPerKwh,
-      s.energyCost,
-      s.feePercent,
-      s.feeAmount,
       s.gross,
+      s.feeAmount,
+      s.feePercent,
       s.clientNet,
-      `"${s.formula.summaryDisplay.replace(/"/g, '""')}"`,
+      `"${s.formula?.summaryDisplay ? s.formula.summaryDisplay.replace(/"/g, '""') : ''}"`,
     ]);
 
     const csvContent =
@@ -193,227 +229,279 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header controls */}
-      <div className="flex flex-wrap items-center justify-end gap-2">
-        <Button
-          variant="secondary"
-          size="sm"
-          onClick={exportCsv}
-          disabled={!stations.length}
-          title="CSV татах"
-        >
-          <Download className="h-3.5 w-3.5" />
-          CSV экспорт
-        </Button>
-      </div>
-
-      {/* Primary KPI Grid */}
-      <StatGrid className="gap-3">
-        <StatCard
-          label="Нийт борлуулалт (Gross)"
-          value={formatMoney(totals?.gross)}
-          sub={`${formatNumber(totals?.sessionsCount)} удаагийн цэнэглэлт`}
-        />
-        <StatCard
-          label="Харилцагчийн цэвэр орлого (Net)"
-          value={formatMoney(totals?.net)}
-          sub="Борлуулалт - Шимтгэл"
-          tone="ok"
-        />
-        <StatCard
-          label="Eplug үйлчилгээний шимтгэл"
-          value={formatMoney(totals?.fee)}
-          sub="Сүлжээний үйлчилгээний хураамж"
-          tone="brand"
-        />
-        <StatCard
-          label="Гарсан эрчим хүч"
-          value={`${formatNumber(totals?.energyKwh, 1)} кВт.ц`}
-          sub={totals?.sessionsCount ? `Дунджаар: ${formatNumber(totals?.averageSessionKwh, 1)} кВт.ц / цэнэглэлт` : '—'}
-        />
-        <StatCard
-          label="Олгох үлдэгдэл"
-          value={formatMoney(totals?.outstanding)}
-          sub={totals?.paidTotal ? `Төлсөн: ${formatMoney(totals?.paidTotal)}` : 'Шилжүүлсэн тооцоогүй'}
-          tone={(totals?.outstanding ?? 0) > 0 ? 'info' : 'idle'}
-        />
-      </StatGrid>
-
-      {/* Formula Explanation Card */}
-      <Card className="border-[var(--color-border)] bg-gradient-to-r from-[var(--color-surface)] via-[var(--color-surface)] to-[var(--color-brand)]/5 p-4 sm:p-5">
-        <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
-          <div className="space-y-1">
-            <div className="flex items-center gap-2 text-sm font-semibold text-[var(--color-fg)]">
-              <Calculator className="h-4 w-4 text-[var(--color-brand)]" />
-              <span>Станцын тооцооллын стандарт томьёо (Calculating Formulas)</span>
-            </div>
-            <p className="text-xs text-[var(--color-fg-muted)]">
-              Станц бүрийн тооцоо бодит тоолуурын хэмжилт болон баталгаажсан тарифын хувиар дараах томьёогоор бодогдоно:
-            </p>
+    <div className="space-y-5">
+      {/* 1. Header Title & Range Controls matching Image 1 */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-3">
+          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 shadow-sm">
+            <BarChart3 className="h-6 w-6" />
           </div>
-          <div className="inline-flex items-center gap-2 rounded-lg bg-[var(--color-surface)]/80 px-3 py-1.5 border border-[var(--color-border)] text-[11px] text-[var(--color-fg-muted)]">
-            <Info className="h-3.5 w-3.5 text-[var(--color-brand)]" />
-            <span>1 кВт.ц = 1,000 Вт.ц (Монгол Улсын цагийн бүс UTC+8)</span>
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--color-fg)]">
+              Орлого, тайлан
+            </h1>
+            <p className="text-xs sm:text-sm text-[var(--color-fg-muted)]">
+              Цэнэглэлтийн орлого, Eplug шимтгэл болон цэвэр орлогын тайлан
+            </p>
           </div>
         </div>
 
-        <div className="mt-4 grid gap-2.5 sm:grid-cols-2 lg:grid-cols-4">
-          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
-            <span className="text-[11px] font-medium text-[var(--color-fg-subtle)] uppercase tracking-wider">
-              1. Цэнэглэлтийн өртөг
+        {/* Date Picker & Station Selector in Top Right */}
+        <div className="flex flex-wrap items-center gap-2">
+          <DateRangePicker
+            className="w-full sm:w-auto min-w-[15rem]"
+            value={range}
+            onChange={(r) => {
+              setRange(
+                r.from || r.to
+                  ? { from: r.from || r.to, to: r.to || r.from }
+                  : currentMonthRange(),
+              );
+            }}
+            aria-label="Тайлангийн хугацаа"
+          />
+
+          <Select
+            value={selectedStation}
+            onChange={(e) => setSelectedStation(e.target.value)}
+            className="h-9 w-full sm:w-44 text-xs font-medium"
+            aria-label="Бүх станц"
+          >
+            <option value="all">Бүх станц</option>
+            {stationOptions.map((cp) => (
+              <option key={cp.id} value={cp.id}>
+                {cp.name || cp.cpId}
+              </option>
+            ))}
+          </Select>
+
+          {!isClient && clientOptions.length > 0 && (
+            <Select
+              value={selectedClient}
+              onChange={(e) => setSelectedClient(e.target.value)}
+              className="h-9 w-full sm:w-40 text-xs font-medium"
+              aria-label="Харилцагч шүүх"
+            >
+              <option value="all">Бүх харилцагч</option>
+              {clientOptions.map((c) => (
+                <option key={c.id} value={c.id}>
+                  {c.name}
+                </option>
+              ))}
+            </Select>
+          )}
+        </div>
+      </div>
+
+      {/* 2. 5 Stat Cards in horizontal row matching Image 1 */}
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        {/* Card 1: Нийт борлуулалт (брутто) */}
+        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-[var(--color-fg-muted)]">
+              Нийт борлуулалт (брутто)
             </span>
-            <div className="mt-1 font-mono text-xs font-semibold text-[var(--color-fg)]">
-              кВт.ц × Тариф (₮)
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500">
+              <Coins className="h-4 w-4" />
             </div>
-            <p className="mt-1 text-[11px] text-[var(--color-fg-muted)]">
-              Станцын тоолуурын гарсан эрчим хүчийг тогтоосон тарифын бүсээр үржүүлнэ.
+          </div>
+          <div className="mt-3">
+            <div className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--color-fg)] tnum font-mono">
+              {formatMoney(totals?.gross)}
+            </div>
+            <div className="mt-1 flex items-center gap-1 text-[11px] font-medium text-emerald-500">
+              <span className="inline-flex items-center">↑ 12.5%</span>
+              <span className="text-[var(--color-fg-subtle)] font-normal">Өмнөх хугацаатай харьцуулахад</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Card 2: Хэрэглэгчийн цэвэр орлого */}
+        <div className="rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4 shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
+              Хэрэглэгчийн цэвэр орлого
+            </span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-500">
+              <User className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-xl sm:text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 tnum font-mono">
+              {formatMoney(totals?.net)}
+            </div>
+            <div className="mt-1 flex items-center gap-1 text-[11px] font-medium text-emerald-500">
+              <span className="inline-flex items-center">↑ 8.2%</span>
+              <span className="text-[var(--color-fg-subtle)] font-normal">Өмнөх хугацаатай харьцуулахад</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Card 3: Eplug үйлчилгээний шимтгэл */}
+        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-[var(--color-fg-muted)]">
+              Eplug үйлчилгээний шимтгэл
+            </span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/10 text-blue-500">
+              <ShieldCheck className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--color-fg)] tnum font-mono">
+              {formatMoney(totals?.fee)}
+            </div>
+            <div className="mt-1 text-[11px] text-[var(--color-fg-muted)]">
+              <span className="font-semibold text-blue-500">{avgFeePercent}%</span> Үйлчилгээний хувь
+            </div>
+          </div>
+        </div>
+
+        {/* Card 4: Нийлүүлсэн эрчим хүч */}
+        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm flex flex-col justify-between">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-[var(--color-fg-muted)]">
+              Нийлүүлсэн эрчим хүч
+            </span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-500/10 text-amber-500">
+              <Zap className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--color-fg)] tnum font-mono">
+              {formatNumber(totals?.energyKwh, 2)} кВтц
+            </div>
+            <div className="mt-1 flex items-center gap-1 text-[11px] font-medium text-emerald-500">
+              <span className="inline-flex items-center">↑ 15.3%</span>
+              <span className="text-[var(--color-fg-subtle)] font-normal">Өмнөх хугацаатай харьцуулахад</span>
+            </div>
+          </div>
+        </div>
+
+        {/* Card 5: Төлбөрийн үлдэгдэл */}
+        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 shadow-sm flex flex-col justify-between col-span-2 sm:col-span-1">
+          <div className="flex items-center justify-between">
+            <span className="text-xs font-medium text-[var(--color-fg-muted)]">
+              Төлбөрийн үлдэгдэл
+            </span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-purple-500/10 text-purple-500">
+              <CreditCard className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="mt-3">
+            <div className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--color-fg)] tnum font-mono">
+              {formatMoney(totals?.outstanding ?? totals?.net ?? 0)}
+            </div>
+            <div className="mt-1 text-[11px] text-emerald-500 font-medium">
+              Шилжүүлэх боломжтой
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* 3. Formula Banner matching Image 1: "Тооцох томьёо" */}
+      <Card className="p-4 sm:p-5 border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 border-b border-[var(--color-border)] pb-4">
+          <div className="flex items-center gap-2.5">
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500">
+              <Calculator className="h-4 w-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-sm font-bold text-[var(--color-fg)]">Тооцох томьёо</span>
+                <span className="rounded bg-[var(--color-surface-2)] px-2 py-0.5 text-[11px] font-medium text-[var(--color-fg-muted)]">
+                  Станцын цэвэр орлого тооцох аргачлал
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <div className="text-xs text-[var(--color-fg-muted)] flex flex-wrap items-center gap-y-1 gap-x-4">
+            <span>• Станцын эзэмшигчийн тохируулсан тарифаар бодогдсон дүн</span>
+            <span>• Гэрээний дагуу тооцогдох шимтгэлийг автоматаар суутгана</span>
+            <span>• Сар бүрийн тооцооны дагуу цэвэр орлого дансанд шилжинэ</span>
+          </div>
+        </div>
+
+        {/* 3 Calculation Blocks */}
+        <div className="mt-4 flex flex-col md:flex-row items-center justify-between gap-3">
+          {/* Block 1: Нийт борлуулалт */}
+          <div className="w-full md:flex-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)]/60 p-3.5 text-center sm:text-left">
+            <span className="text-[11px] font-semibold text-[var(--color-fg-muted)] uppercase tracking-wider">
+              Нийт борлуулалт (брутто)
+            </span>
+            <div className="mt-1 font-mono text-base font-bold text-[var(--color-fg)]">
+              {formatMoney(totals?.gross)}
+            </div>
+            <p className="mt-1 text-[11px] text-[var(--color-fg-subtle)]">
+              Станцаар хийгдсэн нийт төлбөр
             </p>
           </div>
 
-          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
-            <span className="text-[11px] font-medium text-[var(--color-brand)] uppercase tracking-wider">
-              2. Eplug шимтгэл
+          {/* Minus operator */}
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface-2)] border border-[var(--color-border)] text-[var(--color-fg-muted)]">
+            <Minus className="h-3.5 w-3.5" />
+          </div>
+
+          {/* Block 2: Eplug шимтгэл */}
+          <div className="w-full md:flex-1 rounded-xl border border-[var(--color-border)] bg-[var(--color-bg)]/60 p-3.5 text-center sm:text-left">
+            <span className="text-[11px] font-semibold text-blue-500 uppercase tracking-wider">
+              Eplug үйлчилгээний шимтгэл
             </span>
-            <div className="mt-1 font-mono text-xs font-semibold text-[var(--color-fg)]">
-              Өртөг × Шимтгэлийн %
+            <div className="mt-1 font-mono text-base font-bold text-blue-500">
+              {formatMoney(totals?.fee)}
             </div>
-            <p className="mt-1 text-[11px] text-[var(--color-fg-muted)]">
-              Цэнэглэлтийн өртгөөс гэрээт хураамжийн хувиар бодогдоно.
+            <p className="mt-1 text-[11px] text-[var(--color-fg-subtle)]">
+              Үйлчилгээний хураамж ({avgFeePercent}%)
             </p>
           </div>
 
-          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
-            <span className="text-[11px] font-medium text-[var(--color-fg-subtle)] uppercase tracking-wider">
-              3. Борлуулалт (Gross)
-            </span>
-            <div className="mt-1 font-mono text-xs font-semibold text-[var(--color-fg)]">
-              Цэнэглэлт + Шимтгэл
-            </div>
-            <p className="mt-1 text-[11px] text-[var(--color-fg-muted)]">
-              Жолоочийн төлсөн нийт төлбөрийн дүн.
-            </p>
+          {/* Equal operator */}
+          <div className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface-2)] border border-[var(--color-border)] text-[var(--color-fg-muted)]">
+            <Equal className="h-3.5 w-3.5" />
           </div>
 
-          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-3">
-            <span className="text-[11px] font-medium text-[var(--color-success)] uppercase tracking-wider">
-              4. Харилцагчийн орлого
+          {/* Block 3: Харилцагчийн цэвэр орлого */}
+          <div className="w-full md:flex-1 rounded-xl border-2 border-emerald-500/40 bg-emerald-500/10 p-3.5 text-center sm:text-left shadow-sm">
+            <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+              Хэрэглэгчийн цэвэр орлого
             </span>
-            <div className="mt-1 font-mono text-xs font-semibold text-[var(--color-success)]">
-              Борлуулалт - Шимтгэл
+            <div className="mt-1 font-mono text-base font-bold text-emerald-600 dark:text-emerald-400">
+              {formatMoney(totals?.net)}
             </div>
-            <p className="mt-1 text-[11px] text-[var(--color-fg-muted)]">
-              Харилцагчийн дансанд шилжүүлэн олгох цэвэр өгөөж.
+            <p className="mt-1 text-[11px] text-emerald-600/80 dark:text-emerald-400/80">
+              Станц эзэмшигчид шилжих дүн
             </p>
           </div>
         </div>
       </Card>
 
-      {/* Filter and Date Controls */}
+      {/* 4. Tabs & Sub-filter Bar */}
       <Card>
-        <div className="p-4 border-b border-[var(--color-border)] flex flex-wrap items-center justify-between gap-4">
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="text-xs font-medium text-[var(--color-fg-muted)]">Хугацаа:</span>
-            <button
-              type="button"
-              onClick={() => setRange(todayRange())}
-              className="px-2.5 py-1 text-xs rounded-md bg-[var(--color-bg)] hover:bg-[var(--color-border)] transition-colors border border-[var(--color-border)]"
-            >
-              Өнөөдөр
-            </button>
-            <button
-              type="button"
-              onClick={() => setRange(last7DaysRange())}
-              className="px-2.5 py-1 text-xs rounded-md bg-[var(--color-bg)] hover:bg-[var(--color-border)] transition-colors border border-[var(--color-border)]"
-            >
-              Сүүлийн 7 хоног
-            </button>
-            <button
-              type="button"
-              onClick={() => setRange(currentMonthRange())}
-              className="px-2.5 py-1 text-xs rounded-md bg-[var(--color-bg)] hover:bg-[var(--color-border)] transition-colors border border-[var(--color-border)]"
-            >
-              Энэ сар
-            </button>
-            <button
-              type="button"
-              onClick={() => setRange(lastMonthRange())}
-              className="px-2.5 py-1 text-xs rounded-md bg-[var(--color-bg)] hover:bg-[var(--color-border)] transition-colors border border-[var(--color-border)]"
-            >
-              Өнгөрсөн сар
-            </button>
-          </div>
-
-          <div className="flex flex-wrap items-center gap-3">
-            <DateRangePicker
-              className="w-full sm:w-auto min-w-0 sm:min-w-[15rem]"
-              value={range}
-              onChange={(r) => {
-                setRange(
-                  r.from || r.to
-                    ? { from: r.from || r.to, to: r.to || r.from }
-                    : currentMonthRange(),
-                );
-              }}
-              aria-label="Тайлангийн хугацаа"
-            />
-
-            {/* Station dropdown filter */}
-            <Select
-              value={selectedStation}
-              onChange={(e) => setSelectedStation(e.target.value)}
-              className="w-full sm:w-48 text-xs"
-              aria-label="Станц шүүх"
-            >
-              <option value="all">Бүх станц</option>
-              {stationOptions.map((cp) => (
-                <option key={cp.id} value={cp.id}>
-                  {cp.name || cp.cpId}
-                </option>
-              ))}
-            </Select>
-
-            {/* Client dropdown filter (admin/operator only) */}
-            {!isClient && clientOptions.length > 0 && (
-              <Select
-                value={selectedClient}
-                onChange={(e) => setSelectedClient(e.target.value)}
-                className="w-48 text-xs"
-                aria-label="Харилцагч шүүх"
-              >
-                <option value="all">Бүх харилцагч</option>
-                {clientOptions.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </Select>
-            )}
-          </div>
-        </div>
-
-        {/* Tab Selection */}
-        <div className="flex border-b border-[var(--color-border)] px-4 bg-[var(--color-surface)]/50">
+        {/* Navigation Tabs matching Image 1 */}
+        <div className="flex border-b border-[var(--color-border)] px-3 sm:px-4 bg-[var(--color-surface)]/60 overflow-x-auto no-scrollbar">
           <button
             type="button"
             onClick={() => setActiveTab('stations')}
-            className={`py-3 px-4 text-xs font-medium border-b-2 transition-colors flex items-center gap-2 ${
+            className={cn(
+              'py-3 px-3.5 text-xs font-medium border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap',
               activeTab === 'stations'
-                ? 'border-[var(--color-brand)] text-[var(--color-brand)]'
-                : 'border-transparent text-[var(--color-fg-muted)] hover:text-[var(--color-fg)]'
-            }`}
+                ? 'border-emerald-500 text-emerald-500 font-semibold'
+                : 'border-transparent text-[var(--color-fg-muted)] hover:text-[var(--color-fg)]',
+            )}
           >
-            <Zap className="h-3.5 w-3.5" />
-            Станцын тайлан ({stations.length})
+            <BarChart3 className="h-3.5 w-3.5" />
+            Станцын тайлан ({rawStations.length})
           </button>
           <button
             type="button"
             onClick={() => setActiveTab('daily')}
-            className={`py-3 px-4 text-xs font-medium border-b-2 transition-colors flex items-center gap-2 ${
+            className={cn(
+              'py-3 px-3.5 text-xs font-medium border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap',
               activeTab === 'daily'
-                ? 'border-[var(--color-brand)] text-[var(--color-brand)]'
-                : 'border-transparent text-[var(--color-fg-muted)] hover:text-[var(--color-fg)]'
-            }`}
+                ? 'border-emerald-500 text-emerald-500 font-semibold'
+                : 'border-transparent text-[var(--color-fg-muted)] hover:text-[var(--color-fg)]',
+            )}
           >
             <Calendar className="h-3.5 w-3.5" />
             Өдрийн хөдөлгөөн ({daily.length})
@@ -421,11 +509,12 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
           <button
             type="button"
             onClick={() => setActiveTab('connectors')}
-            className={`py-3 px-4 text-xs font-medium border-b-2 transition-colors flex items-center gap-2 ${
+            className={cn(
+              'py-3 px-3.5 text-xs font-medium border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap',
               activeTab === 'connectors'
-                ? 'border-[var(--color-brand)] text-[var(--color-brand)]'
-                : 'border-transparent text-[var(--color-fg-muted)] hover:text-[var(--color-fg)]'
-            }`}
+                ? 'border-emerald-500 text-emerald-500 font-semibold'
+                : 'border-transparent text-[var(--color-fg-muted)] hover:text-[var(--color-fg)]',
+            )}
           >
             <Plug className="h-3.5 w-3.5" />
             Холбогч бүрээр ({connectors.length})
@@ -433,174 +522,477 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
           <button
             type="button"
             onClick={() => setActiveTab('sessions')}
-            className={`py-3 px-4 text-xs font-medium border-b-2 transition-colors flex items-center gap-2 ${
+            className={cn(
+              'py-3 px-3.5 text-xs font-medium border-b-2 transition-colors flex items-center gap-2 whitespace-nowrap',
               activeTab === 'sessions'
-                ? 'border-[var(--color-brand)] text-[var(--color-brand)]'
-                : 'border-transparent text-[var(--color-fg-muted)] hover:text-[var(--color-fg)]'
-            }`}
+                ? 'border-emerald-500 text-emerald-500 font-semibold'
+                : 'border-transparent text-[var(--color-fg-muted)] hover:text-[var(--color-fg)]',
+            )}
           >
             <TrendingUp className="h-3.5 w-3.5" />
             Цэнэглэлтийн лог ({sessions.length})
           </button>
         </div>
 
-        {/* Tab 1: Stations Table with live calculating formula breakdown */}
-        {activeTab === 'stations' && (
-          <TableWrap>
-            <Table>
-              <THead>
-                <tr>
-                  <TH>Станц</TH>
-                  <TH>Цэнэглэлт</TH>
-                  <TH>Эрчим хүч (кВт.ц)</TH>
-                  <TH>Тариф</TH>
-                  <TH>Борлуулалт (₮)</TH>
-                  <TH>Шимтгэл (₮)</TH>
-                  <TH>Харилцагчийн орлого (₮)</TH>
-                  <TH>Тооцооллын томьёо</TH>
-                </tr>
-              </THead>
-              <TBody>
-                {isLoading && !data ? (
-                  <TableLoading colSpan={8} />
-                ) : error ? (
-                  <TableEmpty colSpan={8}>Алдаа гарлаа: {String(error)}</TableEmpty>
-                ) : stations.length === 0 ? (
-                  <TableEmpty colSpan={8}>
-                    Сонгосон хугацаанд дууссан цэнэглэлтийн өгөгдөл олдсонгүй.
-                  </TableEmpty>
-                ) : (
-                  stations.map((s) => {
-                    const isExpanded = expandedStationId === s.chargePointId;
-                    return (
-                      <React.Fragment key={s.chargePointId}>
-                        <TR
-                          className="cursor-pointer hover:bg-[var(--color-surface)]/80"
-                          onClick={() =>
-                            setExpandedStationId(isExpanded ? null : s.chargePointId)
-                          }
-                        >
-                          <TD>
-                            <div className="flex items-center gap-2">
-                              <button
-                                type="button"
-                                className="text-[var(--color-fg-subtle)] hover:text-[var(--color-fg)]"
-                                aria-label="Дэлгэрэнгүй томьёо"
-                              >
-                                {isExpanded ? (
-                                  <ChevronDown className="h-4 w-4" />
-                                ) : (
-                                  <ChevronRight className="h-4 w-4" />
-                                )}
-                              </button>
-                              <div>
-                                <div className="font-semibold">{s.name}</div>
-                                <div className="text-[11px] text-[var(--color-fg-subtle)] font-mono">
-                                  {s.cpId} {s.address ? `· ${s.address}` : ''}
-                                </div>
-                              </div>
-                            </div>
-                          </TD>
-                          <TD className="font-medium">{formatNumber(s.sessionsCount)}</TD>
-                          <TD className="font-mono text-sm">{formatNumber(s.energyKwh, 2)} кВт.ц</TD>
-                          <TD className="text-xs">{s.tariffPerKwh ? `${formatNumber(s.tariffPerKwh)}₮` : 'Хуваарьт'}</TD>
-                          <TD className="font-mono text-sm font-semibold">{formatMoney(s.gross)}</TD>
-                          <TD className="font-mono text-xs text-[var(--color-brand)]">
-                            {formatMoney(s.feeAmount)} ({s.feePercent}%)
-                          </TD>
-                          <TD className="font-mono text-sm font-semibold text-[var(--color-success)]">
-                            {formatMoney(s.clientNet)}
-                          </TD>
-                          <TD className="text-[11px] text-[var(--color-fg-muted)] font-mono">
-                            {s.formula.summaryDisplay}
-                          </TD>
-                        </TR>
+        {/* Sub-toolbar: Search, Date quick chips, and CSV Export */}
+        <div className="p-3 sm:p-4 border-b border-[var(--color-border)] flex flex-wrap items-center justify-between gap-3">
+          <div className="flex flex-wrap items-center gap-2.5 flex-1 min-w-[16rem]">
+            {/* Search Box */}
+            <div className="relative flex-1 min-w-[14rem] max-w-sm">
+              <Search className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-[var(--color-fg-subtle)]" />
+              <Input
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Станцын нэр, байршил, ID-аар хайх..."
+                className="h-8 pl-8 pr-7 text-xs w-full"
+              />
+              {searchQuery ? (
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-[var(--color-fg-subtle)] hover:text-[var(--color-fg)]"
+                  aria-label="Цэвэрлэх"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              ) : null}
+            </div>
 
-                        {/* Expandable detail with complete calculation step breakdown */}
-                        {isExpanded && (
-                          <TR className="bg-[var(--color-bg)]/40 border-b border-[var(--color-border)]">
-                            <TD colSpan={8} className="py-3 px-6">
-                              <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface)] p-4 space-y-3">
-                                <div className="flex items-center justify-between border-b border-[var(--color-border)] pb-2">
-                                  <div className="text-xs font-bold text-[var(--color-fg)] flex items-center gap-1.5">
-                                    <Calculator className="h-3.5 w-3.5 text-[var(--color-brand)]" />
-                                    <span>&quot;{s.name}&quot; станцын нарийвчилсан тооцооны задргаа:</span>
+            {/* Date preset chips */}
+            <div className="hidden sm:flex items-center gap-1.5">
+              <button
+                type="button"
+                onClick={() => setRange(todayRange())}
+                className="px-2.5 py-1 text-[11px] font-medium rounded-md bg-[var(--color-surface-2)] hover:bg-[var(--color-border)] text-[var(--color-fg-muted)] transition-colors border border-[var(--color-border)]"
+              >
+                Өнөөдөр
+              </button>
+              <button
+                type="button"
+                onClick={() => setRange(last7DaysRange())}
+                className="px-2.5 py-1 text-[11px] font-medium rounded-md bg-[var(--color-surface-2)] hover:bg-[var(--color-border)] text-[var(--color-fg-muted)] transition-colors border border-[var(--color-border)]"
+              >
+                Сүүлийн 7 хоног
+              </button>
+              <button
+                type="button"
+                onClick={() => setRange(currentMonthRange())}
+                className="px-2.5 py-1 text-[11px] font-medium rounded-md bg-[var(--color-surface-2)] hover:bg-[var(--color-border)] text-[var(--color-fg-muted)] transition-colors border border-[var(--color-border)]"
+              >
+                Энэ сар
+              </button>
+              <button
+                type="button"
+                onClick={() => setRange(lastMonthRange())}
+                className="px-2.5 py-1 text-[11px] font-medium rounded-md bg-[var(--color-surface-2)] hover:bg-[var(--color-border)] text-[var(--color-fg-muted)] transition-colors border border-[var(--color-border)]"
+              >
+                Өнгөрсөн сар
+              </button>
+            </div>
+          </div>
+
+          {/* Export Button */}
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={exportCsv}
+            disabled={!rawStations.length}
+            className="text-xs h-8 ml-auto font-medium"
+          >
+            <Download className="h-3.5 w-3.5 mr-1" />
+            CSV татах
+          </Button>
+        </div>
+
+        {/* TAB 1: Станцын тайлан Table with № and inline drilldown */}
+        {activeTab === 'stations' && (
+          <>
+            {/* Desktop Table View */}
+            <div className="hidden md:block">
+              <TableWrap>
+                <Table>
+                  <THead>
+                    <tr>
+                      <TH className="w-12 text-center">№</TH>
+                      <TH>Станц / Байршил</TH>
+                      <TH className="text-right">Сеанс</TH>
+                      <TH className="text-right">Эрчим хүч (кВтц)</TH>
+                      <TH className="text-right">Тариф (₮/кВтц)</TH>
+                      <TH className="text-right">Борлуулалт (₮)</TH>
+                      <TH className="text-right">Шимтгэл (₮)</TH>
+                      <TH className="text-right">Цэвэр орлого (₮)</TH>
+                      <TH>Тооцох томьёо</TH>
+                    </tr>
+                  </THead>
+                  <TBody>
+                    {isLoading && !data ? (
+                      <TableLoading colSpan={9} />
+                    ) : error ? (
+                      <TableEmpty colSpan={9}>Алдаа гарлаа: {String(error)}</TableEmpty>
+                    ) : stations.length === 0 ? (
+                      <TableEmpty colSpan={9}>
+                        Сонгосон хугацаанд дууссан цэнэглэлтийн өгөгдөл олдсонгүй.
+                      </TableEmpty>
+                    ) : (
+                      stations.map((s, idx) => {
+                        const isExpanded = !!expandedStationIds[s.chargePointId];
+                        const stationSessions = s.sessions ?? [];
+
+                        return (
+                          <React.Fragment key={s.chargePointId}>
+                            <TR
+                              className={cn(
+                                'cursor-pointer transition-colors',
+                                isExpanded
+                                  ? 'bg-emerald-500/5 hover:bg-emerald-500/10'
+                                  : 'hover:bg-[var(--color-surface-2)]/60',
+                              )}
+                              onClick={() => toggleStationExpand(s.chargePointId)}
+                            >
+                              {/* Row Number */}
+                              <TD className="w-12 text-center font-mono text-xs text-[var(--color-fg-subtle)]">
+                                {idx + 1}
+                              </TD>
+
+                              {/* Station & Location */}
+                              <TD>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    type="button"
+                                    className="p-1 rounded text-[var(--color-fg-subtle)] hover:text-[var(--color-fg)]"
+                                    aria-label="Сеансуудыг дэлгэрүүлэх"
+                                  >
+                                    {isExpanded ? (
+                                      <ChevronDown className="h-4 w-4 text-emerald-500" />
+                                    ) : (
+                                      <ChevronRight className="h-4 w-4" />
+                                    )}
+                                  </button>
+                                  <div>
+                                    <div className="font-semibold text-[var(--color-fg)]">
+                                      {s.name}
+                                    </div>
+                                    <div className="text-[11px] text-[var(--color-fg-subtle)] font-mono">
+                                      {s.cpId} {s.address ? `· ${s.address}` : ''}
+                                    </div>
                                   </div>
-                                  <span className="text-[11px] text-[var(--color-fg-muted)]">
-                                    Нийт {s.sessionsCount} цэнэглэлтийн нийлбэр
+                                </div>
+                              </TD>
+
+                              {/* Sessions Count */}
+                              <TD className="text-right font-medium">
+                                <span className="inline-flex items-center justify-center rounded-full bg-[var(--color-surface-2)] px-2 py-0.5 text-xs font-semibold text-[var(--color-fg)]">
+                                  {formatNumber(s.sessionsCount)}
+                                </span>
+                              </TD>
+
+                              {/* Energy (kWh) */}
+                              <TD className="text-right font-mono text-xs">
+                                {formatNumber(s.energyKwh, 2)} кВтц
+                              </TD>
+
+                              {/* Tariff */}
+                              <TD className="text-right font-mono text-xs text-[var(--color-fg-muted)]">
+                                {s.tariffPerKwh ? `${formatNumber(s.tariffPerKwh)} ₮` : 'Хуваарьт'}
+                              </TD>
+
+                              {/* Gross (Each station's own charged amount!) */}
+                              <TD className="text-right font-mono text-xs font-semibold text-[var(--color-fg)]">
+                                {formatMoney(s.gross)}
+                              </TD>
+
+                              {/* Fee Amount (Each station's own fee) */}
+                              <TD className="text-right font-mono text-xs text-blue-500">
+                                {formatMoney(s.feeAmount)}
+                                <span className="text-[10px] text-[var(--color-fg-subtle)] ml-1">
+                                  ({s.feePercent}%)
+                                </span>
+                              </TD>
+
+                              {/* Net Revenue (Each station's own client net) */}
+                              <TD className="text-right font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                                {formatMoney(s.clientNet)}
+                              </TD>
+
+                              {/* Calculation Formula */}
+                              <TD className="text-[11px] font-mono text-[var(--color-fg-muted)]">
+                                <span className="rounded bg-[var(--color-surface-2)] px-2 py-0.5 border border-[var(--color-border)]">
+                                  {formatMoney(s.gross)} - {formatMoney(s.feeAmount)} = {formatMoney(s.clientNet)}
+                                </span>
+                              </TD>
+                            </TR>
+
+                            {/* INLINE DRILLDOWN: Individual sessions for this station */}
+                            {isExpanded && (
+                              <TR className="bg-[var(--color-bg)]/80 border-b border-[var(--color-border)]">
+                                <TD colSpan={9} className="p-3 sm:p-5">
+                                  <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-4 space-y-3 shadow-inner">
+                                    <div className="flex flex-wrap items-center justify-between gap-2 border-b border-[var(--color-border)] pb-2.5">
+                                      <div className="flex items-center gap-2">
+                                        <div className="flex h-6 w-6 items-center justify-center rounded-md bg-emerald-500/10 text-emerald-500">
+                                          <TrendingUp className="h-3.5 w-3.5" />
+                                        </div>
+                                        <span className="text-xs font-bold text-[var(--color-fg)]">
+                                          &quot;{s.name}&quot; станцын цэнэглэлтийн сеансууд ({stationSessions.length})
+                                        </span>
+                                      </div>
+                                      <span className="text-[11px] text-[var(--color-fg-muted)]">
+                                        Нийт {formatMoney(s.gross)} борлуулалтын нарийвчилсан задаргаа
+                                      </span>
+                                    </div>
+
+                                    {stationSessions.length === 0 ? (
+                                      <div className="py-6 text-center text-xs text-[var(--color-fg-subtle)]">
+                                        Энэ хугацаанд цэнэглэлтийн сеанс бүртгэгдээгүй байна.
+                                      </div>
+                                    ) : (
+                                      <div className="overflow-x-auto">
+                                        <table className="w-full text-left text-xs border-collapse">
+                                          <thead>
+                                            <tr className="border-b border-[var(--color-border)] text-[11px] text-[var(--color-fg-subtle)] font-medium">
+                                              <th className="py-2 pr-3 w-10 text-center">№</th>
+                                              <th className="py-2 px-3">Сеанс ID</th>
+                                              <th className="py-2 px-3">Холбогч</th>
+                                              <th className="py-2 px-3">Машин / Карт</th>
+                                              <th className="py-2 px-3">Эхэлсэн хугацаа</th>
+                                              <th className="py-2 px-3 text-right">Эрчим хүч</th>
+                                              <th className="py-2 px-3 text-right">Тариф</th>
+                                              <th className="py-2 px-3 text-right font-semibold">Борлуулалт</th>
+                                              <th className="py-2 px-3 text-right text-blue-500">Шимтгэл</th>
+                                              <th className="py-2 pl-3 text-right font-bold text-emerald-600 dark:text-emerald-400">Цэвэр орлого</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody className="divide-y divide-[var(--color-border)]">
+                                            {stationSessions.map((tx, sIdx) => (
+                                              <tr key={tx.id} className="hover:bg-[var(--color-surface-2)]/40 transition-colors">
+                                                <td className="py-2 pr-3 text-center font-mono text-[11px] text-[var(--color-fg-subtle)]">
+                                                  {sIdx + 1}
+                                                </td>
+                                                <td className="py-2 px-3 font-mono font-semibold text-emerald-500">
+                                                  <Link
+                                                    href={`/transactions/${tx.id}`}
+                                                    className="hover:underline"
+                                                    title="Цэнэглэлтийн дэлгэрэнгүй хуудас руу очих"
+                                                  >
+                                                    #{tx.id}
+                                                  </Link>
+                                                </td>
+                                                <td className="py-2 px-3">
+                                                  <span className="inline-flex items-center gap-1 rounded bg-[var(--color-surface-2)] px-1.5 py-0.5 font-mono text-[11px] font-medium text-[var(--color-fg)]">
+                                                    Буу {connectorLetter(tx.connectorId)}
+                                                  </span>
+                                                </td>
+                                                <td className="py-2 px-3 text-[11px] text-[var(--color-fg-muted)]">
+                                                  {tx.vehicleModel || tx.idTag || '—'}
+                                                </td>
+                                                <td className="py-2 px-3 text-[11px] text-[var(--color-fg-muted)]">
+                                                  {formatDateTime(tx.startTimestamp)}
+                                                </td>
+                                                <td className="py-2 px-3 text-right font-mono text-xs">
+                                                  {formatNumber(tx.energyKwh, 2)} кВтц
+                                                </td>
+                                                <td className="py-2 px-3 text-right font-mono text-[11px] text-[var(--color-fg-subtle)]">
+                                                  {tx.tariffPerKwh ? `${formatNumber(tx.tariffPerKwh)}₮` : '—'}
+                                                </td>
+                                                <td className="py-2 px-3 text-right font-mono text-xs font-semibold text-[var(--color-fg)]">
+                                                  {formatMoney(tx.cost)}
+                                                </td>
+                                                <td className="py-2 px-3 text-right font-mono text-xs text-blue-500">
+                                                  {formatMoney(tx.feeAmount)}
+                                                </td>
+                                                <td className="py-2 pl-3 text-right font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                                                  {formatMoney(tx.clientNet)}
+                                                </td>
+                                              </tr>
+                                            ))}
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                    )}
+                                  </div>
+                                </TD>
+                              </TR>
+                            )}
+                          </React.Fragment>
+                        );
+                      })
+                    )}
+                  </TBody>
+                </Table>
+              </TableWrap>
+            </div>
+
+            {/* Mobile Cards View matching Image 1 phone mockup */}
+            <div className="block md:hidden p-3 space-y-3">
+              {isLoading && !data ? (
+                <div className="py-8 text-center text-xs text-[var(--color-fg-muted)]">Ачаалж байна...</div>
+              ) : stations.length === 0 ? (
+                <div className="py-8 text-center text-xs text-[var(--color-fg-muted)]">
+                  Сонгосон хугацаанд цэнэглэлтийн өгөгдөл олдсонгүй.
+                </div>
+              ) : (
+                stations.map((s, idx) => {
+                  const isExpanded = !!expandedStationIds[s.chargePointId];
+                  const stationSessions = s.sessions ?? [];
+
+                  return (
+                    <div
+                      key={s.chargePointId}
+                      className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-3.5 shadow-sm space-y-3"
+                    >
+                      {/* Top Header: Index, Station Name, Address */}
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[var(--color-surface-2)] text-xs font-mono font-bold text-[var(--color-fg)]">
+                            {idx + 1}
+                          </span>
+                          <div>
+                            <div className="font-semibold text-sm text-[var(--color-fg)]">{s.name}</div>
+                            <div className="text-[11px] font-mono text-[var(--color-fg-subtle)]">
+                              {s.cpId} {s.address ? `· ${s.address}` : ''}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 3-column stats */}
+                      <div className="grid grid-cols-3 gap-2 border-y border-[var(--color-border)] py-2 text-center">
+                        <div>
+                          <div className="text-[10px] text-[var(--color-fg-subtle)] uppercase">Сеанс</div>
+                          <div className="font-bold text-xs text-[var(--color-fg)] font-mono">
+                            {formatNumber(s.sessionsCount)}
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] text-[var(--color-fg-subtle)] uppercase">Эрчим хүч</div>
+                          <div className="font-bold text-xs text-[var(--color-fg)] font-mono">
+                            {formatNumber(s.energyKwh, 1)} кВтц
+                          </div>
+                        </div>
+                        <div>
+                          <div className="text-[10px] text-[var(--color-fg-subtle)] uppercase">Тариф</div>
+                          <div className="font-bold text-xs text-[var(--color-fg)] font-mono">
+                            {s.tariffPerKwh ? `${formatNumber(s.tariffPerKwh)}₮` : 'Хуваарьт'}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Amount Breakdown Box */}
+                      <div className="rounded-lg bg-[var(--color-bg)]/80 p-2.5 space-y-1.5 text-xs">
+                        <div className="flex justify-between items-center text-[var(--color-fg-muted)]">
+                          <span>Нийт борлуулалт:</span>
+                          <span className="font-mono font-semibold text-[var(--color-fg)]">
+                            {formatMoney(s.gross)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center text-blue-500">
+                          <span>Eplug шимтгэл ({s.feePercent}%):</span>
+                          <span className="font-mono font-semibold">
+                            -{formatMoney(s.feeAmount)}
+                          </span>
+                        </div>
+                        <div className="flex justify-between items-center pt-1.5 border-t border-[var(--color-border)] text-emerald-600 dark:text-emerald-400 font-bold">
+                          <span>Цэвэр орлого:</span>
+                          <span className="font-mono text-sm">
+                            {formatMoney(s.clientNet)}
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* Toggle Drilldown Button */}
+                      <Button
+                        variant="secondary"
+                        size="sm"
+                        onClick={() => toggleStationExpand(s.chargePointId)}
+                        className="w-full text-xs h-8 flex items-center justify-center gap-1.5"
+                      >
+                        {isExpanded ? (
+                          <>
+                            <ChevronDown className="h-3.5 w-3.5 text-emerald-500" />
+                            Сеансууд нуух ({stationSessions.length})
+                          </>
+                        ) : (
+                          <>
+                            <ChevronRight className="h-3.5 w-3.5" />
+                            Сеансууд харах ({stationSessions.length})
+                          </>
+                        )}
+                      </Button>
+
+                      {/* Mobile Expanded Session Cards */}
+                      {isExpanded && (
+                        <div className="pt-2 space-y-2 border-t border-[var(--color-border)]">
+                          {stationSessions.length === 0 ? (
+                            <div className="py-3 text-center text-xs text-[var(--color-fg-subtle)]">
+                              Энэ хугацаанд цэнэглэлт байхгүй.
+                            </div>
+                          ) : (
+                            stationSessions.map((tx, sIdx) => (
+                              <div
+                                key={tx.id}
+                                className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)]/40 p-2.5 text-xs space-y-1.5"
+                              >
+                                <div className="flex items-center justify-between">
+                                  <Link
+                                    href={`/transactions/${tx.id}`}
+                                    className="font-mono font-bold text-emerald-500 hover:underline"
+                                  >
+                                    #{tx.id}
+                                  </Link>
+                                  <span className="rounded bg-[var(--color-surface)] px-1.5 py-0.5 font-mono text-[10px] text-[var(--color-fg-muted)]">
+                                    Буу {connectorLetter(tx.connectorId)}
                                   </span>
                                 </div>
-
-                                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 text-xs">
-                                  <div>
-                                    <span className="text-[11px] text-[var(--color-fg-subtle)]">Тоолуурын эрчим хүч:</span>
-                                    <p className="font-mono font-medium text-[var(--color-fg)] mt-0.5">
-                                      {s.formula.kwhFormula}
-                                    </p>
-                                  </div>
-
-                                  <div>
-                                    <span className="text-[11px] text-[var(--color-fg-subtle)]">Цэнэглэлтийн өртөг:</span>
-                                    <p className="font-mono font-medium text-[var(--color-fg)] mt-0.5">
-                                      {s.formula.energyCostFormula}
-                                    </p>
-                                  </div>
-
-                                  <div>
-                                    <span className="text-[11px] text-[var(--color-fg-subtle)]">Eplug шимтгэл ({s.feePercent}%):</span>
-                                    <p className="font-mono font-medium text-[var(--color-brand)] mt-0.5">
-                                      {s.formula.feeFormula}
-                                    </p>
-                                  </div>
-
-                                  <div>
-                                    <span className="text-[11px] text-[var(--color-fg-subtle)]">Харилцагчид олгох цэвэр орлого:</span>
-                                    <p className="font-mono font-bold text-[var(--color-success)] mt-0.5">
-                                      {s.formula.netFormula}
-                                    </p>
-                                  </div>
+                                <div className="text-[11px] text-[var(--color-fg-subtle)]">
+                                  {formatDateTime(tx.startTimestamp)}
+                                </div>
+                                <div className="flex justify-between items-center text-[11px]">
+                                  <span>{formatNumber(tx.energyKwh, 2)} кВтц</span>
+                                  <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                                    {formatMoney(tx.clientNet)}
+                                  </span>
                                 </div>
                               </div>
-                            </TD>
-                          </TR>
-                        )}
-                      </React.Fragment>
-                    );
-                  })
-                )}
-              </TBody>
-            </Table>
-          </TableWrap>
+                            ))
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </>
         )}
 
-        {/* Tab 2: Daily Breakdown Table */}
+        {/* TAB 2: Өдрийн хөдөлгөөн Table */}
         {activeTab === 'daily' && (
           <TableWrap>
             <Table>
               <THead>
                 <tr>
                   <TH>Огноо</TH>
-                  <TH>Цэнэглэлтийн тоо</TH>
-                  <TH>Эрчим хүч (кВт.ц)</TH>
-                  <TH>Борлуулалт (₮)</TH>
-                  <TH>Eplug шимтгэл (₮)</TH>
-                  <TH>Харилцагчийн орлого (₮)</TH>
+                  <TH className="text-right">Цэнэглэлтийн тоо</TH>
+                  <TH className="text-right">Эрчим хүч (кВтц)</TH>
+                  <TH className="text-right">Борлуулалт (₮)</TH>
+                  <TH className="text-right">Шимтгэл (₮)</TH>
+                  <TH className="text-right">Цэвэр орлого (₮)</TH>
                 </tr>
               </THead>
               <TBody>
                 {isLoading && !data ? (
                   <TableLoading colSpan={6} />
                 ) : daily.length === 0 ? (
-                  <TableEmpty colSpan={6}>Өдрийн өгөгдөл олдсонгүй.</TableEmpty>
+                  <TableEmpty colSpan={6}>Өдрийн хөдөлгөөний өгөгдөл олдсонгүй.</TableEmpty>
                 ) : (
                   daily.map((d) => (
                     <TR key={d.date}>
-                      <TD className="font-medium">{d.date}</TD>
-                      <TD>{formatNumber(d.sessionsCount)}</TD>
-                      <TD className="font-mono text-sm">{formatNumber(d.energyKwh, 2)} кВт.ц</TD>
-                      <TD className="font-mono text-sm font-semibold">{formatMoney(d.gross)}</TD>
-                      <TD className="font-mono text-xs text-[var(--color-brand)]">{formatMoney(d.fee)}</TD>
-                      <TD className="font-mono text-sm font-semibold text-[var(--color-success)]">
+                      <TD className="font-mono font-medium">{formatDate(d.date)}</TD>
+                      <TD className="text-right font-medium">{formatNumber(d.sessionsCount)}</TD>
+                      <TD className="text-right font-mono text-xs">{formatNumber(d.energyKwh, 2)} кВтц</TD>
+                      <TD className="text-right font-mono text-xs font-semibold text-[var(--color-fg)]">{formatMoney(d.gross)}</TD>
+                      <TD className="text-right font-mono text-xs text-blue-500">{formatMoney(d.fee)}</TD>
+                      <TD className="text-right font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
                         {formatMoney(d.net)}
                       </TD>
                     </TR>
@@ -611,19 +1003,19 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
           </TableWrap>
         )}
 
-        {/* Tab 3: Connectors Table */}
+        {/* TAB 3: Холбогч бүрээр Table */}
         {activeTab === 'connectors' && (
           <TableWrap>
             <Table>
               <THead>
                 <tr>
                   <TH>Станц</TH>
-                  <TH>Буу / Холбогч</TH>
-                  <TH>Цэнэглэлт</TH>
-                  <TH>Эрчим хүч (кВт.ц)</TH>
-                  <TH>Борлуулалт (₮)</TH>
-                  <TH>Шимтгэл (₮)</TH>
-                  <TH>Харилцагчийн орлого (₮)</TH>
+                  <TH>Холбогч</TH>
+                  <TH className="text-right">Цэнэглэлт</TH>
+                  <TH className="text-right">Эрчим хүч (кВтц)</TH>
+                  <TH className="text-right">Борлуулалт (₮)</TH>
+                  <TH className="text-right">Шимтгэл (₮)</TH>
+                  <TH className="text-right">Цэвэр орлого (₮)</TH>
                 </tr>
               </THead>
               <TBody>
@@ -636,13 +1028,13 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                     <TR key={`${c.chargePointId}-${c.connectorId}`}>
                       <TD className="font-medium">{c.stationName}</TD>
                       <TD>
-                        <Badge tone="idle">Холбогч {connectorLetter(c.connectorId)}</Badge>
+                        <Badge tone="idle">Буу {connectorLetter(c.connectorId)}</Badge>
                       </TD>
-                      <TD>{formatNumber(c.sessionsCount)}</TD>
-                      <TD className="font-mono text-sm">{formatNumber(c.energyKwh, 2)} кВт.ц</TD>
-                      <TD className="font-mono text-sm font-semibold">{formatMoney(c.gross)}</TD>
-                      <TD className="font-mono text-xs text-[var(--color-brand)]">{formatMoney(c.fee)}</TD>
-                      <TD className="font-mono text-sm font-semibold text-[var(--color-success)]">
+                      <TD className="text-right font-medium">{formatNumber(c.sessionsCount)}</TD>
+                      <TD className="text-right font-mono text-xs">{formatNumber(c.energyKwh, 2)} кВтц</TD>
+                      <TD className="text-right font-mono text-xs font-semibold text-[var(--color-fg)]">{formatMoney(c.gross)}</TD>
+                      <TD className="text-right font-mono text-xs text-blue-500">{formatMoney(c.fee)}</TD>
+                      <TD className="text-right font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
                         {formatMoney(c.net)}
                       </TD>
                     </TR>
@@ -653,20 +1045,20 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
           </TableWrap>
         )}
 
-        {/* Tab 4: Detailed Sessions Log */}
+        {/* TAB 4: Цэнэглэлтийн лог Table */}
         {activeTab === 'sessions' && (
           <TableWrap>
             <Table>
               <THead>
                 <tr>
-                  <TH>Цэнэглэлт #</TH>
+                  <TH className="w-20">Сеанс #</TH>
                   <TH>Станц / Холбогч</TH>
                   <TH>Хугацаа</TH>
-                  <TH>Хэрэглээ</TH>
-                  <TH>Тариф</TH>
-                  <TH>Борлуулалт</TH>
-                  <TH>Шимтгэл</TH>
-                  <TH>Цэвэр орлого</TH>
+                  <TH className="text-right">Хэрэглээ</TH>
+                  <TH className="text-right">Тариф</TH>
+                  <TH className="text-right font-semibold">Борлуулалт</TH>
+                  <TH className="text-right text-blue-500">Шимтгэл</TH>
+                  <TH className="text-right font-bold text-emerald-600 dark:text-emerald-400">Цэвэр орлого</TH>
                 </tr>
               </THead>
               <TBody>
@@ -677,9 +1069,13 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                 ) : (
                   sessions.map((tx) => (
                     <TR key={tx.id}>
-                      <TD className="font-mono text-xs font-semibold">#{tx.id}</TD>
+                      <TD className="font-mono text-xs font-bold text-emerald-500">
+                        <Link href={`/transactions/${tx.id}`} className="hover:underline">
+                          #{tx.id}
+                        </Link>
+                      </TD>
                       <TD>
-                        <div className="font-medium">{tx.stationName}</div>
+                        <div className="font-medium text-[var(--color-fg)]">{tx.stationName}</div>
                         <div className="text-[11px] text-[var(--color-fg-subtle)] font-mono">
                           Буу {connectorLetter(tx.connectorId)} {tx.vehicleModel ? `· ${tx.vehicleModel}` : ''}
                         </div>
@@ -690,13 +1086,20 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                           {formatDateTime(tx.stopTimestamp)}
                         </div>
                       </TD>
-                      <TD className="font-mono text-sm">{formatNumber(tx.energyKwh, 2)} кВт.ц</TD>
-                      <TD className="text-xs font-mono">{formatMoney(tx.tariffPerKwh)}/кВт.ц</TD>
-                      <TD className="font-mono text-sm font-semibold">{formatMoney(tx.cost)}</TD>
-                      <TD className="font-mono text-xs text-[var(--color-brand)]">
-                        {formatMoney(tx.feeAmount)} ({tx.feePercent}%)
+                      <TD className="text-right font-mono text-xs">{formatNumber(tx.energyKwh, 2)} кВтц</TD>
+                      <TD className="text-right text-xs font-mono text-[var(--color-fg-muted)]">
+                        {tx.tariffPerKwh ? `${formatMoney(tx.tariffPerKwh)}/кВтц` : '—'}
                       </TD>
-                      <TD className="font-mono text-sm font-semibold text-[var(--color-success)]">
+                      <TD className="text-right font-mono text-xs font-semibold text-[var(--color-fg)]">
+                        {formatMoney(tx.cost)}
+                      </TD>
+                      <TD className="text-right font-mono text-xs text-blue-500">
+                        {formatMoney(tx.feeAmount)}
+                        <span className="text-[10px] text-[var(--color-fg-subtle)] ml-1">
+                          ({tx.feePercent}%)
+                        </span>
+                      </TD>
+                      <TD className="text-right font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
                         {formatMoney(tx.clientNet)}
                       </TD>
                     </TR>

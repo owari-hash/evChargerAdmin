@@ -21,6 +21,7 @@ export interface EbarimtMerchantItem {
   merchantTin: string;
   districtCode: string;
   khorooCode?: string;
+  vatPayer?: boolean;
   envMode: 'PRODUCTION' | 'TEST';
   prodApiUrl: string;
   testApiUrl: string;
@@ -57,6 +58,7 @@ export function EbarimtMerchantModal({
   const [merchantTin, setMerchantTin] = React.useState(merchant?.merchantTin ?? '');
   const [districtCode, setDistrictCode] = React.useState(merchant?.districtCode ?? '23');
   const [khorooCode, setKhorooCode] = React.useState(merchant?.khorooCode ?? '20');
+  const [vatPayer, setVatPayer] = React.useState(merchant?.vatPayer ?? true);
   const [envMode, setEnvMode] = React.useState<'PRODUCTION' | 'TEST'>(merchant?.envMode ?? 'PRODUCTION');
   const [prodApiUrl, setProdApiUrl] = React.useState(
     merchant?.prodApiUrl ?? merchant?.ebarimtApiUrl ?? 'http://103.143.40.43:7080/',
@@ -75,6 +77,7 @@ export function EbarimtMerchantModal({
       setMerchantTin(merchant.merchantTin ?? '');
       setDistrictCode(merchant.districtCode ?? '23');
       setKhorooCode(merchant.khorooCode ?? '20');
+      setVatPayer(merchant.vatPayer ?? true);
       setEnvMode(merchant.envMode ?? 'PRODUCTION');
       setProdApiUrl(merchant.prodApiUrl ?? merchant.ebarimtApiUrl ?? 'http://103.143.40.43:7080/');
       setTestApiUrl(merchant.testApiUrl ?? 'http://103.236.194.50:7080/');
@@ -98,6 +101,7 @@ export function EbarimtMerchantModal({
         merchantTin: merchantTin.trim(),
         districtCode: districtCode.trim() || '23',
         khorooCode: khorooCode.trim() || '1',
+        vatPayer,
         envMode,
         prodApiUrl: prodApiUrl.trim() || 'http://103.143.40.43:7080/',
         testApiUrl: testApiUrl.trim() || 'http://103.236.194.50:7080/',
@@ -282,6 +286,16 @@ export function EbarimtMerchantModal({
               className="text-xs font-mono"
             />
           )}
+
+          <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 cursor-pointer pt-1">
+            <input
+              type="checkbox"
+              checked={vatPayer}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setVatPayer(e.target.checked)}
+              className="h-3.5 w-3.5 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500"
+            />
+            <span>НӨАТ суутган төлөгч (VAT Payer - хэрэв биш бол баримтад НӨАТ тооцохгүй)</span>
+          </label>
 
           <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 cursor-pointer pt-1">
             <input

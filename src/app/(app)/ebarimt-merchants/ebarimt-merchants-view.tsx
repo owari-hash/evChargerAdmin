@@ -208,6 +208,15 @@ export function EbarimtMerchantsView({
                                 Автомат
                               </span>
                             )}
+                            {item.vatPayer === false ? (
+                              <span className="text-[11px] font-semibold text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/50 px-1.5 py-0.5 rounded border border-amber-200 dark:border-amber-800" title="НӨАТ суутган төлөгч биш тул баримтанд НӨАТ тооцохгүй">
+                                НӨАТ-гүй
+                              </span>
+                            ) : (
+                              <span className="text-[11px] font-semibold text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/50 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800" title="НӨАТ суутган төлөгч">
+                                НӨАТ-тэй
+                              </span>
+                            )}
                           </div>
                         </div>
                       </TD>

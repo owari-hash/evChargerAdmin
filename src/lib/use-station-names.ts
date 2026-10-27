@@ -33,9 +33,18 @@ async function loadNames(): Promise<Map<string, StationLookupInfo>> {
         name: cp.name?.trim() || undefined,
         displayName,
       };
-      if (cp.cpId) map.set(cp.cpId, info);
-      if (cp.id) map.set(String(cp.id), info);
-      if (cp._id) map.set(String(cp._id), info);
+      if (cp.cpId) {
+        map.set(cp.cpId, info);
+        map.set(cp.cpId.toLowerCase(), info);
+      }
+      if (cp.id) {
+        map.set(String(cp.id), info);
+        map.set(String(cp.id).toLowerCase(), info);
+      }
+      if (cp._id) {
+        map.set(String(cp._id), info);
+        map.set(String(cp._id).toLowerCase(), info);
+      }
     }
     if (page * PAGE >= res.total || res.data.length < PAGE) break;
   }
@@ -47,8 +56,11 @@ export function useStationLookup() {
     revalidateOnFocus: false,
     dedupingInterval: 60_000,
   });
-  return (id: string | null | undefined): StationLookupInfo | undefined =>
-    id ? data?.get(id) : undefined;
+  return (id: string | null | undefined): StationLookupInfo | undefined => {
+    if (!id) return undefined;
+    const clean = String(id).trim();
+    return data?.get(clean) || data?.get(clean.toLowerCase());
+  };
 }
 
 export function useStationNames() {

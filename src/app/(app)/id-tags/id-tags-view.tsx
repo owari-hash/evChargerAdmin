@@ -33,8 +33,15 @@ const ID_TAGS_GUIDE_STEPS = [
 ];
 import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty, TableLoading } from '@/components/ui/table';
 import { IdTagModal } from './id-tag-modal';
-import { BulkImportModal } from './bulk-import-modal';
 import { AuthorizeCheckModal } from './authorize-check-modal';
+
+function formatPhone(phone?: string | null): string {
+  if (!phone) return '—';
+  let clean = phone.trim();
+  if (clean.startsWith('+976')) clean = clean.slice(4);
+  else if (clean.startsWith('976') && clean.length > 8) clean = clean.slice(3);
+  return clean || '—';
+}
 
 export function IdTagsView({
   canEdit,
@@ -53,7 +60,6 @@ export function IdTagsView({
 
   const [editing, setEditing] = React.useState<IdTag | null>(null);
   const [creating, setCreating] = React.useState(false);
-  const [importing, setImporting] = React.useState(false);
   const [checking, setChecking] = React.useState<string | null>(null);
   const [deleting, setDeleting] = React.useState<IdTag | null>(null);
   const [viewingStationsTag, setViewingStationsTag] = React.useState<IdTag | null>(null);
@@ -122,10 +128,6 @@ export function IdTagsView({
           <PageGuide topic="id-tags" title="RFID карт удирдах" steps={ID_TAGS_GUIDE_STEPS} />
           {canEdit ? (
             <FilterActions>
-              <Button variant="secondary" size="md" onClick={() => setImporting(true)}>
-                <Upload className="h-3.5 w-3.5" />
-                Бөөнөөр оруулах
-              </Button>
               <Button variant="primary" size="md" onClick={() => setCreating(true)}>
                 <Plus className="h-3.5 w-3.5" />
                 Шинэ карт
@@ -180,8 +182,8 @@ export function IdTagsView({
                           <p className="text-[11px] text-[var(--color-fg-subtle)] font-normal">{tag.ownerEmail}</p>
                         ) : null}
                       </TD>
-                      <TD align="left" className="whitespace-nowrap font-mono text-xs text-[var(--color-fg)]">
-                        {tag.ownerPhone || '—'}
+                      <TD align="center" className="whitespace-nowrap font-mono text-xs text-[var(--color-fg)]">
+                        {formatPhone(tag.ownerPhone)}
                       </TD>
                       <TD className="text-xs">
                         {tag.expiryDate ? (
@@ -201,7 +203,7 @@ export function IdTagsView({
                             title="Зөвшөөрсөн станцуудын жагсаалт харах"
                           >
                             <Badge tone="info" className="underline cursor-pointer">
-                              {formatNumber(tag.allowedChargePointIds.length)} станц
+                              {formatNumber(new Set(tag.allowedChargePointIds.map((id) => lookupStation(id)?.cpId || id)).size)} станц
                             </Badge>
                           </button>
                         ) : (
@@ -269,18 +271,12 @@ export function IdTagsView({
           <EmptyState
             icon={<CreditCard className="h-8 w-8" />}
             title="Одоогоор RFID карт алга"
-            description="Эндээс карт үүсгэх, эсвэл байгаа жагсаалтаа бөөнөөр оруулна уу."
+            description="Эндээс шинэ карт үүсгэж системд бүртгэнэ үү."
             action={
-              <div className="flex gap-2">
-                <Button variant="primary" size="sm" onClick={() => setCreating(true)}>
-                  <Plus className="h-3.5 w-3.5" />
-                  Шинэ карт
-                </Button>
-                <Button variant="secondary" size="sm" onClick={() => setImporting(true)}>
-                  <Upload className="h-3.5 w-3.5" />
-                  Bulk import
-                </Button>
-              </div>
+              <Button variant="primary" size="sm" onClick={() => setCreating(true)}>
+                <Plus className="h-3.5 w-3.5" />
+                Шинэ карт
+              </Button>
             }
           />
         ) : null}
@@ -295,12 +291,6 @@ export function IdTagsView({
           setEditing(null);
         }}
         onSaved={() => void mutate()}
-      />
-
-      <BulkImportModal
-        open={importing}
-        onClose={() => setImporting(false)}
-        onImported={() => void mutate()}
       />
 
       <AuthorizeCheckModal
@@ -339,29 +329,53 @@ export function IdTagsView({
             Энэ карт зөвхөн дараах станцуудад цэнэглэлт эхлүүлэх эрхтэй:
           </p>
           <div className="flex flex-col gap-2 max-h-60 overflow-y-auto p-1">
-            {viewingStationsTag?.allowedChargePointIds?.map((idOrCp) => {
-              const station = lookupStation(idOrCp);
-              const title = station?.name || station?.displayName || idOrCp;
-              return (
+            {(() => {
+              const rawList = viewingStationsTag?.allowedChargePointIds ?? [];
+              const seen = new Set<string>();
+              const list: { key: string; name: string; cpId: string }[] = [];
+
+              for (const raw of rawList) {
+                const idOrCp = String(raw).trim();
+                if (!idOrCp) continue;
+                const station = lookupStation(idOrCp);
+                const cpId = station?.cpId || (station ? '' : idOrCp);
+                const name = station?.name || station?.displayName || '';
+                const dedupKey = (station?.cpId || station?.id || idOrCp).toLowerCase();
+
+                if (seen.has(dedupKey)) continue;
+                seen.add(dedupKey);
+
+                list.push({
+                  key: idOrCp,
+                  name: name || cpId,
+                  cpId: station?.cpId || '',
+                });
+              }
+
+              if (list.length === 0) {
+                return (
+                  <p className="text-center text-xs text-[var(--color-fg-subtle)] py-4">
+                    Зөвшөөрсөн станц бүртгэгдээгүй байна
+                  </p>
+                );
+              }
+
+              return list.map((item) => (
                 <div
-                  key={idOrCp}
+                  key={item.key}
                   className="flex items-center justify-between gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-xs"
                 >
-                  <span className="font-semibold text-[var(--color-fg)]">
-                    {title}
+                  <span className="font-medium text-[var(--color-fg)]">
+                    {item.name}
                   </span>
-                  {station?.cpId ? (
+                  {item.cpId && item.cpId !== item.name ? (
                     <Badge tone="info" className="font-mono text-[10px]">
-                      {station.cpId}
+                      {item.cpId}
                     </Badge>
-                  ) : (
-                    <span className="font-mono text-[10px] text-[var(--color-fg-subtle)]">
-                      {idOrCp}
-                    </span>
-                  )}
+                  ) : null}
                 </div>
-              );
-            })}
+              ));
+            })()}
           </div>
         </div>
       </Modal>

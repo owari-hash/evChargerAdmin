@@ -11,7 +11,7 @@ import { useNow } from '@/lib/use-now';
 import { AUTHORIZATION_STATUSES, type IdTag, type Paginated } from '@/lib/types';
 import { Badge, Button, Card, EmptyState, Input, Select } from '@/components/ui/primitives';
 import { AuthStatusBadge } from '@/components/ui/status';
-import { ConfirmModal } from '@/components/ui/modal';
+import { ConfirmModal, Modal } from '@/components/ui/modal';
 import { FilterActions, FilterBar, Pagination } from '@/components/ui/pagination';
 import { PageGuide } from '@/components/shell/page-guide';
 import { ID_TAG_STATUS, mn } from '@/lib/mn';
@@ -54,6 +54,7 @@ export function IdTagsView({
   const [importing, setImporting] = React.useState(false);
   const [checking, setChecking] = React.useState<string | null>(null);
   const [deleting, setDeleting] = React.useState<IdTag | null>(null);
+  const [viewingStationsTag, setViewingStationsTag] = React.useState<IdTag | null>(null);
   const [busy, setBusy] = React.useState(false);
 
   React.useEffect(() => {
@@ -137,22 +138,21 @@ export function IdTagsView({
               <tr>
                 <TH>Карт</TH>
                 <TH>Төлөв</TH>
-                <TH>Нэр / эзэмшигч</TH>
-                <TH>Эцэг карт</TH>
+                <TH>Нэр</TH>
+                <TH>Утас</TH>
                 <TH>Дуусах</TH>
-                <TH>Дээд зэрэг</TH>
                 <TH>Хязгаарласан станц</TH>
                 <TH>Шинэчлэгдсэн</TH>
-                <TH />
+                <TH className="text-center">Үйлдэл</TH>
               </tr>
             </THead>
             <TBody>
               {isLoading && !data ? (
-                <TableLoading colSpan={9} />
+                <TableLoading colSpan={8} />
               ) : error ? (
-                <TableEmpty colSpan={9}>Картуудыг ачаалж чадсангүй.</TableEmpty>
+                <TableEmpty colSpan={8}>Картуудыг ачаалж чадсангүй.</TableEmpty>
               ) : rows.length === 0 ? (
-                <TableEmpty colSpan={9}>
+                <TableEmpty colSpan={8}>
                   {debounced || status ? 'Энэ шүүлтүүрт тохирох карт алга.' : 'Одоогоор карт алга.'}
                 </TableEmpty>
               ) : (
@@ -173,16 +173,13 @@ export function IdTagsView({
                         <AuthStatusBadge status={tag.status} />
                       </TD>
                       <TD align="left" className="whitespace-nowrap text-xs">
-                        {tag.label || tag.ownerName || '—'}
+                        <span className="font-medium text-[var(--color-fg)]">{tag.label || tag.ownerName || '—'}</span>
                         {tag.ownerEmail ? (
-                          <p className="text-[var(--color-fg-subtle)]">{tag.ownerEmail}</p>
-                        ) : null}
-                        {tag.ownerPhone ? (
-                          <p className="text-[var(--color-fg-subtle)]">{tag.ownerPhone}</p>
+                          <p className="text-[11px] text-[var(--color-fg-subtle)] font-normal">{tag.ownerEmail}</p>
                         ) : null}
                       </TD>
-                      <TD className="font-mono text-xs text-[var(--color-fg-muted)]">
-                        {tag.parentIdTag ?? '—'}
+                      <TD align="left" className="whitespace-nowrap font-mono text-xs text-[var(--color-fg)]">
+                        {tag.ownerPhone || '—'}
                       </TD>
                       <TD className="text-xs">
                         {tag.expiryDate ? (
@@ -194,13 +191,17 @@ export function IdTagsView({
                         )}
                       </TD>
                       <TD className="text-xs">
-                        {tag.maxActiveTransactions === 0 ? '∞' : tag.maxActiveTransactions}
-                      </TD>
-                      <TD className="text-xs">
                         {tag.allowedChargePointIds?.length ? (
-                          <Badge tone="info">
-                            {formatNumber(tag.allowedChargePointIds.length)} charge points
-                          </Badge>
+                          <button
+                            type="button"
+                            onClick={() => setViewingStationsTag(tag)}
+                            className="inline-flex items-center gap-1 text-xs font-semibold text-[var(--color-brand)] underline underline-offset-2 hover:opacity-80 transition cursor-pointer"
+                            title="Зөвшөөрсөн станцуудын жагсаалт харах"
+                          >
+                            <Badge tone="info" className="underline cursor-pointer">
+                              {formatNumber(tag.allowedChargePointIds.length)} станц
+                            </Badge>
+                          </button>
                         ) : (
                           <span className="text-[var(--color-fg-subtle)]">Бүгд</span>
                         )}
@@ -208,34 +209,34 @@ export function IdTagsView({
                       <TD className="text-xs text-[var(--color-fg-muted)]">
                         {formatRelative(tag.updatedAt)}
                       </TD>
-                      <TD>
-                        <div className="flex justify-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
+                      <TD className="text-center">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            type="button"
                             onClick={() => setChecking(tag.idTag)}
                             title="Зөвшөөрлийг туршиж үзэх"
+                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-sky-500/30 bg-sky-500/10 text-sky-600 dark:text-sky-400 hover:bg-sky-500/20 transition"
                           >
                             <ShieldQuestion className="h-3.5 w-3.5" />
-                          </Button>
+                          </button>
                           {canEdit ? (
                             <>
-                              <Button
-                                variant="ghost"
-                                size="icon"
+                              <button
+                                type="button"
                                 onClick={() => setEditing(tag)}
                                 title="Засах"
+                                className="flex h-7 w-7 items-center justify-center rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 transition"
                               >
                                 <Pencil className="h-3.5 w-3.5" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
+                              </button>
+                              <button
+                                type="button"
                                 onClick={() => setDeleting(tag)}
                                 title="Устгах"
+                                className="flex h-7 w-7 items-center justify-center rounded-lg border border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 transition"
                               >
                                 <Trash2 className="h-3.5 w-3.5" />
-                              </Button>
+                              </button>
                             </>
                           ) : null}
                         </div>
@@ -323,6 +324,27 @@ export function IdTagsView({
           </>
         }
       />
+
+      <Modal
+        open={viewingStationsTag !== null}
+        onClose={() => setViewingStationsTag(null)}
+        title="Зөвшөөрөгдсөн станцууд"
+        description={`RFID карт: ${viewingStationsTag?.idTag ?? ''}`}
+        size="sm"
+      >
+        <div className="space-y-3 py-1">
+          <p className="text-xs text-[var(--color-fg-muted)]">
+            Энэ карт зөвхөн дараах станцуудад цэнэглэлт эхлүүлэх эрхтэй:
+          </p>
+          <div className="flex flex-wrap gap-2 max-h-60 overflow-y-auto p-1">
+            {viewingStationsTag?.allowedChargePointIds?.map((cpId) => (
+              <Badge key={cpId} tone="info" className="font-mono text-xs px-2.5 py-1">
+                {cpId}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      </Modal>
     </>
   );
 }

@@ -7,19 +7,23 @@ import {
   Car,
   ChevronRight,
   CreditCard,
+  Menu,
   Pencil,
   Plus,
   RefreshCw,
   Search,
   ShieldCheck,
+  Trash2,
   UserCheck,
   Users,
   Wallet,
 } from 'lucide-react';
-import { apiUrl, fetcher } from '@/lib/client';
+import { toast } from 'sonner';
+import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
 import { formatDateTime, formatMoney, formatNumber } from '@/lib/format';
 import type { DriverListItem, Paginated } from '@/lib/types';
 import { Badge, Button, Card, EmptyState, Input, Select } from '@/components/ui/primitives';
+import { ConfirmModal } from '@/components/ui/modal';
 import { Pagination } from '@/components/ui/pagination';
 import { StatCard, StatGrid } from '@/components/stat-card';
 import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty, TableLoading } from '@/components/ui/table';
@@ -45,6 +49,23 @@ export function DriversView({
 
   const [creatingDriver, setCreatingDriver] = React.useState(false);
   const [editingDriver, setEditingDriver] = React.useState<DriverListItem | null>(null);
+  const [deletingDriver, setDeletingDriver] = React.useState<DriverListItem | null>(null);
+  const [busyDelete, setBusyDelete] = React.useState(false);
+
+  async function removeDriver() {
+    if (!deletingDriver) return;
+    setBusyDelete(true);
+    try {
+      await api.del(`drivers/${encodeURIComponent(deletingDriver.id)}`);
+      toast.success(`${deletingDriver.name || deletingDriver.phone || 'Жолооч'} амжилттай устгагдлаа`);
+      setDeletingDriver(null);
+      void mutate();
+    } catch (err) {
+      toast.error(errorMessage(err));
+    } finally {
+      setBusyDelete(false);
+    }
+  }
 
   React.useEffect(() => {
     const t = setTimeout(() => {
@@ -215,7 +236,7 @@ export function DriversView({
                     <TH>RFID карт</TH>
                     <TH className="text-right">Цэнэглэлт</TH>
                     <TH>Төлөв</TH>
-                    <TH className="text-right">Үйлдэл</TH>
+                    <TH className="text-center">Үйлдэл</TH>
                   </TR>
                 </THead>
                 <TBody>
@@ -241,9 +262,6 @@ export function DriversView({
                               {d.name}
                               <ChevronRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition" />
                             </Link>
-                            <p className="text-[11px] text-[var(--color-fg-subtle)] font-mono">
-                              Бүртгүүлсэн: {formatDateTime(d.createdAt).split(' ')[0]}
-                            </p>
                           </TD>
 
                           {/* Phone / Email */}
@@ -274,9 +292,6 @@ export function DriversView({
                             <span className="font-mono text-xs font-bold text-[var(--color-fg)]">
                               {formatMoney(d.wallet.balance)}
                             </span>
-                            <p className="text-[10px] text-[var(--color-fg-subtle)]">
-                              Нийт: {formatMoney(d.wallet.totalSpent)}
-                            </p>
                           </TD>
 
                           {/* RFID Cards */}
@@ -323,24 +338,35 @@ export function DriversView({
                           </TD>
 
                           {/* Actions */}
-                          <TD className="text-right">
-                            <div className="flex items-center justify-end gap-1">
+                          <TD className="text-center">
+                            <div className="flex items-center justify-center gap-1.5">
                               {canEdit ? (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
+                                <button
+                                  type="button"
                                   onClick={() => setEditingDriver(d)}
                                   title="Засах"
+                                  className="flex h-7 w-7 items-center justify-center rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 transition"
                                 >
                                   <Pencil className="h-3.5 w-3.5" />
-                                </Button>
+                                </button>
                               ) : null}
                               <Link
                                 href={`/drivers/${d.id}`}
-                                className="inline-flex items-center gap-1 h-8 px-3 rounded-lg border border-[var(--color-border-strong)] bg-[var(--color-surface)] hover:bg-[var(--color-surface-2)] text-xs font-medium text-[var(--color-fg)]"
+                                title="Дэлгэрэнгүй харах"
+                                className="flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--color-brand)]/30 bg-[var(--color-brand-soft)] text-[var(--color-brand)] hover:bg-[var(--color-brand)]/20 transition"
                               >
-                                Дэлгэрэнгүй
+                                <Menu className="h-3.5 w-3.5" />
                               </Link>
+                              {canEdit ? (
+                                <button
+                                  type="button"
+                                  onClick={() => setDeletingDriver(d)}
+                                  title="Устгах"
+                                  className="flex h-7 w-7 items-center justify-center rounded-lg border border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 transition"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              ) : null}
                             </div>
                           </TD>
                         </TR>
@@ -383,6 +409,28 @@ export function DriversView({
           onSaved={() => mutate()}
         />
       ) : null}
+
+      <ConfirmModal
+        open={deletingDriver !== null}
+        onClose={() => setDeletingDriver(null)}
+        onConfirm={() => void removeDriver()}
+        loading={busyDelete}
+        title="Жолоочийг устгах уу?"
+        confirmLabel="Устгах"
+        message={
+          <>
+            <span className="block">
+              <span className="font-semibold text-[var(--color-fg)]">
+                {deletingDriver?.name || deletingDriver?.phone}
+              </span>{' '}
+              бүртгэлийг системээс бүрмөсөн устгах уу?
+            </span>
+            <span className="mt-2 block text-xs text-[var(--color-fg-subtle)]">
+              Холбогдсон RFID картуудын холболт цуцлагдана.
+            </span>
+          </>
+        }
+      />
     </div>
   );
 }

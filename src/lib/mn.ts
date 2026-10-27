@@ -20,7 +20,7 @@ export const CONNECTOR_STATUS: Record<string, string> = {
   Available: 'Бэлэн',
   Preparing: 'Бэлтгэж байна',
   Charging: 'Цэнэглэж байна',
-  SuspendedEV: 'Машин түр зогсоосон',
+  SuspendedEV: 'Зогссон',
   SuspendedEVSE: 'Станц түр зогсоосон',
   Finishing: 'Дуусгаж байна',
   Reserved: 'Захиалагдсан',

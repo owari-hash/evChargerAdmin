@@ -1052,6 +1052,7 @@ export interface DriverDetailResponse {
     expiryDate?: string;
     isInternal?: boolean;
     isPrimary?: boolean;
+    allowedChargePointIds?: string[];
     createdAt?: string;
   }>;
   stats: {

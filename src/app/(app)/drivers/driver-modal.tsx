@@ -1,9 +1,10 @@
 'use client';
 
 import * as React from 'react';
+import useSWR from 'swr';
 import { toast } from 'sonner';
-import { api, errorMessage } from '@/lib/client';
-import type { DriverListItem } from '@/lib/types';
+import { api, apiUrl, fetcher, errorMessage } from '@/lib/client';
+import type { ChargePoint, DriverDetailResponse, DriverListItem, Paginated } from '@/lib/types';
 import { Modal } from '@/components/ui/modal';
 import { Button, Field, Input, Select } from '@/components/ui/primitives';
 
@@ -28,12 +29,47 @@ export function DriverModal({
   const [idTag, setIdTag] = React.useState(driver?.idTag || '');
   const [tagStatus, setTagStatus] = React.useState('Accepted');
   const [tagExpiryDate, setTagExpiryDate] = React.useState('');
-  const [allowedChargePointIds, setAllowedChargePointIds] = React.useState('');
+  const [allowedStationIds, setAllowedStationIds] = React.useState<string[]>([]);
   const [initialBalance, setInitialBalance] = React.useState<string>('');
   const [isInternal, setIsInternal] = React.useState(Boolean(driver?.isInternal));
   const [isActive, setIsActive] = React.useState(driver ? driver.isActive : true);
 
   const [busy, setBusy] = React.useState(false);
+
+  // Fetch stations for dropdown
+  const { data: cpData } = useSWR<Paginated<ChargePoint>>(
+    apiUrl('charge-points', { limit: 200 }),
+    fetcher,
+    { revalidateOnFocus: false }
+  );
+  const stations = cpData?.data ?? [];
+
+  // Load full driver details when editing
+  React.useEffect(() => {
+    if (driver?.id) {
+      api.get<DriverDetailResponse>(`drivers/${driver.id}`)
+        .then((res) => {
+          if (res?.driver) {
+            if (res.driver.name) setName(res.driver.name);
+            if (res.driver.phone) setPhone(res.driver.phone);
+            if (res.driver.email) setEmail(res.driver.email);
+            if (res.driver.vehicleBrand) setVehicleBrand(res.driver.vehicleBrand);
+            if (res.driver.vehicleModel) setVehicleModel(res.driver.vehicleModel);
+            if (res.driver.ebarimtCustomerNo) setEbarimtCustomerNo(res.driver.ebarimtCustomerNo);
+            if (res.driver.idTag) setIdTag(res.driver.idTag);
+          }
+          const primaryTag = res?.rfidCards?.find((c) => c.isPrimary) || res?.rfidCards?.[0];
+          if (primaryTag) {
+            if (primaryTag.status) setTagStatus(primaryTag.status);
+            if (primaryTag.expiryDate) setTagExpiryDate(primaryTag.expiryDate.slice(0, 10));
+            if (primaryTag.allowedChargePointIds) {
+              setAllowedStationIds(primaryTag.allowedChargePointIds);
+            }
+          }
+        })
+        .catch(() => {});
+    }
+  }, [driver?.id]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -44,11 +80,6 @@ export function DriverModal({
 
     setBusy(true);
     try {
-      const allowedList = allowedChargePointIds
-        .split(',')
-        .map((s) => s.trim())
-        .filter(Boolean);
-
       const payload: Record<string, unknown> = {
         phone: phone.trim(),
         name: name.trim() || undefined,
@@ -63,7 +94,7 @@ export function DriverModal({
           ? {
               tagStatus,
               tagExpiryDate: tagExpiryDate || undefined,
-              allowedChargePointIds: allowedList.length ? allowedList : undefined,
+              allowedChargePointIds: allowedStationIds,
             }
           : {}),
       };
@@ -223,13 +254,75 @@ export function DriverModal({
                 />
               </Field>
 
-              <Field label="Зөвшөөрсөн станцууд" hint="Бүх станцад бол хоосон орхино">
-                <Input
-                  type="text"
-                  placeholder="Жишээ: CP001, CP002"
-                  value={allowedChargePointIds}
-                  onChange={(e) => setAllowedChargePointIds(e.target.value)}
-                />
+              <Field
+                label="Зөвшөөрсөн станцууд"
+                hint={
+                  allowedStationIds.length === 0
+                    ? 'Бүх станцад зөвшөөрөгдөнө'
+                    : `${allowedStationIds.length} станц сонгосон`
+                }
+              >
+                <div className="space-y-2">
+                  <Select
+                    value=""
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      if (val && !allowedStationIds.includes(val)) {
+                        setAllowedStationIds([...allowedStationIds, val]);
+                      }
+                    }}
+                    options={[
+                      { value: '', label: '+ Станц сонгох...' },
+                      ...stations.map((st) => {
+                        const id = String(st.id || st._id || '');
+                        const isSelected =
+                          allowedStationIds.includes(id) ||
+                          (st.cpId ? allowedStationIds.includes(st.cpId) : false);
+                        return {
+                          value: id,
+                          label: st.name ? `${st.name} (${st.cpId})` : st.cpId,
+                          disabled: isSelected,
+                        };
+                      }),
+                    ]}
+                  />
+
+                  {allowedStationIds.length > 0 ? (
+                    <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+                      {allowedStationIds.map((stId) => {
+                        const st = stations.find(
+                          (s) => String(s.id || s._id) === stId || s.cpId === stId,
+                        );
+                        const label = st?.name ? `${st.name} (${st.cpId})` : (st?.cpId || stId);
+                        return (
+                          <span
+                            key={stId}
+                            className="inline-flex items-center gap-1 rounded-md bg-[var(--color-surface)] border border-[var(--color-border)] px-2 py-0.5 text-xs font-medium text-[var(--color-fg)] shadow-xs"
+                          >
+                            <span className="truncate max-w-[180px]">{label}</span>
+                            <button
+                              type="button"
+                              className="text-[var(--color-fg-subtle)] hover:text-red-500 ml-1 text-sm font-bold leading-none transition cursor-pointer"
+                              onClick={() =>
+                                setAllowedStationIds(allowedStationIds.filter((id) => id !== stId))
+                              }
+                              title="Хасах"
+                            >
+                              ×
+                            </button>
+                          </span>
+                        );
+                      })}
+                      <button
+                        type="button"
+                        onClick={() => setAllowedStationIds([])}
+                        className="text-[11px] text-[var(--color-fg-subtle)] hover:text-red-500 underline ml-1 cursor-pointer"
+                      >
+                        Бүгдийг арилгах
+                      </button>
+                    </div>
+                  ) : null}
+                </div>
               </Field>
             </div>
           ) : null}

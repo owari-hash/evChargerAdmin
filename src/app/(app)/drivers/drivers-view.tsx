@@ -237,22 +237,21 @@ export function DriversView({
                 <THead>
                   <TR>
                     <TH className="w-10 text-center">№</TH>
-                    <TH align="left">Жолооч</TH>
+                    <TH className="text-center">Жолооч</TH>
                     <TH className="text-center">Утас / Имэйл</TH>
                     <TH className="text-center">Тээврийн хэрэгсэл</TH>
-                    <TH className="text-right">Хэтэвч үлдэгдэл</TH>
+                    <TH className="text-center">Хэтэвч үлдэгдэл</TH>
                     <TH className="text-center">RFID карт</TH>
-                    <TH className="text-right">Цэнэглэлт</TH>
-                    <TH className="text-center">Төрөл</TH>
+                    <TH className="text-center">Цэнэглэлт</TH>
                     <TH className="text-center">Төлөв</TH>
                     <TH className="text-center">Үйлдэл</TH>
                   </TR>
                 </THead>
                 <TBody>
                   {isLoading && drivers.length === 0 ? (
-                    <TableLoading colSpan={10} rows={8} />
+                    <TableLoading colSpan={9} rows={8} />
                   ) : drivers.length === 0 ? (
-                    <TableEmpty colSpan={10}>Жолоочийн бүртгэл олдсонгүй</TableEmpty>
+                    <TableEmpty colSpan={9}>Жолоочийн бүртгэл олдсонгүй</TableEmpty>
                   ) : (
                     drivers.map((d, index) => {
                       const rowNum = (page - 1) * limit + index + 1;
@@ -263,7 +262,7 @@ export function DriversView({
                           </TD>
 
                           {/* Driver Name */}
-                          <TD align="left" className="py-1.5">
+                          <TD align="center" className="py-1.5">
                             <Link
                               href={`/drivers/${d.id}`}
                               className="font-semibold text-xs text-[var(--color-fg)] hover:text-[var(--color-brand)] transition"
@@ -278,7 +277,7 @@ export function DriversView({
                               {d.phone || '—'}
                             </p>
                             {d.email ? (
-                              <p className="text-[11px] text-[var(--color-fg-subtle)] truncate max-w-[160px]">
+                              <p className="text-[11px] text-[var(--color-fg-subtle)] truncate max-w-[160px] mx-auto">
                                 {d.email}
                               </p>
                             ) : null}
@@ -296,7 +295,7 @@ export function DriversView({
                           </TD>
 
                           {/* Wallet balance */}
-                          <TD align="right" className="py-1.5">
+                          <TD align="center" className="py-1.5">
                             <span className="font-mono text-xs font-bold text-[var(--color-fg)]">
                               {formatMoney(d.wallet.balance)}
                             </span>
@@ -322,38 +321,27 @@ export function DriversView({
                           </TD>
 
                           {/* Sessions */}
-                          <TD align="right" className="py-1.5">
+                          <TD align="center" className="py-1.5">
                             <button
                               type="button"
                               onClick={() => setViewingSessionsDriver(d)}
-                              className="inline-flex flex-col items-end text-right underline underline-offset-2 hover:opacity-80 transition cursor-pointer"
+                              className="inline-flex items-center justify-center font-mono text-xs font-semibold text-[var(--color-brand)] underline underline-offset-2 hover:opacity-80 transition cursor-pointer"
                               title="Цэнэглэлтийн мэдээлэл харах"
                             >
-                              <span className="font-mono text-xs font-semibold text-[var(--color-brand)]">
-                                {formatNumber(d.sessionsCount)} удаа
-                              </span>
-                              <span className="text-[10px] text-[var(--color-fg-subtle)] font-mono">
-                                {d.totalEnergyKwh} кВт.ц
-                              </span>
+                              {formatNumber(d.sessionsCount)} удаа
                             </button>
-                          </TD>
-
-                          {/* Type (Төрөл) */}
-                          <TD align="center" className="py-1.5">
-                            {d.isInternal ? (
-                              <Badge tone="brand">Дотоод</Badge>
-                            ) : (
-                              <Badge tone="idle">Энгийн</Badge>
-                            )}
                           </TD>
 
                           {/* Status (Төлөв) */}
                           <TD align="center" className="py-1.5">
-                            {d.isActive ? (
-                              <Badge tone="ok">Идэвхтэй</Badge>
-                            ) : (
-                              <Badge tone="danger">Түгжигдсэн</Badge>
-                            )}
+                            <div className="flex flex-wrap items-center justify-center gap-1">
+                              {d.isActive ? (
+                                <Badge tone="ok">Идэвхтэй</Badge>
+                              ) : (
+                                <Badge tone="danger">Түгжигдсэн</Badge>
+                              )}
+                              {d.isInternal && <Badge tone="brand">Дотоод</Badge>}
+                            </div>
                           </TD>
 
                           {/* Actions */}

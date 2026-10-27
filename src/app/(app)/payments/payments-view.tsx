@@ -3,11 +3,12 @@
 import * as React from 'react';
 import useSWR from 'swr';
 import { toast } from 'sonner';
-import { RefreshCw, Search } from 'lucide-react';
+import { Menu, RefreshCw, Search, Trash2 } from 'lucide-react';
 import { REFRESH } from '@/lib/live-query';
 import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
 import { formatAmount, formatDateTime, formatMoney, formatNumber, formatPhone } from '@/lib/format';
 import { Badge, Button, Card, Dot, Input, Select, type Tone } from '@/components/ui/primitives';
+import { ConfirmModal, Modal } from '@/components/ui/modal';
 import { DateRangePicker } from '@/components/ui/date-picker';
 import { FilterBar, Pagination } from '@/components/ui/pagination';
 import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty, TableLoading } from '@/components/ui/table';
@@ -71,7 +72,15 @@ function methodLabel(p: PaymentRow): string {
 /** Open payments can be re-asked of the bank; settled ones need nothing. */
 const RECHECKABLE: ReadonlySet<PaymentStatus> = new Set(['PENDING', 'PARTIALLY_PAID', 'EXPIRED', 'FAILED']);
 
-export function PaymentsView({ initialQuery, initialStatus }: { initialQuery: string; initialStatus: string }) {
+export function PaymentsView({
+  initialQuery,
+  initialStatus,
+  canAdmin = false,
+}: {
+  initialQuery: string;
+  initialStatus: string;
+  canAdmin?: boolean;
+}) {
   const [query, setQuery] = React.useState(initialQuery);
   const [status, setStatus] = React.useState(initialStatus);
   const [provider, setProvider] = React.useState('');
@@ -80,6 +89,9 @@ export function PaymentsView({ initialQuery, initialStatus }: { initialQuery: st
   const [page, setPage] = React.useState(1);
   const [limit, setLimit] = React.useState(50);
   const [checking, setChecking] = React.useState<string | null>(null);
+  const [deleting, setDeleting] = React.useState<PaymentRow | null>(null);
+  const [deletingBusy, setDeletingBusy] = React.useState(false);
+  const [viewing, setViewing] = React.useState<PaymentRow | null>(null);
 
   React.useEffect(() => {
     setStatus(initialStatus);
@@ -130,6 +142,22 @@ export function PaymentsView({ initialQuery, initialStatus }: { initialQuery: st
     }
   }
 
+  async function handleDeletePayment() {
+    if (!deleting) return;
+    setDeletingBusy(true);
+    try {
+      await api.del(`payments/${deleting.id}`);
+      toast.success('Төлбөрийн бичлэг амжилттай устгагдлаа');
+      setDeleting(null);
+      await mutate();
+    } catch (err) {
+      toast.error(errorMessage(err));
+    } finally {
+      setDeletingBusy(false);
+    }
+  }
+
+  const columns = canAdmin ? 9 : 8;
   const filtered = Boolean(query || status || provider || from || to);
 
   return (
@@ -245,23 +273,23 @@ export function PaymentsView({ initialQuery, initialStatus }: { initialQuery: st
             <THead>
               <tr>
                 <TH className="w-12 text-center">№</TH>
-                <TH>Огноо</TH>
-                <TH>Жолооч</TH>
-                <TH>Хэлбэр</TH>
+                <TH className="text-center">Огноо</TH>
+                <TH className="text-center">Жолооч</TH>
+                <TH className="text-center">Хэлбэр</TH>
                 <TH align="right" className="text-right px-3">Дүн</TH>
-                <TH>Төлөв</TH>
-                <TH>Хэтэвч</TH>
-                <TH>Гүйлгээ</TH>
-                <TH>Үйлдэл</TH>
+                <TH className="text-center">Төлөв</TH>
+                <TH className="text-center">Хэтэвч</TH>
+                <TH className="text-center">Гүйлгээ</TH>
+                {canAdmin ? <TH className="text-center">Үйлдэл</TH> : null}
               </tr>
             </THead>
             <TBody>
               {isLoading && !data ? (
-                <TableLoading colSpan={9} />
+                <TableLoading colSpan={columns} />
               ) : error ? (
-                <TableEmpty colSpan={9}>Төлбөрийг ачаалж чадсангүй.</TableEmpty>
+                <TableEmpty colSpan={columns}>Төлбөрийг ачаалж чадсангүй.</TableEmpty>
               ) : rows.length === 0 ? (
-                <TableEmpty colSpan={9}>
+                <TableEmpty colSpan={columns}>
                   {filtered ? 'Энэ хайлтад тохирох төлбөр алга.' : 'Одоогоор төлбөр алга.'}
                 </TableEmpty>
               ) : (
@@ -271,32 +299,32 @@ export function PaymentsView({ initialQuery, initialStatus }: { initialQuery: st
                   const card = p.provider === 'GOLOMT' && rawWallet && !isUuid(rawWallet) ? rawWallet : null;
                   return (
                     <TR key={p.id}>
-                      <TD align="center" className="text-xs text-[var(--color-fg-muted)] font-mono">
+                      <TD align="center" className="text-xs text-[var(--color-fg-muted)] font-mono text-center">
                         {num}
                       </TD>
-                      <TD className="whitespace-nowrap text-xs text-[var(--color-fg-muted)]">
+                      <TD align="center" className="whitespace-nowrap text-xs text-[var(--color-fg-muted)] text-center">
                         {formatDateTime(p.createdAt)}
                       </TD>
                       <TD align="left" className="text-xs px-3 text-left">
                         <p className="font-normal text-[var(--color-fg)]">{p.driver?.name || '—'}</p>
                         <p className="font-mono text-[var(--color-fg-subtle)]">{formatPhone(p.driver?.phone)}</p>
                       </TD>
-                      <TD className="text-xs">
+                      <TD align="center" className="text-xs text-center">
                         <p>{methodLabel(p)}</p>
                         {card ? <p className="font-mono text-[var(--color-fg-subtle)]">{card}</p> : null}
                       </TD>
-                      <TD align="right" className="whitespace-nowrap text-xs font-mono font-normal">
+                      <TD align="right" className="whitespace-nowrap text-xs font-mono font-normal px-3 text-right">
                         {formatAmount(p.amount)}
                       </TD>
-                      <TD>
+                      <TD align="center" className="text-center">
                         <Badge tone={STATUS[p.status]?.tone ?? 'idle'}>{STATUS[p.status]?.label ?? p.status}</Badge>
                         {p.lastError && p.status !== 'PAID' ? (
-                          <p className="mt-1 max-w-[16rem] truncate text-xs text-[var(--color-fg-subtle)]" title={p.lastError}>
+                          <p className="mt-1 max-w-[16rem] mx-auto truncate text-xs text-[var(--color-fg-subtle)]" title={p.lastError}>
                             {p.lastError}
                           </p>
                         ) : null}
                       </TD>
-                      <TD className="text-xs">
+                      <TD align="center" className="text-xs text-center">
                         {p.walletCreditedAt ? (
                           <span className="text-[var(--color-ok)]">✓ Орсон</span>
                         ) : p.status === 'PAID' ? (
@@ -305,21 +333,33 @@ export function PaymentsView({ initialQuery, initialStatus }: { initialQuery: st
                           '—'
                         )}
                       </TD>
-                      <TD className="font-mono text-xs text-[var(--color-fg-muted)]">{p.senderInvoiceNo}</TD>
-                      <TD align="right">
-                        {RECHECKABLE.has(p.status) ? (
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            loading={checking === p.id}
-                            disabled={checking !== null}
-                            onClick={() => void recheck(p)}
-                          >
-                            {checking === p.id ? null : <RefreshCw className="h-3.5 w-3.5" aria-hidden />}
-                            Банкнаас шалгах
-                          </Button>
-                        ) : null}
+                      <TD align="center" className="font-mono text-xs text-[var(--color-fg-muted)] text-center">
+                        {p.senderInvoiceNo}
                       </TD>
+                      {canAdmin ? (
+                        <TD align="center" className="py-1.5">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => setViewing(p)}
+                              title="Дэлгэрэнгүй харах"
+                              aria-label="Дэлгэрэнгүй харах"
+                              className="flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--color-brand)]/30 bg-[var(--color-brand-soft)] text-[var(--color-brand)] hover:bg-[var(--color-brand)]/20 transition cursor-pointer"
+                            >
+                              <Menu className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setDeleting(p)}
+                              title="Устгах"
+                              aria-label="Төлбөр устгах"
+                              className="flex h-7 w-7 items-center justify-center rounded-lg border border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 transition cursor-pointer"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                        </TD>
+                      ) : null}
                     </TR>
                   );
                 })
@@ -342,6 +382,156 @@ export function PaymentsView({ initialQuery, initialStatus }: { initialQuery: st
           />
         ) : null}
       </Card>
+
+      {/* Delete confirmation modal */}
+      {canAdmin ? (
+        <ConfirmModal
+          open={Boolean(deleting)}
+          onClose={() => setDeleting(null)}
+          onConfirm={handleDeletePayment}
+          title="Төлбөрийн бичлэг устгах"
+          message={
+            <span>
+              <strong>{deleting?.senderInvoiceNo}</strong> дугаартай төлбөрийн бичлэгийг устгахдаа итгэлтэй байна уу? Энэ үйлдлийг буцаах боломжгүй.
+            </span>
+          }
+          confirmLabel="Устгах"
+          tone="danger"
+          loading={deletingBusy}
+        />
+      ) : null}
+
+      {/* Payment details modal */}
+      {canAdmin && viewing ? (
+        <Modal
+          open={Boolean(viewing)}
+          onClose={() => setViewing(null)}
+          title="Төлбөрийн дэлгэрэнгүй"
+          size="md"
+          footer={
+            <div className="flex items-center justify-between w-full">
+              <div>
+                {RECHECKABLE.has(viewing.status) ? (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    loading={checking === viewing.id}
+                    disabled={checking !== null}
+                    onClick={async () => {
+                      await recheck(viewing);
+                      setViewing(null);
+                    }}
+                  >
+                    {checking === viewing.id ? null : <RefreshCw className="h-3.5 w-3.5 mr-1" aria-hidden />}
+                    Банкнаас шалгах
+                  </Button>
+                ) : null}
+              </div>
+              <div className="flex items-center gap-2">
+                <Button variant="ghost" onClick={() => setViewing(null)}>
+                  Хаах
+                </Button>
+                <Button
+                  variant="danger"
+                  onClick={() => {
+                    const target = viewing;
+                    setViewing(null);
+                    setDeleting(target);
+                  }}
+                >
+                  <Trash2 className="h-3.5 w-3.5 mr-1" />
+                  Устгах
+                </Button>
+              </div>
+            </div>
+          }
+        >
+          <div className="space-y-4">
+            {/* Driver & Amount overview */}
+            <div className="flex items-start justify-between p-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-subtle)]">
+              <div>
+                <p className="text-xs text-[var(--color-fg-muted)]">Жолооч</p>
+                <p className="text-sm font-semibold text-[var(--color-fg)]">{viewing.driver?.name || '—'}</p>
+                <p className="font-mono text-xs text-[var(--color-fg-subtle)]">{formatPhone(viewing.driver?.phone)}</p>
+              </div>
+              <div className="text-right">
+                <Badge tone={STATUS[viewing.status]?.tone ?? 'idle'}>
+                  {STATUS[viewing.status]?.label ?? viewing.status}
+                </Badge>
+                <p className="mt-1 font-mono text-base font-bold text-[var(--color-fg)]">
+                  {formatMoney(viewing.amount)}
+                </p>
+              </div>
+            </div>
+
+            {/* Key fields */}
+            <div className="grid grid-cols-2 gap-3 text-xs">
+              <div>
+                <span className="text-[var(--color-fg-muted)] block">Нэхэмжлэхийн дугаар:</span>
+                <span className="font-mono text-[var(--color-fg)] font-medium break-all">{viewing.senderInvoiceNo}</span>
+              </div>
+              {viewing.invoiceId ? (
+                <div>
+                  <span className="text-[var(--color-fg-muted)] block">Банкны Invoice ID:</span>
+                  <span className="font-mono text-[var(--color-fg)] break-all">{viewing.invoiceId}</span>
+                </div>
+              ) : null}
+              <div>
+                <span className="text-[var(--color-fg-muted)] block">Төлбөрийн хэлбэр:</span>
+                <span className="text-[var(--color-fg)] font-medium">{methodLabel(viewing)}</span>
+              </div>
+              <div>
+                <span className="text-[var(--color-fg-muted)] block">Зориулалт:</span>
+                <span className="text-[var(--color-fg)]">
+                  {viewing.purpose === 'WALLET_TOPUP' ? 'Хэтэвч цэнэглэлт' : 'Цэнэглэлтийн төлбөр'}
+                </span>
+              </div>
+              <div>
+                <span className="text-[var(--color-fg-muted)] block">Төлсөн дүн:</span>
+                <span className="font-mono font-medium text-[var(--color-fg)]">
+                  {viewing.paidAmount ? formatMoney(viewing.paidAmount) : '—'}
+                </span>
+              </div>
+              <div>
+                <span className="text-[var(--color-fg-muted)] block">Хэтэвчинд орсон эсэх:</span>
+                <span>
+                  {viewing.walletCreditedAt ? (
+                    <span className="text-[var(--color-ok)] font-medium">✓ Орсон ({formatDateTime(viewing.walletCreditedAt)})</span>
+                  ) : viewing.status === 'PAID' ? (
+                    <span className="text-[var(--color-danger)] font-medium">Ороогүй</span>
+                  ) : (
+                    '—'
+                  )}
+                </span>
+              </div>
+              <div>
+                <span className="text-[var(--color-fg-muted)] block">Үүсгэсэн огноо:</span>
+                <span className="text-[var(--color-fg)]">{formatDateTime(viewing.createdAt)}</span>
+              </div>
+              {viewing.paidAt ? (
+                <div>
+                  <span className="text-[var(--color-fg-muted)] block">Төлөгдсөн огноо:</span>
+                  <span className="text-[var(--color-fg)]">{formatDateTime(viewing.paidAt)}</span>
+                </div>
+              ) : null}
+            </div>
+
+            {viewing.description ? (
+              <div className="pt-2 border-t border-[var(--color-border)] text-xs">
+                <span className="text-[var(--color-fg-muted)] block">Тайлбар:</span>
+                <span className="text-[var(--color-fg)]">{viewing.description}</span>
+              </div>
+            ) : null}
+
+            {viewing.lastError ? (
+              <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/20 text-xs text-rose-600 dark:text-rose-400">
+                <span className="font-semibold block mb-0.5">Сүүлийн алдаа:</span>
+                <p className="break-words font-mono text-[11px]">{viewing.lastError}</p>
+              </div>
+            ) : null}
+          </div>
+        </Modal>
+      ) : null}
     </div>
   );
 }

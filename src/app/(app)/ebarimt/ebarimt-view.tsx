@@ -3,14 +3,15 @@
 import * as React from 'react';
 import useSWR from 'swr';
 import Link from 'next/link';
-import { Eye, Receipt, RefreshCw, Search, Undo2 } from 'lucide-react';
-import { apiUrl, fetcher } from '@/lib/client';
+import { toast } from 'sonner';
+import { Eye, Receipt, RefreshCw, Search, Trash2, Undo2 } from 'lucide-react';
+import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
 import { formatAmount, formatDateTime, formatMoney, formatNumber, formatPhone } from '@/lib/format';
 import { Badge, Button, Card, Dot, Input, Select, type Tone } from '@/components/ui/primitives';
 import { DateRangePicker } from '@/components/ui/date-picker';
 import { FilterBar, Pagination } from '@/components/ui/pagination';
 import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty, TableLoading } from '@/components/ui/table';
-import { CopyButton } from '@/components/ui/copy-button';
+import { ConfirmModal } from '@/components/ui/modal';
 import { ReturnConfirmModal, type EbarimtReceiptRow } from './return-confirm-modal';
 import { ReceiptModal } from './receipt-modal';
 
@@ -40,9 +41,13 @@ const STATUS_CONFIG: Record<string, { label: string; tone: Tone }> = {
 export function EbarimtView({
   initialQuery = '',
   initialStatus = 'ALL',
+  canAdmin = false,
+  isClient = false,
 }: {
   initialQuery?: string;
   initialStatus?: string;
+  canAdmin?: boolean;
+  isClient?: boolean;
 }) {
   const [query, setQuery] = React.useState(initialQuery);
   const [status, setStatus] = React.useState(initialStatus);
@@ -55,6 +60,23 @@ export function EbarimtView({
   // Selected receipt for return confirmation or detail/print view
   const [returnTarget, setReturnTarget] = React.useState<EbarimtReceiptRow | null>(null);
   const [viewTarget, setViewTarget] = React.useState<EbarimtReceiptRow | null>(null);
+  const [deletingReceipt, setDeletingReceipt] = React.useState<EbarimtReceiptRow | null>(null);
+  const [busyDelete, setBusyDelete] = React.useState(false);
+
+  async function handleDelete() {
+    if (!deletingReceipt) return;
+    setBusyDelete(true);
+    try {
+      await api.del(`ebarimt/${encodeURIComponent(deletingReceipt.id)}`);
+      toast.success('И-Баримт амжилттай устгагдлаа');
+      setDeletingReceipt(null);
+      await mutate();
+    } catch (err) {
+      toast.error(errorMessage(err));
+    } finally {
+      setBusyDelete(false);
+    }
+  }
 
   const [debouncedQuery, setDebouncedQuery] = React.useState(query);
   React.useEffect(() => {
@@ -205,25 +227,25 @@ export function EbarimtView({
             <THead>
               <TR>
                 <TH className="w-12 text-center">№</TH>
-                <TH>Огноо</TH>
-                <TH>Төрөл</TH>
-                <TH>ДДТД (Баримтын №)</TH>
-                <TH>Сугалаа</TH>
-                <TH align="right" className="text-right px-3">Нийт дүн</TH>
-                <TH align="right" className="text-right px-3">НӨАТ</TH>
-                <TH>Хэрэглэгч / Регистр</TH>
-                <TH>Эх үүсвэр</TH>
-                <TH>Төлөв</TH>
-                <TH className="text-right">Үйлдэл</TH>
+                <TH className="text-center">Огноо</TH>
+                <TH className="text-center">Төрөл</TH>
+                <TH className="text-center">ДДТД (Баримтын №)</TH>
+                <TH className="text-center">Сугалаа</TH>
+                <TH className="text-center px-3">Нийт дүн</TH>
+                <TH className="text-center px-3">НӨАТ</TH>
+                <TH className="text-center">Хэрэглэгч</TH>
+                <TH className="text-center">Эх үүсвэр</TH>
+                <TH className="text-center">Төлөв</TH>
+                {!isClient && <TH className="text-center">Үйлдэл</TH>}
               </TR>
             </THead>
             <TBody>
               {isLoading && receipts.length === 0 ? (
-                <TableLoading colSpan={11} />
+                <TableLoading colSpan={isClient ? 10 : 11} />
               ) : error ? (
-                <TableEmpty colSpan={11}>И-Баримтыг ачаалж чадсангүй.</TableEmpty>
+                <TableEmpty colSpan={isClient ? 10 : 11}>И-Баримтыг ачаалж чадсангүй.</TableEmpty>
               ) : receipts.length === 0 ? (
-                <TableEmpty colSpan={11}>
+                <TableEmpty colSpan={isClient ? 10 : 11}>
                   {debouncedQuery || status !== 'ALL' || type || from || to
                     ? 'Хайлтын нөхцөлд таарах баримт байхгүй байна.'
                     : 'Одоогоор системд олгогдсон цахим төлбөрийн баримт алга байна.'}
@@ -239,27 +261,24 @@ export function EbarimtView({
                   return (
                     <TR key={row.id}>
                       <TD className="text-center text-xs text-[var(--color-fg-muted)]">{num}</TD>
-                      <TD className="whitespace-nowrap text-xs">
+                      <TD className="whitespace-nowrap text-xs text-center">
                         {row.issuedAt ? formatDateTime(row.issuedAt) : '—'}
                       </TD>
-                      <TD className="whitespace-nowrap">
+                      <TD className="whitespace-nowrap text-center">
                         <Badge tone={isB2B ? 'brand' : 'idle'} className="text-[11px]">
                           {isB2B ? 'ААН' : 'Иргэн'}
                         </Badge>
                       </TD>
-                      <TD className="whitespace-nowrap">
+                      <TD className="whitespace-nowrap text-center">
                         {row.receiptId ? (
-                          <div className="flex items-center gap-1 font-mono text-xs">
-                            <span title={row.receiptId} className="max-w-[140px] truncate">
-                              {row.receiptId}
-                            </span>
-                            <CopyButton value={row.receiptId} className="h-6 w-6 p-0" />
-                          </div>
+                          <span title={row.receiptId} className="font-mono text-xs">
+                            {row.receiptId}
+                          </span>
                         ) : (
                           <span className="text-xs text-[var(--color-fg-subtle)]">—</span>
                         )}
                       </TD>
-                      <TD className="whitespace-nowrap">
+                      <TD className="whitespace-nowrap text-center">
                         {row.lottery ? (
                           <span className="font-mono text-xs font-normal text-[var(--color-brand)]">
                             {row.lottery}
@@ -268,22 +287,18 @@ export function EbarimtView({
                           <span className="text-xs text-[var(--color-fg-subtle)]">—</span>
                         )}
                       </TD>
-                      <TD align="right" className="whitespace-nowrap text-right font-mono text-xs font-normal px-3">
+                      <TD className="whitespace-nowrap text-center font-mono text-xs font-normal px-3">
                         {formatAmount(row.totalAmount)}
                       </TD>
-                      <TD align="right" className="whitespace-nowrap text-right font-mono text-xs text-[var(--color-fg-muted)] font-normal px-3">
+                      <TD className="whitespace-nowrap text-center font-mono text-xs text-[var(--color-fg-muted)] font-normal px-3">
                         {formatAmount(row.totalVAT)}
                       </TD>
-                      <TD className="whitespace-nowrap text-xs">
+                      <TD className="whitespace-nowrap text-xs text-center">
                         <div className="min-w-0">
-                          {row.customerTin ? (
-                            <span className="font-mono font-normal text-[var(--color-fg)]">
-                              {row.customerTin}
+                          {row.driver?.phone ? (
+                            <span className="font-mono font-medium text-[var(--color-fg)]">
+                              {formatPhone(row.driver.phone)}
                             </span>
-                          ) : row.customerNo ? (
-                            <span className="font-mono">{row.customerNo}</span>
-                          ) : row.driver?.phone ? (
-                            <span className="font-mono">{formatPhone(row.driver.phone)}</span>
                           ) : (
                             <span className="text-[var(--color-fg-subtle)]">—</span>
                           )}
@@ -294,7 +309,7 @@ export function EbarimtView({
                           )}
                         </div>
                       </TD>
-                      <TD className="whitespace-nowrap text-xs">
+                      <TD className="whitespace-nowrap text-xs text-center">
                         {row.source === 'TRANSACTION' ? (
                           <Link
                             href={`/transactions/${row.sourceId}`}
@@ -309,48 +324,60 @@ export function EbarimtView({
                           </span>
                         )}
                       </TD>
-                      <TD className="whitespace-nowrap">
-                        <Badge tone={st.tone} className="gap-1.5 text-[11px]">
+                      <TD className="whitespace-nowrap text-center">
+                        <Badge tone={st.tone} className="gap-1.5 text-[11px] justify-center mx-auto">
                           <Dot tone={st.tone} />
                           {st.label}
                         </Badge>
                       </TD>
-                      <TD className="whitespace-nowrap text-right">
-                        <div className="inline-flex items-center gap-1">
-                          {/* View & Print button */}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            className="h-7 px-2 text-xs gap-1"
-                            onClick={() => setViewTarget(row)}
-                            title="Баримт харах / хэвлэх"
-                          >
-                            <Eye className="h-3.5 w-3.5" />
-                            <span className="hidden sm:inline">Харах</span>
-                          </Button>
+                      {!isClient && (
+                        <TD className="whitespace-nowrap text-center">
+                          <div className="flex items-center justify-center gap-1">
+                            {/* View & Print button (only for admin) */}
+                            {canAdmin && (
+                              <button
+                                type="button"
+                                onClick={() => setViewTarget(row)}
+                                title="Баримт харах"
+                                className="flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--color-brand)]/30 bg-[var(--color-brand-soft)] text-[var(--color-brand)] hover:bg-[var(--color-brand)]/20 transition"
+                              >
+                                <Eye className="h-3.5 w-3.5" />
+                              </button>
+                            )}
 
-                          {/* Return button */}
-                          {canRefund ? (
-                            <Button
-                              variant="danger"
-                              size="sm"
-                              className="h-7 px-2 text-xs gap-1"
-                              onClick={() => setReturnTarget(row)}
-                              title="Татварын системээс баримт буцаах"
-                            >
-                              <Undo2 className="h-3.5 w-3.5" />
-                              Буцаах
-                            </Button>
-                          ) : isRefunded ? (
-                            <span
-                              className="text-[11px] text-[var(--color-danger)] px-1.5 py-0.5 rounded bg-[var(--color-danger)]/10"
-                              title={row.returnedAt ? `Буцаасан: ${formatDateTime(row.returnedAt)}` : 'Буцаагдсан'}
-                            >
-                              Буцаасан
-                            </span>
-                          ) : null}
-                        </div>
-                      </TD>
+                            {/* Return button (icon only) */}
+                            {canRefund ? (
+                              <button
+                                type="button"
+                                onClick={() => setReturnTarget(row)}
+                                title="Татварын системээс баримт буцаах"
+                                className="flex h-7 w-7 items-center justify-center rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 transition"
+                              >
+                                <Undo2 className="h-3.5 w-3.5" />
+                              </button>
+                            ) : isRefunded ? (
+                              <span
+                                className="flex h-7 w-7 items-center justify-center rounded-lg border border-rose-500/20 bg-rose-500/5 text-rose-500"
+                                title={row.returnedAt ? `Буцаасан: ${formatDateTime(row.returnedAt)}` : 'Буцаагдсан'}
+                              >
+                                <Undo2 className="h-3.5 w-3.5 opacity-40" />
+                              </span>
+                            ) : null}
+
+                            {/* Delete button (only for admin) */}
+                            {canAdmin && (
+                              <button
+                                type="button"
+                                onClick={() => setDeletingReceipt(row)}
+                                title="Устгах"
+                                className="flex h-7 w-7 items-center justify-center rounded-lg border border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 transition"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            )}
+                          </div>
+                        </TD>
+                      )}
                     </TR>
                   );
                 })
@@ -382,6 +409,41 @@ export function EbarimtView({
       <ReceiptModal
         receipt={viewTarget}
         onClose={() => setViewTarget(null)}
+      />
+
+      {/* Delete confirmation dialog */}
+      <ConfirmModal
+        open={deletingReceipt !== null}
+        onClose={() => setDeletingReceipt(null)}
+        onConfirm={() => void handleDelete()}
+        loading={busyDelete}
+        title="И-Баримтыг устгах уу?"
+        confirmLabel="Устгах"
+        message={
+          <>
+            <span className="block">
+              {deletingReceipt?.receiptId ? (
+                <>
+                  ДДТД:{' '}
+                  <span className="font-mono font-semibold text-[var(--color-fg)]">
+                    {deletingReceipt.receiptId}
+                  </span>
+                </>
+              ) : (
+                <>
+                  Баримт:{' '}
+                  <span className="font-semibold text-[var(--color-fg)]">
+                    #{deletingReceipt?.sourceId}
+                  </span>
+                </>
+              )}{' '}
+              бичлэгийг системээс устгах уу?
+            </span>
+            <span className="mt-2 block text-xs text-[var(--color-fg-subtle)]">
+              Энэ үйлдэл нь системийн баримтын бүртгэлийг устгана.
+            </span>
+          </>
+        }
       />
     </div>
   );

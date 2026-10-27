@@ -47,7 +47,7 @@ const STATUS_OPTIONS: Array<{ value: string; label: string }> = [
   { value: 'SuspendedEVSE', label: 'Станц түр зогссон' },
   { value: 'Finishing', label: 'Дуусгаж байна' },
   { value: 'Reserved', label: 'Захиалагдсан' },
-  { value: 'Unavailable', label: 'Сүлжээгүй' },
+  { value: 'Unavailable', label: 'Идэвхгүй' },
   { value: 'Faulted', label: 'Эвдрэлтэй' },
 ];
 
@@ -133,7 +133,7 @@ function renderConnectorStatus(status?: string) {
     return (
       <span className="inline-flex items-center gap-1.5 rounded-full bg-zinc-500/10 px-2.5 py-0.5 text-xs font-semibold text-zinc-500 whitespace-nowrap">
         <Dot tone="idle" />
-        Сүлжээгүй
+        Идэвхгүй
       </span>
     );
   }

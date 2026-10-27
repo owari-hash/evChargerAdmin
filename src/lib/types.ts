@@ -475,6 +475,10 @@ export interface Paginated<T> {
   page: number;
   limit: number;
   statusCounts?: Record<string, number>;
+  summary?: {
+    totalBalance?: number;
+    totalSessions?: number;
+  };
 }
 
 export interface StatsOverview {

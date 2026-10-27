@@ -91,9 +91,11 @@ export function DriversView({
   const drivers = data?.data ?? [];
   const total = data?.total ?? 0;
 
-  // Compute page totals
-  const totalBalance = drivers.reduce((sum, d) => sum + (d.wallet?.balance ?? 0), 0);
-  const totalSessions = drivers.reduce((sum, d) => sum + d.sessionsCount, 0);
+  // Compute totals across all pages if provided by backend, fallback to current page
+  const totalBalance =
+    data?.summary?.totalBalance ?? drivers.reduce((sum, d) => sum + (d.wallet?.balance ?? 0), 0);
+  const totalSessions =
+    data?.summary?.totalSessions ?? drivers.reduce((sum, d) => sum + d.sessionsCount, 0);
 
   return (
     <div className="space-y-6">
@@ -162,16 +164,16 @@ export function DriversView({
               tone="brand"
             />
             <StatCard
-              label="Энэ хуудасны хэтэвчний үлдэгдэл"
+              label="Нийт хэтэвчний үлдэгдэл"
               value={formatMoney(totalBalance)}
-              sub="Жолооч нарын нийт үлдэгдэл"
+              sub="Бүх жолооч нарын нийт үлдэгдэл"
               icon={Wallet}
               tone="ok"
             />
             <StatCard
-              label="Энэ хуудасны нийт цэнэглэлт"
+              label="Нийт цэнэглэлт"
               value={formatNumber(totalSessions)}
-              sub="Хийгдсэн цэнэглэлтийн тоо"
+              sub="Системийн нийт цэнэглэлтийн тоо"
               icon={Car}
               tone="info"
             />
@@ -234,44 +236,44 @@ export function DriversView({
               <Table>
                 <THead>
                   <TR>
-                    <TH className="w-10">№</TH>
-                    <TH>Жолооч</TH>
-                    <TH>Утас / Имэйл</TH>
-                    <TH>Тээврийн хэрэгсэл</TH>
+                    <TH className="w-10 text-center">№</TH>
+                    <TH align="left">Жолооч</TH>
+                    <TH className="text-center">Утас / Имэйл</TH>
+                    <TH className="text-center">Тээврийн хэрэгсэл</TH>
                     <TH className="text-right">Хэтэвч үлдэгдэл</TH>
-                    <TH>RFID карт</TH>
+                    <TH className="text-center">RFID карт</TH>
                     <TH className="text-right">Цэнэглэлт</TH>
-                    <TH>Төлөв</TH>
+                    <TH className="text-center">Төрөл</TH>
+                    <TH className="text-center">Төлөв</TH>
                     <TH className="text-center">Үйлдэл</TH>
                   </TR>
                 </THead>
                 <TBody>
                   {isLoading && drivers.length === 0 ? (
-                    <TableLoading colSpan={9} rows={8} />
+                    <TableLoading colSpan={10} rows={8} />
                   ) : drivers.length === 0 ? (
-                    <TableEmpty colSpan={9}>Жолоочийн бүртгэл олдсонгүй</TableEmpty>
+                    <TableEmpty colSpan={10}>Жолоочийн бүртгэл олдсонгүй</TableEmpty>
                   ) : (
                     drivers.map((d, index) => {
                       const rowNum = (page - 1) * limit + index + 1;
                       return (
                         <TR key={d.id} className="group hover:bg-[var(--color-surface-2)]">
-                          <TD className="font-mono text-xs text-[var(--color-fg-subtle)] border-r border-[var(--color-border)]">
+                          <TD className="font-mono text-xs text-[var(--color-fg-subtle)] border-r border-[var(--color-border)] text-center py-1.5">
                             {rowNum}
                           </TD>
 
-                          {/* Driver Name with link to detail */}
-                          <TD>
+                          {/* Driver Name */}
+                          <TD align="left" className="py-1.5">
                             <Link
                               href={`/drivers/${d.id}`}
-                              className="font-semibold text-xs text-[var(--color-fg)] group-hover:text-[var(--color-brand)] transition flex items-center gap-1.5"
+                              className="font-semibold text-xs text-[var(--color-fg)] hover:text-[var(--color-brand)] transition"
                             >
                               {d.name}
-                              <ChevronRight className="h-3 w-3 opacity-0 group-hover:opacity-100 transition" />
                             </Link>
                           </TD>
 
                           {/* Phone / Email */}
-                          <TD>
+                          <TD align="center" className="py-1.5">
                             <p className="font-mono text-xs font-medium text-[var(--color-fg)]">
                               {d.phone || '—'}
                             </p>
@@ -283,7 +285,7 @@ export function DriversView({
                           </TD>
 
                           {/* Vehicle */}
-                          <TD>
+                          <TD align="center" className="py-1.5">
                             {d.vehicleBrand || d.vehicleModel ? (
                               <p className="text-xs font-medium text-[var(--color-fg)]">
                                 {[d.vehicleBrand, d.vehicleModel].filter(Boolean).join(' ')}
@@ -294,15 +296,15 @@ export function DriversView({
                           </TD>
 
                           {/* Wallet balance */}
-                          <TD className="text-right">
+                          <TD align="right" className="py-1.5">
                             <span className="font-mono text-xs font-bold text-[var(--color-fg)]">
                               {formatMoney(d.wallet.balance)}
                             </span>
                           </TD>
 
                           {/* RFID Cards */}
-                          <TD>
-                            <div className="flex flex-wrap items-center gap-1">
+                          <TD align="center" className="py-1.5">
+                            <div className="flex flex-wrap items-center justify-center gap-1">
                               {d.idTag ? (
                                 <Badge tone="info" className="font-mono text-[10px]">
                                   {d.idTag}
@@ -320,7 +322,7 @@ export function DriversView({
                           </TD>
 
                           {/* Sessions */}
-                          <TD className="text-right">
+                          <TD align="right" className="py-1.5">
                             <button
                               type="button"
                               onClick={() => setViewingSessionsDriver(d)}
@@ -336,22 +338,26 @@ export function DriversView({
                             </button>
                           </TD>
 
-                          {/* Status */}
-                          <TD>
-                            <div className="flex flex-col gap-1 items-start">
-                              {d.isActive ? (
-                                <Badge tone="ok">Идэвхтэй</Badge>
-                              ) : (
-                                <Badge tone="danger">Түгжигдсэн</Badge>
-                              )}
-                              {d.isInternal ? (
-                                <Badge tone="brand" className="text-[10px]">Дотоод үнэгүй</Badge>
-                              ) : null}
-                            </div>
+                          {/* Type (Төрөл) */}
+                          <TD align="center" className="py-1.5">
+                            {d.isInternal ? (
+                              <Badge tone="brand">Дотоод</Badge>
+                            ) : (
+                              <Badge tone="idle">Энгийн</Badge>
+                            )}
+                          </TD>
+
+                          {/* Status (Төлөв) */}
+                          <TD align="center" className="py-1.5">
+                            {d.isActive ? (
+                              <Badge tone="ok">Идэвхтэй</Badge>
+                            ) : (
+                              <Badge tone="danger">Түгжигдсэн</Badge>
+                            )}
                           </TD>
 
                           {/* Actions */}
-                          <TD className="text-center">
+                          <TD align="center" className="py-1.5">
                             <div className="flex items-center justify-center gap-1.5">
                               {canEdit ? (
                                 <button

@@ -15,6 +15,7 @@ import { ConfirmModal, Modal } from '@/components/ui/modal';
 import { FilterActions, FilterBar, Pagination } from '@/components/ui/pagination';
 import { PageGuide } from '@/components/shell/page-guide';
 import { ID_TAG_STATUS, mn } from '@/lib/mn';
+import { useStationLookup } from '@/lib/use-station-names';
 
 const ID_TAGS_GUIDE_STEPS = [
   {
@@ -43,6 +44,7 @@ export function IdTagsView({
   initialSearch: string;
 }) {
   const now = useNow();
+  const lookupStation = useStationLookup();
   const [search, setSearch] = React.useState(initialSearch);
   const [debounced, setDebounced] = React.useState(initialSearch);
   const [status, setStatus] = React.useState('');
@@ -336,12 +338,30 @@ export function IdTagsView({
           <p className="text-xs text-[var(--color-fg-muted)]">
             Энэ карт зөвхөн дараах станцуудад цэнэглэлт эхлүүлэх эрхтэй:
           </p>
-          <div className="flex flex-wrap gap-2 max-h-60 overflow-y-auto p-1">
-            {viewingStationsTag?.allowedChargePointIds?.map((cpId) => (
-              <Badge key={cpId} tone="info" className="font-mono text-xs px-2.5 py-1">
-                {cpId}
-              </Badge>
-            ))}
+          <div className="flex flex-col gap-2 max-h-60 overflow-y-auto p-1">
+            {viewingStationsTag?.allowedChargePointIds?.map((idOrCp) => {
+              const station = lookupStation(idOrCp);
+              const title = station?.name || station?.displayName || idOrCp;
+              return (
+                <div
+                  key={idOrCp}
+                  className="flex items-center justify-between gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-muted)] px-3 py-2 text-xs"
+                >
+                  <span className="font-semibold text-[var(--color-fg)]">
+                    {title}
+                  </span>
+                  {station?.cpId ? (
+                    <Badge tone="info" className="font-mono text-[10px]">
+                      {station.cpId}
+                    </Badge>
+                  ) : (
+                    <span className="font-mono text-[10px] text-[var(--color-fg-subtle)]">
+                      {idOrCp}
+                    </span>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       </Modal>

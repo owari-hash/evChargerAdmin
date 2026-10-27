@@ -268,8 +268,8 @@ export function DriversView({
                           key={d.id}
                           className={`group transition-colors ${
                             isEven
-                              ? 'bg-[#eef8f5] dark:bg-emerald-950/25 hover:bg-[#e2f3ee] dark:hover:bg-emerald-950/40'
-                              : 'bg-white dark:bg-[var(--color-surface)] hover:bg-[var(--color-surface-2)]'
+                              ? 'bg-[#dcf2ea] dark:bg-emerald-900/35 hover:bg-[#cbeae0] dark:hover:bg-emerald-900/50'
+                              : 'bg-white dark:bg-[var(--color-surface)] hover:bg-[#f0faf6] dark:hover:bg-[var(--color-surface-2)]'
                           }`}
                         >
                           <TD className="font-mono text-xs font-normal text-[var(--color-fg-subtle)] border-r border-[var(--color-border)] text-center py-1.5">

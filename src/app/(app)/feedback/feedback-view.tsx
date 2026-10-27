@@ -226,13 +226,13 @@ export function FeedbackView({ canEdit }: { canEdit: boolean }) {
             <THead>
               <TR>
                 <TH className="w-12 text-center">№</TH>
-                <TH>Огноо</TH>
-                <TH>Жолооч / Утас</TH>
-                <TH className="min-w-[280px]">Санал хүсэлт</TH>
-                <TH>Эх сурвалж</TH>
-                <TH>SMS очсон</TH>
-                <TH>Төлөв</TH>
-                {canEdit && <TH className="text-right">Үйлдэл</TH>}
+                <TH className="text-center">Огноо</TH>
+                <TH className="text-center">Жолооч / Утас</TH>
+                <TH className="min-w-[280px] text-center">Санал хүсэлт</TH>
+                <TH className="text-center">Эх сурвалж</TH>
+                <TH className="text-center">SMS очсон</TH>
+                <TH className="text-center">Төлөв</TH>
+                {canEdit && <TH className="text-center">Үйлдэл</TH>}
               </TR>
             </THead>
             <TBody>
@@ -308,43 +308,41 @@ export function FeedbackView({ canEdit }: { canEdit: boolean }) {
                       )}
                     </TD>
                     {canEdit && (
-                      <TD className="text-right whitespace-nowrap">
-                        <div className="flex items-center justify-end gap-1">
+                      <TD align="center" className="py-1.5 whitespace-nowrap">
+                        <div className="flex items-center justify-center gap-1.5">
                           {row.status === 'new' ? (
-                            <Button
-                              variant="secondary"
-                              size="sm"
+                            <button
+                              type="button"
                               disabled={busyId === row.id}
                               onClick={() => void setStatusDone(row, true)}
-                              title="Шийдвэрлэсэн болгох"
-                              className="text-xs h-7 px-2 text-emerald-600 dark:text-emerald-400"
+                              title="Шийдсэн болгох"
+                              aria-label="Шийдсэн болгох"
+                              className="flex h-7 w-7 items-center justify-center rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition cursor-pointer"
                             >
-                              <Check className="size-3.5 mr-1" />
-                              <span>Шийдсэн</span>
-                            </Button>
+                              <Check className="h-3.5 w-3.5" />
+                            </button>
                           ) : (
-                            <Button
-                              variant="ghost"
-                              size="sm"
+                            <button
+                              type="button"
                               disabled={busyId === row.id}
                               onClick={() => void setStatusDone(row, false)}
                               title="Шинэ болгох"
-                              className="text-xs h-7 px-2 text-muted"
+                              aria-label="Шинэ болгох"
+                              className="flex h-7 w-7 items-center justify-center rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 transition cursor-pointer"
                             >
-                              <RotateCcw className="size-3.5 mr-1" />
-                              <span>Шинэ</span>
-                            </Button>
+                              <RotateCcw className="h-3.5 w-3.5" />
+                            </button>
                           )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
+                          <button
+                            type="button"
                             disabled={busyId === row.id}
                             onClick={() => setDeleting(row)}
                             title="Устгах"
-                            className="text-xs h-7 px-2 text-rose-600 dark:text-rose-400 hover:bg-rose-500/10"
+                            aria-label="Устгах"
+                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 transition cursor-pointer"
                           >
-                            <Trash2 className="size-3.5" />
-                          </Button>
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
                         </div>
                       </TD>
                     )}

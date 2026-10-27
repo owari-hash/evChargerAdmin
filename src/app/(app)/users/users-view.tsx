@@ -63,14 +63,14 @@ export function UsersView({ currentUserId }: { currentUserId: string }) {
             <THead>
               <tr>
                 <TH className="w-12 text-center">№</TH>
-                <TH>И-мэйл</TH>
-                <TH>Нэр</TH>
-                <TH>Эрх</TH>
-                <TH>Харилцагч</TH>
-                <TH>Зөвшөөрсөн цэсүүд</TH>
-                <TH>Төлөв</TH>
-                <TH>Сүүлд нэвтэрсэн</TH>
-                <TH>Үйлдэл</TH>
+                <TH className="text-center">И-мэйл</TH>
+                <TH className="text-center">Нэр</TH>
+                <TH className="text-center">Эрх</TH>
+                <TH className="text-center">Харилцагч</TH>
+                <TH className="text-center">Зөвшөөрсөн цэсүүд</TH>
+                <TH className="text-center">Төлөв</TH>
+                <TH className="text-center">Сүүлд нэвтэрсэн</TH>
+                <TH className="text-center">Үйлдэл</TH>
               </tr>
             </THead>
             <TBody>
@@ -89,10 +89,10 @@ export function UsersView({ currentUserId }: { currentUserId: string }) {
 
                   return (
                     <TR key={user.id}>
-                      <TD align="center" className="text-xs text-[var(--color-fg-muted)] font-mono">
+                      <TD align="center" className="text-xs text-[var(--color-fg-muted)] font-mono text-center">
                         {num}
                       </TD>
-                      <TD align="left" className="text-xs font-normal">
+                      <TD align="left" className="text-xs font-normal px-3 text-left">
                         {user.email}
                         {isSelf ? (
                           <Badge tone="brand" className="ml-2">
@@ -100,11 +100,11 @@ export function UsersView({ currentUserId }: { currentUserId: string }) {
                           </Badge>
                         ) : null}
                       </TD>
-                      <TD align="left" className="text-xs text-[var(--color-fg-muted)] font-normal">{user.name ?? '—'}</TD>
-                      <TD>
+                      <TD align="left" className="text-xs text-[var(--color-fg-muted)] font-normal px-3 text-left">{user.name ?? '—'}</TD>
+                      <TD align="center" className="text-center">
                         <RoleBadge role={user.role} />
                       </TD>
-                      <TD className="text-xs">
+                      <TD align="center" className="text-xs text-center">
                         {user.client ? (
                           <span className="inline-flex items-center gap-1.5 font-medium text-[var(--color-fg)]">
                             <Building2 className="h-3.5 w-3.5 text-[var(--color-brand)] shrink-0" />
@@ -114,8 +114,8 @@ export function UsersView({ currentUserId }: { currentUserId: string }) {
                           <span className="text-[var(--color-fg-subtle)]">Бүх сүлжээ</span>
                         )}
                       </TD>
-                      <TD>
-                        <div className="flex flex-wrap items-center gap-1 max-w-xs">
+                      <TD align="center" className="text-center">
+                        <div className="flex flex-wrap items-center justify-center gap-1 max-w-xs mx-auto">
                           {hasCustomMenus ? (
                             <Badge tone="brand" className="font-mono text-[11px]">
                               {allowedCount} цэс
@@ -127,33 +127,39 @@ export function UsersView({ currentUserId }: { currentUserId: string }) {
                           )}
                         </div>
                       </TD>
-                      <TD>
+                      <TD align="center" className="text-center">
                         <Badge tone={user.isActive ? 'ok' : 'idle'}>
                           {user.isActive ? 'Идэвхтэй' : 'Идэвхгүй'}
                         </Badge>
                       </TD>
-                      <TD className="whitespace-nowrap text-xs text-[var(--color-fg-muted)]">
+                      <TD align="center" className="whitespace-nowrap text-xs text-[var(--color-fg-muted)] text-center">
                         {user.lastLoginAt ? formatRelative(user.lastLoginAt) : 'Хэзээ ч үгүй'}
                       </TD>
-                      <TD>
-                        <div className="flex justify-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
+                      <TD align="center" className="py-1.5">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            type="button"
                             onClick={() => setEditing(user)}
                             title="Засах"
+                            aria-label={`${user.email} засах`}
+                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 transition cursor-pointer"
                           >
                             <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
+                          </button>
+                          <button
+                            type="button"
                             onClick={() => setDeleting(user)}
                             title={isSelf ? 'Өөрийн бүртгэлээ устгах боломжгүй' : 'Устгах'}
+                            aria-label={`${user.email} устгах`}
                             disabled={isSelf}
+                            className={`flex h-7 w-7 items-center justify-center rounded-lg border transition ${
+                              isSelf
+                                ? 'border-gray-500/20 bg-gray-500/5 text-gray-400 cursor-not-allowed opacity-50'
+                                : 'border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 cursor-pointer'
+                            }`}
                           >
                             <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
+                          </button>
                         </div>
                       </TD>
                     </TR>
@@ -199,6 +205,18 @@ export function UsersView({ currentUserId }: { currentUserId: string }) {
   );
 }
 
+function extractClientId(raw: unknown): string {
+  if (!raw) return '';
+  if (typeof raw === 'string') {
+    return raw === '[object Object]' ? '' : raw;
+  }
+  if (typeof raw === 'object' && raw !== null) {
+    const obj = raw as Record<string, unknown>;
+    return String(obj._id || obj.id || '');
+  }
+  return '';
+}
+
 function UserModal({
   open,
   user,
@@ -220,11 +238,13 @@ function UserModal({
   const { data: clientsData } = useSWR<Paginated<Client>>(apiUrl('clients', { limit: 100 }), fetcher);
   const clients = clientsData?.data ?? [];
 
+  const initialClientId = extractClientId(user?.clientId) || extractClientId((user as any)?.client);
+
   const [form, setForm] = React.useState({
     email: user?.email ?? '',
     name: user?.name ?? '',
-    role: (user?.role ?? (user?.clientId ? 'CLIENT' : 'VIEWER')) as UserRole,
-    clientId: user?.clientId ?? (user?.client ? String(user.client.id) : ''),
+    role: (user?.role ?? (initialClientId ? 'CLIENT' : 'VIEWER')) as UserRole,
+    clientId: initialClientId,
     password: '',
     isActive: user?.isActive ?? true,
   });
@@ -262,11 +282,12 @@ function UserModal({
     setSaving(true);
     setError(null);
     try {
+      const cleanCid = extractClientId(form.clientId) || null;
       if (isEdit) {
         const body: Record<string, unknown> = {
           name: form.name.trim() || undefined,
           role: form.role,
-          clientId: form.clientId || null,
+          clientId: cleanCid,
           allowedMenus,
           isActive: form.isActive,
         };
@@ -279,7 +300,7 @@ function UserModal({
           password: form.password,
           name: form.name.trim() || undefined,
           role: form.role,
-          clientId: form.clientId || undefined,
+          clientId: cleanCid || undefined,
           allowedMenus,
         });
         toast.success(`${form.email.trim()} үүслээ`);

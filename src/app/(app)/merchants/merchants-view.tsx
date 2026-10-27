@@ -221,13 +221,13 @@ export function MerchantsView({
             <THead>
               <tr>
                 <TH className="w-12 text-center">№</TH>
-                <TH>Нэр</TH>
-                <TH>Мерчант ID</TH>
-                <TH>Регистр</TH>
-                <TH>MCC</TH>
-                <TH>Холбоо барих</TH>
-                <TH>Хаяг</TH>
-                <TH>Үйлдэл</TH>
+                <TH className="text-center">Нэр</TH>
+                <TH className="text-center">Мерчант ID</TH>
+                <TH className="text-center">Регистр</TH>
+                <TH className="text-center">MCC</TH>
+                <TH className="text-center">Холбоо барих</TH>
+                <TH className="text-center">Хаяг</TH>
+                <TH className="text-center">Үйлдэл</TH>
               </tr>
             </THead>
             <TBody>
@@ -287,12 +287,11 @@ export function MerchantsView({
                       <TD className="max-w-[220px] truncate text-xs text-[var(--color-fg-muted)]">
                         {m.address ?? '—'}
                       </TD>
-                      <TD>
-                        <div className="flex items-center justify-end gap-1">
+                      <TD align="center" className="py-1.5">
+                        <div className="flex items-center justify-center gap-1.5">
                           {!isActive && canEdit && mid ? (
-                            <Button
-                              variant="ghost"
-                              size="sm"
+                            <button
+                              type="button"
                               onClick={() => {
                                 setSelectedForActive({
                                   merchantId: mid,
@@ -304,22 +303,23 @@ export function MerchantsView({
                                 });
                                 setConfiguringActive(true);
                               }}
-                              className="h-8 px-2 text-xs"
-                              title="Энэ мерчантыг үндсэн болгох"
+                              className="flex h-7 w-7 items-center justify-center rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition cursor-pointer"
+                              title="Үндсэн болгох"
+                              aria-label="Үндсэн болгох"
                             >
-                              <Check className="mr-1 h-3 w-3" />
-                              Сонгох
-                            </Button>
+                              <Check className="h-3.5 w-3.5" />
+                            </button>
                           ) : null}
                           {canDelete && mid ? (
-                            <Button
-                              variant="ghost"
-                              size="icon"
+                            <button
+                              type="button"
                               onClick={() => setDeleting(m)}
                               title="Устгах"
+                              aria-label="Устгах"
+                              className="flex h-7 w-7 items-center justify-center rounded-lg border border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 transition cursor-pointer"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
+                            </button>
                           ) : null}
                         </div>
                       </TD>

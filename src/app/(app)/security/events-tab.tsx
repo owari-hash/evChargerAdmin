@@ -165,13 +165,13 @@ export function SecurityEventsTab({ canOperate }: { canOperate: boolean }) {
             <THead>
               <tr>
                 <TH className="w-12 text-center">№</TH>
-                <TH>Хугацаа</TH>
-                <TH>Төрөл</TH>
-                <TH>Ноцтой байдал</TH>
-                <TH>Цэнэглэх станц</TH>
-                <TH>Техникийн мэдээлэл</TH>
-                <TH>Хүлээн зөвшөөрсөн</TH>
-                <TH>Үйлдэл</TH>
+                <TH className="text-center">Хугацаа</TH>
+                <TH className="text-center">Төрөл</TH>
+                <TH className="text-center">Ноцтой байдал</TH>
+                <TH className="text-center">Цэнэглэх станц</TH>
+                <TH className="text-center">Техникийн мэдээлэл</TH>
+                <TH className="text-center">Хүлээн зөвшөөрсөн</TH>
+                <TH className="text-center">Үйлдэл</TH>
               </tr>
             </THead>
             <TBody>
@@ -186,23 +186,23 @@ export function SecurityEventsTab({ canOperate }: { canOperate: boolean }) {
                   const num = (page - 1) * limit + idx + 1;
                   return (
                   <TR key={event._id}>
-                    <TD align="center" className="text-xs text-[var(--color-fg-muted)] font-mono">
+                    <TD align="center" className="text-xs text-[var(--color-fg-muted)] font-mono text-center">
                       {num}
                     </TD>
-                    <TD className="whitespace-nowrap text-xs text-[var(--color-fg-muted)]">
+                    <TD align="center" className="whitespace-nowrap text-xs text-[var(--color-fg-muted)] text-center">
                       {formatDateTime(event.timestamp)}
                     </TD>
-                    <TD className="text-xs font-medium">{event.type}</TD>
-                    <TD>
+                    <TD align="center" className="text-xs font-medium text-center">{event.type}</TD>
+                    <TD align="center" className="text-center">
                       <SecurityCriticality critical={event.isCritical} />
                     </TD>
-                    <TD>
+                    <TD align="center" className="text-center">
                       <StationName id={event.chargePointId} />
                     </TD>
-                    <TD className="max-w-[280px] truncate font-mono text-[11px] text-[var(--color-fg-muted)]">
+                    <TD align="center" className="max-w-[280px] truncate font-mono text-[11px] text-[var(--color-fg-muted)] text-center">
                       {event.techInfo ?? '—'}
                     </TD>
-                    <TD className="text-xs text-[var(--color-fg-muted)]">
+                    <TD align="center" className="text-xs text-[var(--color-fg-muted)] text-center">
                       {event.acknowledged ? (
                         <span title={formatDateTime(event.acknowledgedAt)}>
                           {event.acknowledgedBy ?? 'yes'}
@@ -211,18 +211,21 @@ export function SecurityEventsTab({ canOperate }: { canOperate: boolean }) {
                         '—'
                       )}
                     </TD>
-                    <TD>
-                      {canOperate && !event.acknowledged ? (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          loading={acking === event._id}
-                          onClick={() => void acknowledge(event._id)}
-                        >
-                          <Check className="h-3.5 w-3.5" />
-                          Хүлээн зөвшөөрөх
-                        </Button>
-                      ) : null}
+                    <TD align="center" className="py-1.5">
+                      <div className="flex items-center justify-center">
+                        {canOperate && !event.acknowledged ? (
+                          <button
+                            type="button"
+                            disabled={acking === event._id}
+                            onClick={() => void acknowledge(event._id)}
+                            title="Хүлээн зөвшөөрөх"
+                            aria-label="Хүлээн зөвшөөрөх"
+                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition cursor-pointer"
+                          >
+                            <Check className="h-3.5 w-3.5" />
+                          </button>
+                        ) : null}
+                      </div>
                     </TD>
                   </TR>
                 );

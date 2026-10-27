@@ -133,14 +133,14 @@ export function SettlementsView({ canAdmin }: { canAdmin: boolean }) {
             <THead>
               <tr>
                 <TH className="w-12 text-center">№</TH>
-                <TH>Харилцагч</TH>
-                <TH>Цэнэглэлт</TH>
-                <TH>Эрчим хүч</TH>
+                <TH className="text-center">Харилцагч</TH>
+                <TH className="text-center">Цэнэглэлт</TH>
+                <TH className="text-center">Эрчим хүч</TH>
                 <TH align="right" className="text-right px-3">Борлуулалт</TH>
                 <TH align="right" className="text-right px-3">Eplug хураамж</TH>
                 <TH align="right" className="text-right px-3">Харилцагчид олгох</TH>
                 <TH align="right" className="text-right px-3">Нийт үлдэгдэл</TH>
-                <TH>Үйлдэл</TH>
+                <TH className="text-center">Үйлдэл</TH>
               </tr>
             </THead>
             <TBody>
@@ -194,33 +194,32 @@ export function SettlementsView({ canAdmin }: { canAdmin: boolean }) {
                               {r.lastPaidAt ? `Сүүлд олгосон ${formatDate(r.lastPaidAt)}` : 'Олгоогүй'}
                             </div>
                           </TD>
-                          <TD className="whitespace-nowrap">
-                            <div className="flex items-center justify-end gap-1 whitespace-nowrap">
-                              <Button
-                                variant="ghost"
-                                size="sm"
+                          <TD align="center" className="whitespace-nowrap py-1.5">
+                            <div className="flex items-center justify-center gap-1.5 whitespace-nowrap">
+                              <button
+                                type="button"
                                 onClick={() => setExpanded(open ? null : r.client.id)}
                                 aria-expanded={open}
                                 aria-label={`${r.client.name} төлбөрийн түүх`}
+                                title="Төлбөрийн түүх"
+                                className="flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--color-brand)]/30 bg-[var(--color-brand-soft)] text-[var(--color-brand)] hover:bg-[var(--color-brand)]/20 transition cursor-pointer"
                               >
                                 {open ? (
                                   <ChevronDown className="h-3.5 w-3.5" />
                                 ) : (
                                   <ChevronRight className="h-3.5 w-3.5" />
                                 )}
-                                Түүх
-                              </Button>
+                              </button>
                               {canAdmin ? (
-                                <Button
-                                  variant="secondary"
-                                  size="sm"
+                                <button
+                                  type="button"
                                   onClick={() => setPaying(r)}
-                                  title="Төлбөр бүртгэх"
+                                  title="Олгох (Төлбөр бүртгэх)"
                                   aria-label={`${r.client.name}-д олгосон төлбөр бүртгэх`}
+                                  className="flex h-7 w-7 items-center justify-center rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition cursor-pointer"
                                 >
                                   <Banknote className="h-3.5 w-3.5" />
-                                  Олгох
-                                </Button>
+                                </button>
                               ) : null}
                             </div>
                           </TD>
@@ -332,15 +331,13 @@ function PayoutHistory({ row, canAdmin }: { row: SettlementSummaryRow; canAdmin:
         <Table>
           <THead>
             <tr>
-              <TH>Олгосон огноо</TH>
+              <TH className="text-center">Олгосон огноо</TH>
               <TH align="right" className="text-right px-3">Дүн</TH>
-              <TH>Хамрах хугацаа</TH>
-              <TH>Гүйлгээний утга</TH>
-              <TH>Бүртгэсэн</TH>
+              <TH className="text-center">Хамрах хугацаа</TH>
+              <TH className="text-center">Гүйлгээний утга</TH>
+              <TH className="text-center">Бүртгэсэн</TH>
               {canAdmin ? (
-                <TH>
-                  <span className="sr-only">Үйлдэл</span>
-                </TH>
+                <TH className="text-center">Үйлдэл</TH>
               ) : null}
             </tr>
           </THead>
@@ -354,9 +351,9 @@ function PayoutHistory({ row, canAdmin }: { row: SettlementSummaryRow; canAdmin:
             ) : (
               items.map((s) => (
                 <TR key={s.id ?? s._id}>
-                  <TD className="whitespace-nowrap text-xs">{formatDate(s.paidAt)}</TD>
+                  <TD className="whitespace-nowrap text-xs text-center">{formatDate(s.paidAt)}</TD>
                   <TD align="right" className="tnum whitespace-nowrap font-mono font-normal text-right px-3">{formatAmount(s.amount)}</TD>
-                  <TD className="whitespace-nowrap text-xs text-[var(--color-fg-muted)]">
+                  <TD className="whitespace-nowrap text-xs text-[var(--color-fg-muted)] text-center">
                     {s.periodFrom || s.periodTo
                       ? `${formatDate(s.periodFrom)} – ${formatDate(s.periodTo)}`
                       : '—'}
@@ -371,18 +368,20 @@ function PayoutHistory({ row, canAdmin }: { row: SettlementSummaryRow; canAdmin:
                       </div>
                     ) : null}
                   </TD>
-                  <TD className="text-xs text-[var(--color-fg-muted)]">{s.createdBy ?? '—'}</TD>
+                  <TD className="text-xs text-[var(--color-fg-muted)] text-center">{s.createdBy ?? '—'}</TD>
                   {canAdmin ? (
-                    <TD>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setDeleting(s)}
-                        aria-label="Төлбөрийн бичлэг устгах"
-                        className="text-[var(--color-danger)] hover:bg-[var(--color-danger-soft)]"
-                      >
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </Button>
+                    <TD align="center" className="py-1.5">
+                      <div className="flex items-center justify-center">
+                        <button
+                          type="button"
+                          onClick={() => setDeleting(s)}
+                          aria-label="Устгах"
+                          title="Устгах"
+                          className="flex h-7 w-7 items-center justify-center rounded-lg border border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 transition cursor-pointer"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </div>
                     </TD>
                   ) : null}
                 </TR>

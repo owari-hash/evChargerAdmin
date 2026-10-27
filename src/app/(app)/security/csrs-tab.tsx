@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import useSWR from 'swr';
-import { Check, FileKey, X } from 'lucide-react';
+import { Check, FileKey, Menu, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { REFRESH } from '@/lib/live-query';
 import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
@@ -95,12 +95,12 @@ export function CsrsTab({ canOperate }: { canOperate: boolean }) {
             <THead>
               <tr>
                 <TH className="w-12 text-center">№</TH>
-                <TH>Цэнэглэх станц</TH>
-                <TH>Төлөв</TH>
-                <TH>Баталгаажуулсан</TH>
-                <TH>Шалтгаан</TH>
-                <TH>Хүлээн авсан</TH>
-                <TH>Үйлдэл</TH>
+                <TH className="text-center">Цэнэглэх станц</TH>
+                <TH className="text-center">Төлөв</TH>
+                <TH className="text-center">Баталгаажуулсан</TH>
+                <TH className="text-center">Шалтгаан</TH>
+                <TH className="text-center">Хүлээн авсан</TH>
+                <TH className="text-center">Үйлдэл</TH>
               </tr>
             </THead>
             <TBody>
@@ -115,47 +115,60 @@ export function CsrsTab({ canOperate }: { canOperate: boolean }) {
                   const num = (page - 1) * limit + idx + 1;
                   return (
                   <TR key={csr._id}>
-                    <TD align="center" className="text-xs text-[var(--color-fg-muted)] font-mono">
+                    <TD align="center" className="text-xs text-[var(--color-fg-muted)] font-mono text-center">
                       {num}
                     </TD>
-                    <TD>
+                    <TD align="center" className="text-center">
                       <StationName id={csr.chargePointId} />
                     </TD>
-                    <TD>
+                    <TD align="center" className="text-center">
                       <CsrStatusBadge status={csr.status} />
                     </TD>
-                    <TD className="text-xs text-[var(--color-fg-muted)]">
+                    <TD align="center" className="text-xs text-[var(--color-fg-muted)] text-center">
                       {csr.signedBy ? (
                         <span title={formatDateTime(csr.signedAt)}>{csr.signedBy}</span>
                       ) : (
                         '—'
                       )}
                     </TD>
-                    <TD className="max-w-[220px] truncate text-xs text-[var(--color-fg-muted)]">
+                    <TD align="center" className="max-w-[220px] truncate text-xs text-[var(--color-fg-muted)] text-center">
                       {csr.rejectedReason ?? csr.error ?? '—'}
                     </TD>
-                    <TD className="text-xs text-[var(--color-fg-muted)]">
+                    <TD align="center" className="text-xs text-[var(--color-fg-muted)] text-center">
                       {formatRelative(csr.createdAt)}
                     </TD>
-                    <TD>
-                      <div className="flex justify-center gap-1">
-                        <Button variant="ghost" size="sm" onClick={() => setViewing(csr)}>
-                          Шалгах
-                        </Button>
+                    <TD align="center" className="py-1.5">
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => setViewing(csr)}
+                          title="Шалгах / Дэлгэрэнгүй"
+                          aria-label="Шалгах"
+                          className="flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--color-brand)]/30 bg-[var(--color-brand-soft)] text-[var(--color-brand)] hover:bg-[var(--color-brand)]/20 transition cursor-pointer"
+                        >
+                          <Menu className="h-3.5 w-3.5" />
+                        </button>
                         {canOperate && csr.status === 'Pending' ? (
                           <>
-                            <Button
-                              variant="primary"
-                              size="sm"
-                              loading={busy}
+                            <button
+                              type="button"
+                              disabled={busy}
                               onClick={() => void sign(csr)}
+                              title="Баталгаажуулах"
+                              aria-label="Баталгаажуулах"
+                              className="flex h-7 w-7 items-center justify-center rounded-lg border border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition cursor-pointer"
                             >
                               <Check className="h-3.5 w-3.5" />
-                              Баталгаажуулах
-                            </Button>
-                            <Button variant="ghost" size="sm" onClick={() => setRejecting(csr)}>
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setRejecting(csr)}
+                              title="Татгалзах"
+                              aria-label="Татгалзах"
+                              className="flex h-7 w-7 items-center justify-center rounded-lg border border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 transition cursor-pointer"
+                            >
                               <X className="h-3.5 w-3.5" />
-                            </Button>
+                            </button>
                           </>
                         ) : null}
                       </div>

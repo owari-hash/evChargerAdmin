@@ -5,8 +5,9 @@ import Link from 'next/link';
 import useSWR from 'swr';
 import {
   Building2,
-  Edit2,
   Mail,
+  Menu,
+  Pencil,
   Phone,
   Plus,
   Search,
@@ -167,14 +168,14 @@ export function ClientsView({
             <THead>
               <tr>
                 <TH className="w-12 text-center">№</TH>
-                <TH>Харилцагчийн нэр</TH>
-                <TH>Регистр</TH>
-                <TH>Станцууд</TH>
-                <TH>Холбоо барих</TH>
-                <TH>Хаяг</TH>
-                <TH>Төлөв</TH>
+                <TH className="text-center">Харилцагчийн нэр</TH>
+                <TH className="text-center">Регистр</TH>
+                <TH className="text-center">Станцууд</TH>
+                <TH className="text-center">Холбоо барих</TH>
+                <TH className="text-center">Хаяг</TH>
+                <TH className="text-center">Төлөв</TH>
                 {canEdit || canDelete ? (
-                  <TH className="text-center">Үйлдлүүд</TH>
+                  <TH className="text-center">Үйлдэл</TH>
                 ) : null}
               </tr>
             </THead>
@@ -194,10 +195,10 @@ export function ClientsView({
                   const num = (page - 1) * limit + idx + 1;
                   return (
                   <TR key={c.id}>
-                    <TD align="center" className="text-xs text-[var(--color-fg-muted)] font-mono">
+                    <TD align="center" className="text-xs text-[var(--color-fg-muted)] font-mono text-center">
                       {num}
                     </TD>
-                    <TD align="left" className="whitespace-nowrap">
+                    <TD align="left" className="whitespace-nowrap px-3 text-left">
                       {/* One line: name, then the contact person muted. */}
                       <div className="inline-flex max-w-[280px] items-center gap-2">
                         <Building2 className="h-4 w-4 shrink-0 text-[var(--color-fg-muted)]" />
@@ -218,10 +219,10 @@ export function ClientsView({
                         ) : null}
                       </div>
                     </TD>
-                    <TD className="font-mono text-xs text-[var(--color-fg-muted)]">
+                    <TD align="center" className="font-mono text-xs text-[var(--color-fg-muted)] text-center">
                       {c.businessRegister ?? '—'}
                     </TD>
-                    <TD>
+                    <TD align="center" className="text-center">
                       <Link
                         href={`/clients/${encodeURIComponent(c.id)}`}
                         className="inline-flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-[var(--color-surface-2)] hover:bg-[var(--color-surface-3)] transition-colors"
@@ -230,17 +231,17 @@ export function ClientsView({
                         <span>{c.stationCount ?? 0} станц</span>
                       </Link>
                     </TD>
-                    <TD align="left" className="whitespace-nowrap text-xs text-[var(--color-fg-muted)] px-3 text-left">
+                    <TD align="center" className="whitespace-nowrap text-xs text-[var(--color-fg-muted)] text-center">
                       {/* Phone and email side by side; a long address truncates. */}
                       {c.phone || c.email ? (
-                        <div className="inline-flex max-w-[340px] items-center gap-3">
+                        <div className="inline-flex max-w-[340px] items-center justify-center gap-3">
                           {c.phone ? (
                             <a
                               href={`tel:${c.phone}`}
                               className="inline-flex shrink-0 items-center gap-1 hover:text-[var(--color-fg)]"
                             >
                               <Phone className="h-3 w-3 shrink-0" />
-                              <span className="tnum">{formatPhone(c.phone)}</span>
+                              <span className="tnum font-mono">{formatPhone(c.phone)}</span>
                             </a>
                           ) : null}
                           {c.email ? (
@@ -258,10 +259,10 @@ export function ClientsView({
                         '—'
                       )}
                     </TD>
-                    <TD className="text-xs text-[var(--color-fg-muted)] max-w-[200px] truncate">
+                    <TD align="center" className="text-xs text-[var(--color-fg-muted)] max-w-[200px] truncate text-center">
                       {c.address ?? '—'}
                     </TD>
-                    <TD>
+                    <TD align="center" className="text-center">
                       {c.isActive ? (
                         <Badge tone="ok">Идэвхтэй</Badge>
                       ) : (
@@ -269,44 +270,51 @@ export function ClientsView({
                       )}
                     </TD>
                     {canEdit || canDelete ? (
-                      <TD>
-                        <div className="flex items-center justify-center gap-1">
+                      <TD align="center" className="py-1.5">
+                        <div className="flex items-center justify-center gap-1.5">
                           {canEdit ? (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => setPermissionClient(c)}
-                              aria-label={`${c.name} цэс хандах эрх`}
-                              title="Цэс хандах эрх"
-                              className="text-[var(--color-brand)] hover:bg-[var(--color-brand-soft)]"
-                            >
-                              <Shield className="h-3.5 w-3.5" />
-                            </Button>
-                          ) : null}
-                          {canEdit ? (
-                            <Button
-                              variant="ghost"
-                              size="sm"
+                            <button
+                              type="button"
                               onClick={() => {
                                 setEditingClient(c);
                                 setModalOpen(true);
                               }}
                               aria-label={`${c.name} засах`}
                               title="Засах"
+                              className="flex h-7 w-7 items-center justify-center rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 transition cursor-pointer"
                             >
-                              <Edit2 className="h-3.5 w-3.5" />
-                            </Button>
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
+                          ) : null}
+                          <Link
+                            href={`/clients/${encodeURIComponent(c.id)}`}
+                            title="Дэлгэрэнгүй харах"
+                            aria-label={`${c.name} дэлгэрэнгүй харах`}
+                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--color-brand)]/30 bg-[var(--color-brand-soft)] text-[var(--color-brand)] hover:bg-[var(--color-brand)]/20 transition cursor-pointer"
+                          >
+                            <Menu className="h-3.5 w-3.5" />
+                          </Link>
+                          {canEdit ? (
+                            <button
+                              type="button"
+                              onClick={() => setPermissionClient(c)}
+                              aria-label={`${c.name} цэс хандах эрх`}
+                              title="Цэс хандах эрх"
+                              className="flex h-7 w-7 items-center justify-center rounded-lg border border-sky-500/30 bg-sky-500/10 text-sky-600 dark:text-sky-400 hover:bg-sky-500/20 transition cursor-pointer"
+                            >
+                              <Shield className="h-3.5 w-3.5" />
+                            </button>
                           ) : null}
                           {canDelete ? (
-                            <Button
-                              variant="ghost"
-                              size="sm"
+                            <button
+                              type="button"
                               onClick={() => setDeletingClient(c)}
                               aria-label={`${c.name} устгах`}
-                              className="text-[var(--color-danger)] hover:bg-[var(--color-danger-soft)]"
+                              title="Устгах"
+                              className="flex h-7 w-7 items-center justify-center rounded-lg border border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 transition cursor-pointer"
                             >
                               <Trash2 className="h-3.5 w-3.5" />
-                            </Button>
+                            </button>
                           ) : null}
                         </div>
                       </TD>

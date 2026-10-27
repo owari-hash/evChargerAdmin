@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import useSWR from 'swr';
-import { FileSearch, ScrollText } from 'lucide-react';
+import { FileSearch, Menu, ScrollText } from 'lucide-react';
 import { REFRESH } from '@/lib/live-query';
 import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
 import { formatDate, formatDateTime } from '@/lib/format';
@@ -79,13 +79,13 @@ export function CertificatesTab() {
             <THead>
               <tr>
                 <TH className="w-12 text-center">№</TH>
-                <TH>Эзэмшигч</TH>
-                <TH>Төрөл</TH>
-                <TH>Цэнэглэх станц</TH>
-                <TH>Олгогч</TH>
-                <TH>Сериал</TH>
-                <TH>Хүчинтэй хугацаа</TH>
-                <TH>Үйлдэл</TH>
+                <TH className="text-center">Эзэмшигч</TH>
+                <TH className="text-center">Төрөл</TH>
+                <TH className="text-center">Цэнэглэх станц</TH>
+                <TH className="text-center">Олгогч</TH>
+                <TH className="text-center">Сериал</TH>
+                <TH className="text-center">Хүчинтэй хугацаа</TH>
+                <TH className="text-center">Үйлдэл</TH>
               </tr>
             </THead>
             <TBody>
@@ -101,38 +101,46 @@ export function CertificatesTab() {
                     cert.validTo != null && new Date(cert.validTo).getTime() < now;
                   return (
                     <TR key={cert._id}>
-                      <TD align="center" className="text-xs text-[var(--color-fg-muted)] font-mono">
+                      <TD align="center" className="text-xs text-[var(--color-fg-muted)] font-mono text-center">
                         {idx + 1}
                       </TD>
-                      <TD className="max-w-[240px] truncate text-xs font-medium">
+                      <TD align="left" className="max-w-[240px] truncate text-xs font-medium px-3 text-left">
                         {cert.subject ?? '—'}
                       </TD>
-                      <TD>
+                      <TD align="center" className="text-center">
                         <Badge tone="idle">{cert.type.replace('Certificate', '')}</Badge>
                       </TD>
-                      <TD className="text-xs">
+                      <TD align="center" className="text-xs text-center">
                         {cert.chargePointId ? (
                           <StationName id={cert.chargePointId} />
                         ) : (
                           '—'
                         )}
                       </TD>
-                      <TD className="max-w-[200px] truncate text-xs text-[var(--color-fg-muted)]">
+                      <TD align="center" className="max-w-[200px] truncate text-xs text-[var(--color-fg-muted)] text-center">
                         {cert.issuer ?? '—'}
                       </TD>
-                      <TD className="max-w-[140px] truncate font-mono text-[11px] text-[var(--color-fg-muted)]">
+                      <TD align="center" className="max-w-[140px] truncate font-mono text-[11px] text-[var(--color-fg-muted)] text-center">
                         {cert.serialNumber ?? '—'}
                       </TD>
-                      <TD className="whitespace-nowrap text-xs">
+                      <TD align="center" className="whitespace-nowrap text-xs text-center">
                         <span className={expired ? 'text-[var(--color-danger)]' : undefined}>
                           {formatDate(cert.validTo)}
                           {expired ? ' (хугацаа дууссан)' : ''}
                         </span>
                       </TD>
-                      <TD>
-                        <Button variant="ghost" size="sm" onClick={() => setViewing(cert)}>
-                          Дэлгэрэнгүй
-                        </Button>
+                      <TD align="center" className="py-1.5">
+                        <div className="flex items-center justify-center">
+                          <button
+                            type="button"
+                            onClick={() => setViewing(cert)}
+                            title="Дэлгэрэнгүй харах"
+                            aria-label="Дэлгэрэнгүй харах"
+                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--color-brand)]/30 bg-[var(--color-brand-soft)] text-[var(--color-brand)] hover:bg-[var(--color-brand)]/20 transition cursor-pointer"
+                          >
+                            <Menu className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
                       </TD>
                     </TR>
                   );

@@ -83,10 +83,10 @@ export function AnnouncementsView({ canEdit }: { canEdit: boolean }) {
             <THead>
               <tr>
                 <TH className="w-12 text-center">№</TH>
-                <TH>Гарчиг</TH>
-                <TH>Төлөв</TH>
-                <TH>Нийтэлсэн</TH>
-                <TH>Шинэчлэгдсэн</TH>
+                <TH className="text-center">Гарчиг</TH>
+                <TH className="text-center">Төлөв</TH>
+                <TH className="text-center">Нийтэлсэн</TH>
+                <TH className="text-center">Шинэчлэгдсэн</TH>
                 {canEdit ? (
                   <TH className="text-center">Үйлдэл</TH>
                 ) : null}
@@ -104,10 +104,10 @@ export function AnnouncementsView({ canEdit }: { canEdit: boolean }) {
                   const num = (page - 1) * limit + idx + 1;
                   return (
                   <TR key={a.id}>
-                    <TD align="center" className="text-xs text-[var(--color-fg-muted)] font-mono">
+                    <TD align="center" className="text-xs text-[var(--color-fg-muted)] font-mono text-center">
                       {num}
                     </TD>
-                    <TD align="left" className="whitespace-nowrap">
+                    <TD align="left" className="whitespace-nowrap px-3 text-left">
                       <div className="inline-flex max-w-[320px] items-center gap-2">
                         <Megaphone className="h-4 w-4 shrink-0 text-[var(--color-fg-muted)]" />
                         <span className="truncate font-medium" title={a.title}>
@@ -115,26 +115,32 @@ export function AnnouncementsView({ canEdit }: { canEdit: boolean }) {
                         </span>
                       </div>
                     </TD>
-                    <TD>
+                    <TD align="center" className="text-center">
                       {a.isActive ? <Badge tone="ok">Идэвхтэй</Badge> : <Badge tone="idle">Идэвхгүй</Badge>}
                     </TD>
-                    <TD className="text-xs text-[var(--color-fg-muted)]">{formatDateTime(a.createdAt)}</TD>
-                    <TD className="text-xs text-[var(--color-fg-muted)]">{formatDateTime(a.updatedAt)}</TD>
+                    <TD align="center" className="text-xs text-[var(--color-fg-muted)] text-center">{formatDateTime(a.createdAt)}</TD>
+                    <TD align="center" className="text-xs text-[var(--color-fg-muted)] text-center">{formatDateTime(a.updatedAt)}</TD>
                     {canEdit ? (
-                      <TD>
-                        <div className="flex items-center justify-center gap-1">
-                          <Button variant="ghost" size="sm" onClick={() => setEditing(a)} aria-label="Засах">
+                      <TD align="center" className="py-1.5">
+                        <div className="flex items-center justify-center gap-1.5">
+                          <button
+                            type="button"
+                            onClick={() => setEditing(a)}
+                            aria-label="Засах"
+                            title="Засах"
+                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 transition cursor-pointer"
+                          >
                             <Pencil className="h-3.5 w-3.5" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
+                          </button>
+                          <button
+                            type="button"
                             onClick={() => setDeleting(a)}
                             aria-label="Устгах"
-                            className="text-[var(--color-danger)] hover:bg-[var(--color-danger-soft)]"
+                            title="Устгах"
+                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 transition cursor-pointer"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
+                          </button>
                         </div>
                       </TD>
                     ) : null}

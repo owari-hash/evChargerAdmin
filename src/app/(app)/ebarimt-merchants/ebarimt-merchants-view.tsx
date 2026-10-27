@@ -5,9 +5,9 @@ import useSWR from 'swr';
 import {
   CheckCircle2,
   Clock,
-  Edit2,
   FileCode2,
   FileText,
+  Pencil,
   Plus,
   Server,
   ShieldCheck,
@@ -144,25 +144,26 @@ export function EbarimtMerchantsView({
           <Table>
             <THead>
               <TR>
-                <TH>Байгууллагын нэр</TH>
-                <TH>Татвар төлөгчийн № (TIN)</TH>
-                <TH>Дүүрэг / Хороо</TH>
-                <TH>И-Баримт төлөв</TH>
-                <TH>Серверийн орчин</TH>
-                <TH>Үйлдэл</TH>
+                <TH className="w-12 text-center">№</TH>
+                <TH className="text-center">Байгууллагын нэр</TH>
+                <TH className="text-center">Татвар төлөгчийн № (TIN)</TH>
+                <TH className="text-center">Дүүрэг / Хороо</TH>
+                <TH className="text-center">И-Баримт төлөв</TH>
+                <TH className="text-center">Серверийн орчин</TH>
+                <TH className="text-center">Үйлдэл</TH>
               </TR>
             </THead>
             <TBody>
               {error ? (
                 <TR>
-                  <TD colSpan={6} className="text-center text-red-500 py-6">
+                  <TD colSpan={7} className="text-center text-red-500 py-6">
                     {errorMessage(error)}
                   </TD>
                 </TR>
               ) : !data && isValidating ? (
-                <TableLoading colSpan={6} rows={5} />
+                <TableLoading colSpan={7} rows={5} />
               ) : merchants.length === 0 ? (
-                <TableEmpty colSpan={6}>
+                <TableEmpty colSpan={7}>
                   <EmptyState
                     icon={<FileText className="h-8 w-8" />}
                     title="И-Баримт тохиргоо олдсонгүй"
@@ -170,7 +171,7 @@ export function EbarimtMerchantsView({
                   />
                 </TableEmpty>
               ) : (
-                merchants.map((item) => {
+                merchants.map((item, idx) => {
                   const itemId = item.id || item._id;
                   const isTest = item.envMode === 'TEST';
                   const activeUrl = isTest
@@ -179,10 +180,11 @@ export function EbarimtMerchantsView({
                   const districtName = DISTRICT_NAMES[item.districtCode] || item.districtCode;
                   const khorooName = item.khorooCode ? `${item.khorooCode}-р хороо` : '1-р хороо';
 
-                  const checkStatus = item.lastCheckResult?.status;
-
                   return (
                     <TR key={itemId}>
+                      <TD align="center" className="text-xs text-[var(--color-fg-muted)] font-mono text-center">
+                        {idx + 1}
+                      </TD>
                       <TD align="left" className="font-normal text-xs px-3 text-left">
                         {item.name}
                         {item.isDefault && (
@@ -191,15 +193,15 @@ export function EbarimtMerchantsView({
                           </span>
                         )}
                       </TD>
-                      <TD className="font-mono text-xs font-normal tracking-wider">
+                      <TD align="center" className="font-mono text-xs font-normal tracking-wider text-center">
                         {item.merchantTin}
                       </TD>
-                      <TD className="text-xs font-normal">
+                      <TD align="center" className="text-xs font-normal text-center">
                         {districtName}, {khorooName}
                       </TD>
-                      <TD>
+                      <TD align="center" className="text-center">
                         <div className="flex flex-col items-center gap-1">
-                          <div className="flex items-center gap-1.5">
+                          <div className="flex items-center justify-center gap-1.5">
                             <Badge tone={item.enabled ? 'ok' : 'idle'}>
                               {item.enabled ? 'И-Баримт идэвхтэй' : 'Идэвхгүй'}
                             </Badge>
@@ -220,7 +222,7 @@ export function EbarimtMerchantsView({
                           </div>
                         </div>
                       </TD>
-                      <TD>
+                      <TD align="center" className="text-center">
                         <div className="flex flex-col items-center">
                           <span
                             className={`inline-flex w-max items-center rounded px-2 py-0.5 text-[11px] font-bold ${
@@ -236,39 +238,42 @@ export function EbarimtMerchantsView({
                           </span>
                         </div>
                       </TD>
-                      <TD>
+                      <TD align="center" className="py-1.5">
                         <div className="flex items-center justify-center gap-1.5">
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            className="text-xs font-semibold gap-1"
-                            loading={checkingId === itemId}
+                          <button
+                            type="button"
+                            disabled={checkingId === itemId}
                             onClick={() => void handleCheckService(item)}
+                            title="Сервис шалгах"
+                            aria-label="Сервис шалгах"
+                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--color-brand)]/30 bg-[var(--color-brand-soft)] text-[var(--color-brand)] hover:bg-[var(--color-brand)]/20 transition cursor-pointer"
                           >
                             <Server className="h-3.5 w-3.5" />
-                            Шалгах
-                          </Button>
+                          </button>
                           {canEdit && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
+                            <button
+                              type="button"
                               onClick={() => {
                                 setEditingMerchant(item);
                                 setModalOpen(true);
                               }}
+                              title="Засах"
+                              aria-label="Засах"
+                              className="flex h-7 w-7 items-center justify-center rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 transition cursor-pointer"
                             >
-                              <Edit2 className="h-4 w-4" />
-                            </Button>
+                              <Pencil className="h-3.5 w-3.5" />
+                            </button>
                           )}
                           {canDelete && (
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              className="text-red-600 hover:text-red-700"
+                            <button
+                              type="button"
                               onClick={() => setDeletingMerchant(item)}
+                              title="Устгах"
+                              aria-label="Устгах"
+                              className="flex h-7 w-7 items-center justify-center rounded-lg border border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 transition cursor-pointer"
                             >
-                              <Trash2 className="h-4 w-4" />
-                            </Button>
+                              <Trash2 className="h-3.5 w-3.5" />
+                            </button>
                           )}
                         </div>
                       </TD>

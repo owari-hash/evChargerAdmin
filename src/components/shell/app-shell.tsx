@@ -42,7 +42,7 @@ export function AppShell({
             <div className="flex min-h-dvh flex-col lg:pl-64">
               <Topbar user={user} onMenu={() => setMenuOpen(true)} />
               <main className="flex-1 px-2.5 py-4 sm:px-6 sm:py-6">
-                <div className="mx-auto w-full max-w-[1400px] min-w-0">
+                <div className="mx-auto w-full max-w-[1850px] min-w-0">
                   {isAllowed ? (
                     children
                   ) : (

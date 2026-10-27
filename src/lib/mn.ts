@@ -24,7 +24,7 @@ export const CONNECTOR_STATUS: Record<string, string> = {
   SuspendedEVSE: 'Станц түр зогсоосон',
   Finishing: 'Дуусгаж байна',
   Reserved: 'Захиалагдсан',
-  Unavailable: 'Ашиглах боломжгүй',
+  Unavailable: 'Идэвхгүй',
   Faulted: 'Эвдрэлтэй',
 };
 

@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import useSWR from 'swr';
-import { Building2, Pencil, Plus, Search, Trash2, Zap } from 'lucide-react';
+import { Building2, Menu, Pencil, Plus, Search, Trash2, Zap } from 'lucide-react';
 import { toast } from 'sonner';
 import { REFRESH } from '@/lib/live-query';
 import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
@@ -125,7 +125,7 @@ export function ChargePointsView({
   });
 
   const rows = data?.data ?? [];
-  const columns = canEdit ? 10 : 9;
+  const columns = 11;
   const [togglingId, setTogglingId] = React.useState<string | null>(null);
 
   /** «Kiosk-д харуулах»: off hides the station from the kiosk and app lists. */
@@ -188,16 +188,6 @@ export function ChargePointsView({
           <PageGuide topic="charge-points" title="Станц удирдах" steps={CHARGE_POINTS_GUIDE_STEPS} />
           {canEdit ? (
             <FilterActions>
-              <Button
-                variant="secondary"
-                size="md"
-                onClick={() => setCleanConfirmOpen(true)}
-                className="text-[var(--color-danger)] hover:bg-[var(--color-danger-soft)] hover:text-[var(--color-danger)]"
-                title="FLEET-SIM, CP-SIM зэрэг туршилтын виртуал станцуудыг баазаас цэвэрлэх"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-                Симулятор станцууд цэвэрлэх
-              </Button>
               <Button variant="primary" size="md" onClick={() => setCreating(true)}>
                 <Plus className="h-3.5 w-3.5" />
                 Станц бүртгэх
@@ -211,19 +201,16 @@ export function ChargePointsView({
             <THead>
               <tr>
                 <TH>Цэнэглэх станц</TH>
+                <TH>Дотоод нэршил</TH>
                 <TH>Харилцагч</TH>
                 <TH>Холболт</TH>
                 <TH>Холбогч</TH>
-                <TH>Үйлдвэрлэгч / загвар</TH>
+                <TH>Үйлдвэрлэгч</TH>
                 <TH>Программ</TH>
                 <TH>Бүртгэл</TH>
                 <TH>Сүүлд холбогдсон</TH>
-                <TH title="Kiosk вэб болон аппын станцын жагсаалт, газрын зурагт харуулах эсэх">Kiosk-д</TH>
-                {canEdit ? (
-                  <TH>
-                    <span className="sr-only">Үйлдэл</span>
-                  </TH>
-                ) : null}
+                <TH title="Kiosk вэб болон аппын станцын жагсаалт, газрын зурагт харуулах эсэх">Төлөв</TH>
+                <TH>Үйлдэл</TH>
               </tr>
             </THead>
             <TBody>
@@ -238,46 +225,48 @@ export function ChargePointsView({
               ) : (
                 rows.map((cp) => (
                   <TR key={cp.id}>
+                    {/* Цэнэглэх станц */}
                     <TD align="left">
-                      <div className="max-w-[200px]">
-                        <Link
-                          href={`/charge-points/${encodeURIComponent(cp.id)}`}
-                          className={cn(
-                            'block truncate font-medium hover:text-[var(--color-brand)] hover:underline',
-                            !cp.name?.trim() && 'font-mono',
-                          )}
-                          title={cp.name?.trim() ? `${cp.name} (${cp.cpId})` : cp.cpId}
-                        >
-                          {cp.name?.trim() || cp.cpId}
-                        </Link>
-                        {cp.name?.trim() ? (
-                          <p className="truncate font-mono text-[11px] text-[var(--color-fg-subtle)]" title={cp.cpId}>
-                            {cp.cpId}
-                          </p>
-                        ) : null}
-                      </div>
+                      <Link
+                        href={`/charge-points/${encodeURIComponent(cp.id)}`}
+                        className="block truncate font-medium text-[var(--color-fg)] hover:text-[var(--color-brand)] hover:underline max-w-[190px]"
+                        title={cp.name?.trim() || cp.cpId}
+                      >
+                        {cp.name?.trim() || cp.cpId}
+                      </Link>
                     </TD>
-                    <TD className="text-xs">
+
+                    {/* Дотоод нэршил */}
+                    <TD align="center" className="font-mono text-xs">
+                      <span className="font-mono text-[var(--color-fg-muted)]" title={cp.cpId}>
+                        {cp.cpId}
+                      </span>
+                    </TD>
+
+                    {/* Харилцагч */}
+                    <TD align="left" className="text-xs">
                       {cp.client ? (
-                        <div className="inline-flex max-w-[180px] items-center">
-                          <Link
-                            href={`/clients/${encodeURIComponent(cp.client.id)}`}
-                            className="inline-flex max-w-full items-center gap-1.5 font-medium text-[var(--color-brand)] hover:underline"
-                            title={cp.client.name}
-                          >
-                            <Building2 className="h-3.5 w-3.5 shrink-0" />
-                            <span className="truncate">{cp.client.name}</span>
-                          </Link>
-                        </div>
+                        <Link
+                          href={`/clients/${encodeURIComponent(cp.client.id)}`}
+                          className="inline-flex max-w-[170px] items-center gap-1.5 font-medium text-[var(--color-brand)] hover:underline truncate"
+                          title={cp.client.name}
+                        >
+                          <Building2 className="h-3.5 w-3.5 shrink-0" />
+                          <span className="truncate">{cp.client.name}</span>
+                        </Link>
                       ) : (
                         <span className="text-[var(--color-fg-subtle)]">—</span>
                       )}
                     </TD>
-                    <TD>
+
+                    {/* Холболт */}
+                    <TD align="center">
                       <OnlineBadge online={cp.isOnline} />
                     </TD>
-                    <TD>
-                      <div className="flex flex-wrap justify-center gap-1">
+
+                    {/* Холбогч */}
+                    <TD align="center">
+                      <div className="flex flex-wrap justify-center gap-1 whitespace-nowrap">
                         {(cp.connectors ?? [])
                           .filter((c) => c.connectorId > 0)
                           .map((c) => (
@@ -292,68 +281,82 @@ export function ChargePointsView({
                         ) : null}
                       </div>
                     </TD>
-                    <TD className="text-xs text-[var(--color-fg-muted)]">
-                      {cp.chargePointVendor || cp.chargePointModel ? (
-                        <div
-                          className="max-w-[150px] truncate"
-                          title={`${cp.chargePointVendor ?? ''} ${cp.chargePointModel ?? ''}`.trim()}
-                        >
-                          {`${cp.chargePointVendor ?? ''} ${cp.chargePointModel ?? ''}`.trim()}
+
+                    {/* Үйлдвэрлэгч */}
+                    <TD align="center" className="text-xs text-[var(--color-fg-muted)]">
+                      {cp.chargePointVendor ? (
+                        <div className="max-w-[120px] truncate" title={cp.chargePointVendor}>
+                          {cp.chargePointVendor}
                         </div>
                       ) : (
                         '—'
                       )}
                     </TD>
-                    <TD className="font-mono text-xs text-[var(--color-fg-muted)]">
+
+                    {/* Программ */}
+                    <TD align="center" className="font-mono text-xs text-[var(--color-fg-muted)]">
                       {cp.firmwareVersion ? (
-                        <div
-                          className="max-w-[130px] truncate"
-                          title={cp.firmwareVersion}
-                        >
+                        <div className="max-w-[100px] truncate" title={cp.firmwareVersion}>
                           {cp.firmwareVersion}
                         </div>
                       ) : (
                         '—'
                       )}
                     </TD>
-                    <TD>
+
+                    {/* Бүртгэл */}
+                    <TD align="center">
                       <RegistrationBadge status={cp.registrationStatus} />
                     </TD>
-                    <TD className="whitespace-nowrap text-xs text-[var(--color-fg-muted)]">
+
+                    {/* Сүүлд холбогдсон */}
+                    <TD align="center" className="whitespace-nowrap text-xs text-[var(--color-fg-muted)]">
                       {formatRelative(cp.lastSeenAt)}
                     </TD>
-                    <TD>
+
+                    {/* Төлөв */}
+                    <TD align="center">
                       <KioskToggle
                         on={cp.showOnKiosk !== false}
                         disabled={!canEdit || togglingId === cp.id}
                         onChange={(next) => void toggleKiosk(cp, next)}
                       />
                     </TD>
-                    {canEdit ? (
-                      <TD>
-                        <div className="flex items-center gap-1">
-                          <Button
-                            variant="ghost"
-                            size="sm"
+
+                    {/* Үйлдэл */}
+                    <TD align="center" className="py-1.5">
+                      <div className="flex items-center justify-center gap-1.5">
+                        {canEdit ? (
+                          <button
+                            type="button"
                             onClick={() => setEditing(cp)}
+                            title="Засах"
                             aria-label={`${cp.name?.trim() || cp.cpId} станцыг засах`}
+                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 transition"
                           >
                             <Pencil className="h-3.5 w-3.5" />
-                            Засах
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="sm"
+                          </button>
+                        ) : null}
+                        <Link
+                          href={`/charge-points/${encodeURIComponent(cp.id)}`}
+                          title="Дэлгэрэнгүй харах"
+                          className="flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--color-brand)]/30 bg-[var(--color-brand-soft)] text-[var(--color-brand)] hover:bg-[var(--color-brand)]/20 transition"
+                        >
+                          <Menu className="h-3.5 w-3.5" />
+                        </Link>
+                        {canEdit ? (
+                          <button
+                            type="button"
                             onClick={() => setDeletingStation(cp)}
-                            className="text-[var(--color-danger)] hover:bg-[var(--color-danger-soft)] hover:text-[var(--color-danger)]"
-                            aria-label={`${cp.name?.trim() || cp.cpId} станцыг устгах`}
                             title="Станц устгах"
+                            aria-label={`${cp.name?.trim() || cp.cpId} станцыг устгах`}
+                            className="flex h-7 w-7 items-center justify-center rounded-lg border border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 transition"
                           >
                             <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      </TD>
-                    ) : null}
+                          </button>
+                        ) : null}
+                      </div>
+                    </TD>
                   </TR>
                 ))
               )}

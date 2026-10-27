@@ -16,12 +16,14 @@ import {
   Clock,
   Calendar,
   ExternalLink,
+  Menu,
+  Trash2,
 } from 'lucide-react';
+import { toast } from 'sonner';
 import { REFRESH } from '@/lib/live-query';
-import { apiUrl, fetcher } from '@/lib/client';
+import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
 import { connectorLetter, formatNumber, formatPower, formatRelative, formatWh } from '@/lib/format';
 import {
-  CONNECTOR_STATUSES,
   type Connector,
   type ConnectorStatus,
   type Paginated,
@@ -31,19 +33,33 @@ import { Badge, Button, Card, Dot, Input, Select } from '@/components/ui/primiti
 import { ErrorCodeBadge } from '@/components/ui/status';
 import { FilterBar, Pagination } from '@/components/ui/pagination';
 import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty, TableLoading } from '@/components/ui/table';
+import { ConfirmModal } from '@/components/ui/modal';
 import { EditConnectorModal } from './edit-connector-modal';
 import { StationName } from '@/components/station-name';
 import { cn } from '@/lib/cn';
 
+const STATUS_OPTIONS: Array<{ value: string; label: string }> = [
+  { value: '', label: 'Бүх төлөв' },
+  { value: 'Available', label: 'Бэлэн' },
+  { value: 'Preparing', label: 'Бэлтгэж байна' },
+  { value: 'Charging', label: 'Цэнэглэж байна' },
+  { value: 'SuspendedEV', label: 'Машин түр зогссон' },
+  { value: 'SuspendedEVSE', label: 'Станц түр зогссон' },
+  { value: 'Finishing', label: 'Дуусгаж байна' },
+  { value: 'Reserved', label: 'Захиалагдсан' },
+  { value: 'Unavailable', label: 'Сүлжээгүй' },
+  { value: 'Faulted', label: 'Эвдрэлтэй' },
+];
+
 /**
- * Maps connector statuses to the exact user-facing labels and visual tones from Image 2
+ * Maps connector statuses to clear Mongolian labels and visual tones
  */
 function renderConnectorStatus(status?: string) {
   if (!status) return <span className="text-[var(--color-fg-subtle)]">—</span>;
 
   if (status === 'Available') {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
         <Dot tone="ok" />
         Бэлэн
       </span>
@@ -52,44 +68,80 @@ function renderConnectorStatus(status?: string) {
 
   if (status === 'Charging') {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-semibold text-blue-500">
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-blue-500/10 px-2.5 py-0.5 text-xs font-semibold text-blue-500 whitespace-nowrap">
         <Dot tone="brand" pulse />
-        Цэнэглэж байгаа
+        Цэнэглэж байна
       </span>
     );
   }
 
-  if (status === 'SuspendedEV' || status === 'SuspendedEVSE') {
+  if (status === 'SuspendedEV') {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-semibold text-amber-500">
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-semibold text-amber-500 whitespace-nowrap">
         <Dot tone="warn" />
-        Машин түр зогссон
+        Машин зогссон
+      </span>
+    );
+  }
+
+  if (status === 'SuspendedEVSE') {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-500/10 px-2.5 py-0.5 text-xs font-semibold text-amber-500 whitespace-nowrap">
+        <Dot tone="warn" />
+        Станц зогссон
       </span>
     );
   }
 
   if (status === 'Preparing') {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-cyan-500/10 px-2.5 py-0.5 text-xs font-semibold text-cyan-500">
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-cyan-500/10 px-2.5 py-0.5 text-xs font-semibold text-cyan-500 whitespace-nowrap">
         <Dot tone="info" pulse />
         Бэлтгэж байна
       </span>
     );
   }
 
+  if (status === 'Finishing') {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-indigo-500/10 px-2.5 py-0.5 text-xs font-semibold text-indigo-500 whitespace-nowrap">
+        <Dot tone="info" />
+        Дуусгаж байна
+      </span>
+    );
+  }
+
+  if (status === 'Reserved') {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-purple-500/10 px-2.5 py-0.5 text-xs font-semibold text-purple-500 whitespace-nowrap">
+        <Dot tone="info" />
+        Захиалагдсан
+      </span>
+    );
+  }
+
   if (status === 'Faulted') {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-500/10 px-2.5 py-0.5 text-xs font-semibold text-rose-500">
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-rose-500/10 px-2.5 py-0.5 text-xs font-semibold text-rose-500 whitespace-nowrap">
         <Dot tone="danger" />
         Эвдрэлтэй
       </span>
     );
   }
 
+  if (status === 'Unavailable') {
+    return (
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-zinc-500/10 px-2.5 py-0.5 text-xs font-semibold text-zinc-500 whitespace-nowrap">
+        <Dot tone="idle" />
+        Сүлжээгүй
+      </span>
+    );
+  }
+
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-surface-2)] px-2.5 py-0.5 text-xs font-semibold text-[var(--color-fg-muted)]">
+    <span className="inline-flex items-center gap-1.5 rounded-full bg-[var(--color-surface-2)] px-2.5 py-0.5 text-xs font-semibold text-[var(--color-fg-muted)] whitespace-nowrap">
       <Dot tone="idle" />
-      Ашиглах боломжгүй
+      {status}
     </span>
   );
 }
@@ -106,10 +158,11 @@ export function ConnectorsView({
   const [status, setStatus] = React.useState(initialStatus);
   const [chargePointId, setChargePointId] = React.useState(initialChargePointId);
   const [debouncedCp, setDebouncedCp] = React.useState(initialChargePointId);
-  const [includeZero, setIncludeZero] = React.useState(false);
   const [page, setPage] = React.useState(1);
   const [limit, setLimit] = React.useState(50);
   const [editing, setEditing] = React.useState<Connector | null>(null);
+  const [deleting, setDeleting] = React.useState<Connector | null>(null);
+  const [busyDelete, setBusyDelete] = React.useState(false);
 
   // Debounce search query
   React.useEffect(() => {
@@ -146,9 +199,8 @@ export function ConnectorsView({
     },
   );
 
-  const all = data?.data ?? [];
-  const rows = React.useMemo(() => (includeZero ? all : all.filter((c) => c.connectorId > 0)), [all, includeZero]);
-  const columns = 10;
+  const rows = React.useMemo(() => (data?.data ?? []).filter((c) => c.connectorId > 0), [data?.data]);
+  const columns = 9;
 
   // Status counts
   const counts = React.useMemo(() => {
@@ -185,6 +237,23 @@ export function ConnectorsView({
     void mutateOverview();
   }
 
+  async function handleDeleteConnector() {
+    if (!deleting) return;
+    setBusyDelete(true);
+    try {
+      const targetId = deleting.id || (deleting as any)._id;
+      await api.del(`connectors/${encodeURIComponent(targetId)}`);
+      toast.success('Холбогч амжилттай устгагдлаа');
+      setDeleting(null);
+      void mutate();
+      void mutateOverview();
+    } catch (err) {
+      toast.error(errorMessage(err));
+    } finally {
+      setBusyDelete(false);
+    }
+  }
+
   function handleClearFilters() {
     setStatus('');
     setChargePointId('');
@@ -192,7 +261,7 @@ export function ConnectorsView({
     setPage(1);
   }
 
-  const hasActiveFilter = Boolean(status || debouncedCp || includeZero);
+  const hasActiveFilter = Boolean(status || debouncedCp);
 
   return (
     <div className="space-y-5">
@@ -318,7 +387,7 @@ export function ConnectorsView({
           </div>
         </button>
 
-        {/* Card 4: Ашиглахад төвөгтэй */}
+        {/* Card 4: Анхаарал шаардлагатай */}
         <button
           type="button"
           onClick={() => {
@@ -333,7 +402,7 @@ export function ConnectorsView({
           )}
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-rose-500">Ашиглахад төвөгтэй</span>
+            <span className="text-xs font-medium text-rose-500">Анхаарал шаардлагатай</span>
             <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-500/15 text-rose-500">
               <AlertTriangle className="h-4 w-4" />
             </div>
@@ -342,7 +411,7 @@ export function ConnectorsView({
             <span className="text-2xl font-bold tracking-tight text-rose-500 tnum font-mono">
               {formatNumber(attentionCount)}
             </span>
-            <p className="mt-1 text-[11px] text-[var(--color-fg-subtle)]">Алдаатай, түдгэлзсэн зогссон</p>
+            <p className="mt-1 text-[11px] text-[var(--color-fg-subtle)]">Эвдрэл, сааталтай холбогч</p>
           </div>
         </button>
       </div>
@@ -381,34 +450,12 @@ export function ConnectorsView({
             }}
             aria-label="Төлөвөөр шүүх"
           >
-            <option value="">Бүх төлөв</option>
-            {CONNECTOR_STATUSES.map((s) => (
-              <option key={s} value={s}>
-                {s === 'Available'
-                  ? 'Бэлэн'
-                  : s === 'Charging'
-                  ? 'Цэнэглэж байгаа'
-                  : s === 'SuspendedEV' || s === 'SuspendedEVSE'
-                  ? 'Машин түр зогссон'
-                  : s === 'Unavailable'
-                  ? 'Ашиглах боломжгүй'
-                  : s === 'Faulted'
-                  ? 'Эвдрэлтэй'
-                  : s}{' '}
-                {counts[s] ? `(${counts[s]})` : ''}
+            {STATUS_OPTIONS.map((opt) => (
+              <option key={opt.value} value={opt.value}>
+                {opt.label} {counts[opt.value] ? `(${counts[opt.value]})` : ''}
               </option>
             ))}
           </Select>
-
-          <label className="flex cursor-pointer items-center gap-1.5 text-xs text-[var(--color-fg-muted)] select-none">
-            <input
-              type="checkbox"
-              className="h-3.5 w-3.5 accent-emerald-500"
-              checked={includeZero}
-              onChange={(e) => setIncludeZero(e.target.checked)}
-            />
-            <span>0-р холбогч (Станцын үндсэн контроллер)</span>
-          </label>
 
           {hasActiveFilter ? (
             <Button
@@ -429,16 +476,15 @@ export function ConnectorsView({
             <Table>
               <THead>
                 <tr>
-                  <TH className="w-12 text-center">№</TH>
                   <TH>Цэнэглэх станц</TH>
                   <TH>Холбогч №</TH>
                   <TH>Төлөв</TH>
                   <TH>Одоогийн явц / Чадал</TH>
                   <TH>Алдаа</TH>
-                  <TH className="text-right">Ашиглалт</TH>
-                  <TH className="text-right">Төлбөр</TH>
+                  <TH>Ашиглалт</TH>
+                  <TH>Төлбөр</TH>
                   <TH>Шинэчлэгдсэн</TH>
-                  <TH className="text-right">Үйлдэл</TH>
+                  <TH>Үйлдэл</TH>
                 </tr>
               </THead>
               <TBody>
@@ -479,8 +525,7 @@ export function ConnectorsView({
                     </div>
                   </TableEmpty>
                 ) : (
-                  rows.map((c, idx) => {
-                    const rowNumber = (page - 1) * limit + idx + 1;
+                  rows.map((c) => {
                     const isCharging = c.status === 'Charging';
                     const hasError = c.errorCode && c.errorCode !== 'NoError';
                     const letter = c.connectorId === 0 ? '#0' : connectorLetter(c.connectorId);
@@ -491,18 +536,15 @@ export function ConnectorsView({
                         key={`${c.chargePointId}-${c.connectorId}`}
                         className={cn(isCharging && 'bg-blue-500/5 hover:bg-blue-500/10')}
                       >
-                        {/* 1. № */}
-                        <TD className="w-12 text-center font-mono text-xs text-[var(--color-fg-subtle)]">
-                          {rowNumber}
+                        {/* 1. Цэнэглэх станц */}
+                        <TD align="left">
+                          <div className="max-w-[200px] truncate text-left">
+                            <StationName id={c.chargePointId} inline link />
+                          </div>
                         </TD>
 
-                        {/* 2. Цэнэглэх станц */}
-                        <TD>
-                          <StationName id={c.chargePointId} />
-                        </TD>
-
-                        {/* 3. Холбогч № (Pill badge like: A CCS2 60 кВт) */}
-                        <TD>
+                        {/* 2. Холбогч № */}
+                        <TD align="center">
                           <span className="inline-flex items-center gap-1.5 rounded-full border border-emerald-500/30 bg-emerald-500/10 px-2 py-0.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
                             <span className="font-bold">{letter}</span>
                             <span>{c.connectorType || 'CCS2'}</span>
@@ -510,14 +552,14 @@ export function ConnectorsView({
                           </span>
                         </TD>
 
-                        {/* 4. Төлөв (Dot badge) */}
-                        <TD>{renderConnectorStatus(c.status)}</TD>
+                        {/* 3. Төлөв */}
+                        <TD align="center">{renderConnectorStatus(c.status)}</TD>
 
-                        {/* 5. Одоогийн явц / Чадал */}
-                        <TD>
+                        {/* 4. Одоогийн явц / Чадал */}
+                        <TD align="center">
                           {isCharging ? (
-                            <div className="flex flex-col gap-1 text-xs">
-                              <div className="flex items-center gap-2">
+                            <div className="flex flex-col items-center gap-1 text-xs">
+                              <div className="flex items-center gap-1.5">
                                 {c.currentTransactionId ? (
                                   <Link
                                     href={`/transactions/${c.currentTransactionId}`}
@@ -556,8 +598,8 @@ export function ConnectorsView({
                           )}
                         </TD>
 
-                        {/* 6. Алдаа */}
-                        <TD>
+                        {/* 5. Алдаа */}
+                        <TD align="center">
                           {hasError ? (
                             <ErrorCodeBadge code={c.errorCode} />
                           ) : (
@@ -565,32 +607,54 @@ export function ConnectorsView({
                           )}
                         </TD>
 
-                        {/* 7. Ашиглалт */}
-                        <TD className="text-right font-mono text-xs text-[var(--color-fg-muted)]">
+                        {/* 6. Ашиглалт */}
+                        <TD align="right" className="font-mono text-xs">
                           {c.lastMeterWh ? `${formatNumber(c.lastMeterWh / 1000, 2)} кВтц` : '—'}
                         </TD>
 
-                        {/* 8. Төлбөр */}
-                        <TD className="text-right font-mono text-xs text-[var(--color-fg-subtle)]">
+                        {/* 7. Төлбөр */}
+                        <TD align="right" className="font-mono text-xs text-[var(--color-fg-subtle)]">
                           —
                         </TD>
 
-                        {/* 9. Шинэчлэгдсэн */}
-                        <TD className="text-xs text-[var(--color-fg-subtle)] whitespace-nowrap">
+                        {/* 8. Шинэчлэгдсэн */}
+                        <TD align="center" className="text-xs text-[var(--color-fg-subtle)] whitespace-nowrap">
                           {formatRelative(c.statusTimestamp ?? c.updatedAt)}
                         </TD>
 
-                        {/* 10. Үйлдэл: Дэлгэрэнгүй */}
-                        <TD className="text-right whitespace-nowrap">
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setEditing(c)}
-                            className="text-xs h-6 px-2 text-emerald-500 hover:text-emerald-400 font-medium"
-                          >
-                            <Pencil className="h-3 w-3 mr-1" />
-                            Дэлгэрэнгүй
-                          </Button>
+                        {/* 9. Үйлдэл */}
+                        <TD align="center" className="py-1.5">
+                          <div className="flex items-center justify-center gap-1.5">
+                            {canOperate ? (
+                              <button
+                                type="button"
+                                onClick={() => setEditing(c)}
+                                title="Засах / Тохируулах"
+                                aria-label="Холбогч засах"
+                                className="flex h-7 w-7 items-center justify-center rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 transition"
+                              >
+                                <Pencil className="h-3.5 w-3.5" />
+                              </button>
+                            ) : null}
+                            <Link
+                              href={`/charge-points/${encodeURIComponent(c.chargePointId)}`}
+                              title="Станцын дэлгэрэнгүй харах"
+                              className="flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--color-brand)]/30 bg-[var(--color-brand-soft)] text-[var(--color-brand)] hover:bg-[var(--color-brand)]/20 transition"
+                            >
+                              <Menu className="h-3.5 w-3.5" />
+                            </Link>
+                            {canOperate ? (
+                              <button
+                                type="button"
+                                onClick={() => setDeleting(c)}
+                                title="Холбогч устгах"
+                                aria-label="Холбогч устгах"
+                                className="flex h-7 w-7 items-center justify-center rounded-lg border border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 transition"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            ) : null}
+                          </div>
                         </TD>
                       </TR>
                     );
@@ -674,16 +738,36 @@ export function ConnectorsView({
                     </div>
                   </div>
 
-                  {/* Action button */}
-                  <Button
-                    variant="secondary"
-                    size="sm"
-                    onClick={() => setEditing(c)}
-                    className="w-full text-xs h-7 text-emerald-500 hover:text-emerald-400 font-medium"
-                  >
-                    <Pencil className="h-3 w-3 mr-1" />
-                    Дэлгэрэнгүй
-                  </Button>
+                  {/* Action buttons */}
+                  <div className="flex items-center justify-end gap-1.5 pt-1">
+                    {canOperate ? (
+                      <button
+                        type="button"
+                        onClick={() => setEditing(c)}
+                        title="Засах / Тохируулах"
+                        className="flex h-7 w-7 items-center justify-center rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 transition"
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </button>
+                    ) : null}
+                    <Link
+                      href={`/charge-points/${encodeURIComponent(c.chargePointId)}`}
+                      title="Станцын дэлгэрэнгүй харах"
+                      className="flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--color-brand)]/30 bg-[var(--color-brand-soft)] text-[var(--color-brand)] hover:bg-[var(--color-brand)]/20 transition"
+                    >
+                      <Menu className="h-3.5 w-3.5" />
+                    </Link>
+                    {canOperate ? (
+                      <button
+                        type="button"
+                        onClick={() => setDeleting(c)}
+                        title="Холбогч устгах"
+                        className="flex h-7 w-7 items-center justify-center rounded-lg border border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 transition"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    ) : null}
+                  </div>
                 </div>
               );
             })
@@ -718,6 +802,22 @@ export function ConnectorsView({
           }}
         />
       ) : null}
+
+      {/* Delete Confirmation Modal */}
+      <ConfirmModal
+        open={Boolean(deleting)}
+        onClose={() => setDeleting(null)}
+        onConfirm={handleDeleteConnector}
+        title="Холбогч устгах"
+        confirmLabel="Устгах"
+        loading={busyDelete}
+        tone="danger"
+        message={
+          <p className="text-xs">
+            Та энэ холбогчийг баазаас устгахдаа итгэлтэй байна уу? Хэрэв тухайн холбогч дээр идэвхтэй цэнэглэлт явагдаж байвал устгах боломжгүй.
+          </p>
+        }
+      />
     </div>
   );
 }

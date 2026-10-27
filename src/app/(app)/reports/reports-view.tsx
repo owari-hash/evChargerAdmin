@@ -884,6 +884,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
             <Table>
               <THead>
                 <tr>
+                  <TH className="w-10 text-center">№</TH>
                   <TH className="text-left">Огноо</TH>
                   <TH className="text-right">Цэнэглэлтийн тоо</TH>
                   <TH className="text-right">Эрчим хүч (кВтц)</TH>
@@ -894,12 +895,15 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
               </THead>
               <TBody>
                 {isLoading && !data ? (
-                  <TableLoading colSpan={6} />
+                  <TableLoading colSpan={7} />
                 ) : daily.length === 0 ? (
-                  <TableEmpty colSpan={6}>Өдрийн хөдөлгөөний өгөгдөл олдсонгүй.</TableEmpty>
+                  <TableEmpty colSpan={7}>Өдрийн хөдөлгөөний өгөгдөл олдсонгүй.</TableEmpty>
                 ) : (
-                  daily.map((d) => (
+                  daily.map((d, idx) => (
                     <TR key={d.date}>
+                      <TD align="center" className="w-10 text-center font-mono text-xs text-[var(--color-fg-subtle)]">
+                        {idx + 1}
+                      </TD>
                       <TD align="left" className="font-mono font-medium text-xs">{formatDate(d.date)}</TD>
                       <TD className="text-right font-medium text-xs">{formatNumber(d.sessionsCount)}</TD>
                       <TD className="text-right font-mono text-xs">{formatNumber(d.energyKwh, 2)} кВтц</TD>
@@ -922,6 +926,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
             <Table>
               <THead>
                 <tr>
+                  <TH className="w-10 text-center">№</TH>
                   <TH className="text-left">Станц</TH>
                   <TH className="text-center">Холбогч</TH>
                   <TH className="text-right">Цэнэглэлт</TH>
@@ -933,12 +938,15 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
               </THead>
               <TBody>
                 {isLoading && !data ? (
-                  <TableLoading colSpan={7} />
+                  <TableLoading colSpan={8} />
                 ) : connectors.length === 0 ? (
-                  <TableEmpty colSpan={7}>Холбогчийн өгөгдөл олдсонгүй.</TableEmpty>
+                  <TableEmpty colSpan={8}>Холбогчийн өгөгдөл олдсонгүй.</TableEmpty>
                 ) : (
-                  connectors.map((c) => (
+                  connectors.map((c, idx) => (
                     <TR key={`${c.chargePointId}-${c.connectorId}`}>
+                      <TD align="center" className="w-10 text-center font-mono text-xs text-[var(--color-fg-subtle)]">
+                        {idx + 1}
+                      </TD>
                       <TD align="left" className="font-medium text-xs">{c.stationName}</TD>
                       <TD>
                         <Badge tone="idle" className="text-[10px] py-0 px-1.5">Буу {connectorLetter(c.connectorId)}</Badge>
@@ -964,6 +972,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
             <Table>
               <THead>
                 <tr>
+                  <TH className="w-10 text-center">№</TH>
                   <TH className="w-20 text-center">Сеанс #</TH>
                   <TH>Станц / Холбогч</TH>
                   <TH>Хугацаа</TH>
@@ -976,12 +985,15 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
               </THead>
               <TBody>
                 {isLoading && !data ? (
-                  <TableLoading colSpan={8} />
+                  <TableLoading colSpan={9} />
                 ) : sessions.length === 0 ? (
-                  <TableEmpty colSpan={8}>Цэнэглэлтийн лог олдсонгүй.</TableEmpty>
+                  <TableEmpty colSpan={9}>Цэнэглэлтийн лог олдсонгүй.</TableEmpty>
                 ) : (
-                  sessions.map((tx) => (
+                  sessions.map((tx, idx) => (
                     <TR key={tx.id}>
+                      <TD align="center" className="w-10 text-center font-mono text-xs text-[var(--color-fg-subtle)]">
+                        {idx + 1}
+                      </TD>
                       <TD className="font-mono text-xs font-bold text-emerald-500 text-center">
                         <Link href={`/transactions/${tx.id}`} className="hover:underline">
                           #{tx.id}

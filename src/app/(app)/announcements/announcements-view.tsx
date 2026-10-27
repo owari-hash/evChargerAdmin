@@ -82,27 +82,31 @@ export function AnnouncementsView({ canEdit }: { canEdit: boolean }) {
           <Table>
             <THead>
               <tr>
+                <TH className="w-12 text-center">№</TH>
                 <TH>Гарчиг</TH>
                 <TH>Төлөв</TH>
                 <TH>Нийтэлсэн</TH>
                 <TH>Шинэчлэгдсэн</TH>
                 {canEdit ? (
-                  <TH>
-                    <span className="sr-only">Үйлдэл</span>
-                  </TH>
+                  <TH className="text-center">Үйлдэл</TH>
                 ) : null}
               </tr>
             </THead>
             <TBody>
               {isLoading && !data ? (
-                <TableLoading colSpan={canEdit ? 5 : 4} />
+                <TableLoading colSpan={canEdit ? 6 : 5} />
               ) : error ? (
-                <TableEmpty colSpan={canEdit ? 5 : 4}>Мэдээг ачаалж чадсангүй.</TableEmpty>
+                <TableEmpty colSpan={canEdit ? 6 : 5}>Мэдээг ачаалж чадсангүй.</TableEmpty>
               ) : rows.length === 0 ? (
-                <TableEmpty colSpan={canEdit ? 5 : 4}>Одоогоор мэдээ нийтлээгүй байна.</TableEmpty>
+                <TableEmpty colSpan={canEdit ? 6 : 5}>Одоогоор мэдээ нийтлээгүй байна.</TableEmpty>
               ) : (
-                rows.map((a) => (
+                rows.map((a, idx) => {
+                  const num = (page - 1) * limit + idx + 1;
+                  return (
                   <TR key={a.id}>
+                    <TD align="center" className="text-xs text-[var(--color-fg-muted)] font-mono">
+                      {num}
+                    </TD>
                     <TD align="left" className="whitespace-nowrap">
                       <div className="inline-flex max-w-[320px] items-center gap-2">
                         <Megaphone className="h-4 w-4 shrink-0 text-[var(--color-fg-muted)]" />
@@ -135,7 +139,8 @@ export function AnnouncementsView({ canEdit }: { canEdit: boolean }) {
                       </TD>
                     ) : null}
                   </TR>
-                ))
+                );
+              })
               )}
             </TBody>
           </Table>

@@ -10,5 +10,6 @@ export default async function PaymentsPage({
   searchParams: Promise<{ q?: string; status?: string }>;
 }) {
   const params = await searchParams;
-  return <PaymentsView initialQuery={params.q ?? ''} initialStatus={params.status ?? ''} />;
+  const initialStatus = params.status !== undefined ? params.status : 'PAID';
+  return <PaymentsView initialQuery={params.q ?? ''} initialStatus={initialStatus} />;
 }

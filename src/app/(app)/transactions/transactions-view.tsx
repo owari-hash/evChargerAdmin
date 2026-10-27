@@ -171,6 +171,7 @@ export function TransactionsView({
                 <TH>Цэнэглэлт ID</TH>
                 <TH>Төлөв</TH>
                 <TH>Цэнэглэх станц</TH>
+                <TH>Хошуу</TH>
                 <TH>Карт</TH>
                 <TH>Эхэлсэн</TH>
                 <TH>Үргэлжилсэн</TH>
@@ -182,11 +183,11 @@ export function TransactionsView({
             </THead>
             <TBody>
               {isLoading && !data ? (
-                <TableLoading colSpan={11} />
+                <TableLoading colSpan={12} />
               ) : error ? (
-                <TableEmpty colSpan={11}>Цэнэглэлтийг ачаалж чадсангүй.</TableEmpty>
+                <TableEmpty colSpan={12}>Цэнэглэлтийг ачаалж чадсангүй.</TableEmpty>
               ) : rows.length === 0 ? (
-                <TableEmpty colSpan={11}>Энэ шүүлтүүрт тохирох цэнэглэлт алга.</TableEmpty>
+                <TableEmpty colSpan={12}>Энэ шүүлтүүрт тохирох цэнэглэлт алга.</TableEmpty>
               ) : (
                 rows.map((tx, idx) => {
                   const num = (page - 1) * limit + idx + 1;
@@ -238,27 +239,37 @@ export function TransactionsView({
                           <TransactionStatusBadge status={tx.status} />
                         )}
                       </TD>
-                      <TD align="left" className="whitespace-nowrap">
-                        <StationName
-                          id={tx.chargePointId}
-                          name={tx.chargePointName}
-                          cpId={tx.cpId}
-                        />
-                        <span className="ml-1 text-xs text-[var(--color-fg-subtle)]">
+
+                      {/* Цэнэглэх станц */}
+                      <TD align="left">
+                        <div className="max-w-[200px] truncate text-left">
+                          <Link
+                            href={`/charge-points/${encodeURIComponent(tx.chargePointId)}`}
+                            className="font-medium text-[var(--color-fg)] hover:text-[var(--color-brand)] hover:underline truncate block"
+                            title={tx.chargePointName || tx.cpId}
+                          >
+                            {tx.chargePointName?.trim() || tx.cpId}
+                          </Link>
+                        </div>
+                      </TD>
+
+                      {/* Хошуу */}
+                      <TD align="center">
+                        <span className="inline-flex h-6 w-6 items-center justify-center rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-bold font-mono text-xs">
                           {connectorLetter(tx.connectorId)}
                         </span>
                       </TD>
-                      <TD align="left" className="text-xs px-3 text-left">
-                        <span className="font-mono">{tx.idTag}</span>
-                        {tx.driver?.name || tx.driver?.vehicleBrand ? (
-                          <p className="text-[var(--color-fg-subtle)]">
-                            {[tx.driver?.name, [tx.driver?.vehicleBrand, tx.driver?.vehicleModel].filter(Boolean).join(' ')]
-                              .filter(Boolean)
-                              .join(' · ')}
+
+                      {/* Карт */}
+                      <TD align="center" className="text-xs font-mono">
+                        <span className="font-mono text-[var(--color-fg)]">{tx.idTag || '—'}</span>
+                        {tx.driver?.name ? (
+                          <p className="text-[11px] text-[var(--color-fg-subtle)] truncate max-w-[140px]">
+                            {tx.driver.name}
                           </p>
                         ) : null}
                       </TD>
-                      <TD className="whitespace-nowrap text-xs text-[var(--color-fg-muted)]">
+                      <TD align="center" className="whitespace-nowrap text-xs text-[var(--color-fg-muted)]">
                         {formatDateTime(tx.startTimestamp)}
                       </TD>
                       <TD className="text-xs font-mono">

@@ -1,4 +1,6 @@
 import type { Metadata } from 'next';
+import { redirect } from 'next/navigation';
+import { getSessionUser } from '@/lib/session';
 import { csmsSafe } from '@/lib/server-api';
 import type { AnalyticsOverview } from '@/lib/types';
 import { BackendDown } from '@/components/backend-down';
@@ -12,6 +14,9 @@ export const metadata: Metadata = {
 export const dynamic = 'force-dynamic';
 
 export default async function AnalyticsPage() {
+  const user = await getSessionUser();
+  if (!user || user.role === 'CLIENT') redirect('/');
+
   const initialData = await csmsSafe<AnalyticsOverview>('/analytics/overview?days=7');
 
   if (!initialData) {

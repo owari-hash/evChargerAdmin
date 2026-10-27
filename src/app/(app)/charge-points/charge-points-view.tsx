@@ -125,7 +125,7 @@ export function ChargePointsView({
   });
 
   const rows = data?.data ?? [];
-  const columns = 11;
+  const columns = 12;
   const [togglingId, setTogglingId] = React.useState<string | null>(null);
 
   /** «Kiosk-д харуулах»: off hides the station from the kiosk and app lists. */
@@ -200,6 +200,7 @@ export function ChargePointsView({
           <Table>
             <THead>
               <tr>
+                <TH className="w-12 text-center">№</TH>
                 <TH>Цэнэглэх станц</TH>
                 <TH>Дотоод нэршил</TH>
                 <TH>Харилцагч</TH>
@@ -223,8 +224,14 @@ export function ChargePointsView({
                   {debounced || online || clientId ? 'Энэ шүүлтүүрт тохирох станц алга.' : 'Одоогоор станц бүртгэгдээгүй байна.'}
                 </TableEmpty>
               ) : (
-                rows.map((cp) => (
+                rows.map((cp, idx) => {
+                  const num = (page - 1) * limit + idx + 1;
+                  return (
                   <TR key={cp.id}>
+                    {/* № */}
+                    <TD align="center" className="text-xs text-[var(--color-fg-muted)] font-mono">
+                      {num}
+                    </TD>
                     {/* Цэнэглэх станц */}
                     <TD align="left">
                       <Link
@@ -358,7 +365,8 @@ export function ChargePointsView({
                       </div>
                     </TD>
                   </TR>
-                ))
+                );
+              })
               )}
             </TBody>
           </Table>

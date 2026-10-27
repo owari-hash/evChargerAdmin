@@ -81,6 +81,10 @@ export function PaymentsView({ initialQuery, initialStatus }: { initialQuery: st
   const [limit, setLimit] = React.useState(50);
   const [checking, setChecking] = React.useState<string | null>(null);
 
+  React.useEffect(() => {
+    setStatus(initialStatus);
+  }, [initialStatus]);
+
   const [debouncedQuery, setDebouncedQuery] = React.useState(query);
   React.useEffect(() => {
     const t = setTimeout(() => {
@@ -136,18 +140,33 @@ export function PaymentsView({ initialQuery, initialStatus }: { initialQuery: st
           value={formatMoney(paid?.amount ?? 0)}
           hint={`${formatNumber(paid?.count ?? 0)} төлбөр амжилттай`}
           tone="ok"
+          active={status === 'PAID'}
+          onClick={() => {
+            setStatus((prev) => (prev === 'PAID' ? '' : 'PAID'));
+            setPage(1);
+          }}
         />
         <Stat
           label="Хүлээгдэж буй"
           value={`${formatNumber(pending?.count ?? 0)} гүйлгээ`}
           hint="Банкны хариу хүлээж байна"
           tone="warn"
+          active={status === 'PENDING'}
+          onClick={() => {
+            setStatus((prev) => (prev === 'PENDING' ? '' : 'PENDING'));
+            setPage(1);
+          }}
         />
         <Stat
           label="Амжилтгүй"
           value={`${formatNumber(failed?.count ?? 0)} гүйлгээ`}
           hint="Карт татгалзсан эсвэл алдаа"
           tone="danger"
+          active={status === 'FAILED'}
+          onClick={() => {
+            setStatus((prev) => (prev === 'FAILED' ? '' : 'FAILED'));
+            setPage(1);
+          }}
         />
       </div>
 
@@ -225,6 +244,7 @@ export function PaymentsView({ initialQuery, initialStatus }: { initialQuery: st
           <Table>
             <THead>
               <tr>
+                <TH className="w-12 text-center">№</TH>
                 <TH>Огноо</TH>
                 <TH>Жолооч</TH>
                 <TH>Хэлбэр</TH>
@@ -232,24 +252,28 @@ export function PaymentsView({ initialQuery, initialStatus }: { initialQuery: st
                 <TH>Төлөв</TH>
                 <TH>Хэтэвч</TH>
                 <TH>Гүйлгээ</TH>
-                <TH />
+                <TH>Үйлдэл</TH>
               </tr>
             </THead>
             <TBody>
               {isLoading && !data ? (
-                <TableLoading colSpan={8} />
+                <TableLoading colSpan={9} />
               ) : error ? (
-                <TableEmpty colSpan={8}>Төлбөрийг ачаалж чадсангүй.</TableEmpty>
+                <TableEmpty colSpan={9}>Төлбөрийг ачаалж чадсангүй.</TableEmpty>
               ) : rows.length === 0 ? (
-                <TableEmpty colSpan={8}>
+                <TableEmpty colSpan={9}>
                   {filtered ? 'Энэ хайлтад тохирох төлбөр алга.' : 'Одоогоор төлбөр алга.'}
                 </TableEmpty>
               ) : (
-                rows.map((p) => {
+                rows.map((p, idx) => {
+                  const num = (page - 1) * limit + idx + 1;
                   const rawWallet = p.payments?.find((x) => x.paymentWallet)?.paymentWallet;
                   const card = p.provider === 'GOLOMT' && rawWallet && !isUuid(rawWallet) ? rawWallet : null;
                   return (
                     <TR key={p.id}>
+                      <TD align="center" className="text-xs text-[var(--color-fg-muted)] font-mono">
+                        {num}
+                      </TD>
                       <TD className="whitespace-nowrap text-xs text-[var(--color-fg-muted)]">
                         {formatDateTime(p.createdAt)}
                       </TD>
@@ -322,9 +346,40 @@ export function PaymentsView({ initialQuery, initialStatus }: { initialQuery: st
   );
 }
 
-function Stat({ label, value, hint, tone }: { label: string; value: string; hint: string; tone: Tone }) {
+function Stat({
+  label,
+  value,
+  hint,
+  tone,
+  active,
+  onClick,
+}: {
+  label: string;
+  value: string;
+  hint: string;
+  tone: Tone;
+  active?: boolean;
+  onClick?: () => void;
+}) {
   return (
-    <Card className="min-w-0 max-w-full overflow-hidden p-3.5 sm:p-4">
+    <Card
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onClick={onClick}
+      onKeyDown={
+        onClick
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onClick();
+              }
+            }
+          : undefined
+      }
+      className={`min-w-0 max-w-full overflow-hidden p-3.5 sm:p-4 text-left transition-all ${
+        onClick ? 'cursor-pointer hover:border-[var(--color-border-strong)]' : ''
+      } ${active ? 'ring-2 ring-[var(--color-brand)] border-transparent bg-[var(--color-bg-subtle)]' : ''}`}
+    >
       <div className="flex items-center justify-between gap-1.5 min-w-0">
         <span className="inline-flex items-center gap-1.5 min-w-0">
           <Dot tone={tone} pulse={tone === 'warn'} />

@@ -62,6 +62,7 @@ export function UsersView({ currentUserId }: { currentUserId: string }) {
           <Table>
             <THead>
               <tr>
+                <TH className="w-12 text-center">№</TH>
                 <TH>И-мэйл</TH>
                 <TH>Нэр</TH>
                 <TH>Эрх</TH>
@@ -69,24 +70,28 @@ export function UsersView({ currentUserId }: { currentUserId: string }) {
                 <TH>Зөвшөөрсөн цэсүүд</TH>
                 <TH>Төлөв</TH>
                 <TH>Сүүлд нэвтэрсэн</TH>
-                <TH />
+                <TH>Үйлдэл</TH>
               </tr>
             </THead>
             <TBody>
               {isLoading && !data ? (
-                <TableLoading colSpan={8} />
+                <TableLoading colSpan={9} />
               ) : error ? (
-                <TableEmpty colSpan={8}>Хэрэглэгчдийг ачаалж чадсангүй.</TableEmpty>
+                <TableEmpty colSpan={9}>Хэрэглэгчдийг ачаалж чадсангүй.</TableEmpty>
               ) : users.length === 0 ? (
-                <TableEmpty colSpan={8}>Хэрэглэгч олдсонгүй.</TableEmpty>
+                <TableEmpty colSpan={9}>Хэрэглэгч олдсонгүй.</TableEmpty>
               ) : (
-                users.map((user) => {
+                users.map((user, idx) => {
+                  const num = idx + 1;
                   const isSelf = user.id === currentUserId;
                   const hasCustomMenus = Array.isArray(user.allowedMenus) && user.allowedMenus.length > 0;
                   const allowedCount = hasCustomMenus ? user.allowedMenus!.length : MANAGEABLE_MENUS.length;
 
                   return (
                     <TR key={user.id}>
+                      <TD align="center" className="text-xs text-[var(--color-fg-muted)] font-mono">
+                        {num}
+                      </TD>
                       <TD align="left" className="text-xs font-normal">
                         {user.email}
                         {isSelf ? (

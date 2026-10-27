@@ -182,6 +182,7 @@ export function ClientDetailView({
               <Table>
                 <THead>
                   <tr>
+                    <TH className="w-12 text-center">№</TH>
                     <TH>Станц</TH>
                     <TH>Холболт</TH>
                     <TH>Холбогч</TH>
@@ -189,21 +190,22 @@ export function ClientDetailView({
                     <TH>Тариф</TH>
                     <TH>Сүүлд холбогдсон</TH>
                     {canEdit ? (
-                      <TH>
-                        <span className="sr-only">Үйлдэл</span>
-                      </TH>
+                      <TH className="text-center">Үйлдэл</TH>
                     ) : null}
                   </tr>
                 </THead>
                 <TBody>
                   {stations.length === 0 ? (
-                    <TableEmpty colSpan={canEdit ? 7 : 6}>
+                    <TableEmpty colSpan={canEdit ? 8 : 7}>
                       Энэ харилцагчид одоогоор станц хуваарилагдаагүй байна. Та станцын мэдээлэл
                       засах хэсгээс энэ харилцагчийг сонгож холбох боломжтой.
                     </TableEmpty>
                   ) : (
-                    stations.map((cp) => (
+                    stations.map((cp, idx) => (
                       <TR key={cp.id}>
+                        <TD align="center" className="text-xs text-[var(--color-fg-muted)] font-mono">
+                          {idx + 1}
+                        </TD>
                         <TD align="left" className="text-left px-3">
                           <Link
                             href={`/charge-points/${encodeURIComponent(cp.id)}`}

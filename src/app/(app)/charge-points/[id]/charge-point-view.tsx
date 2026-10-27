@@ -369,6 +369,7 @@ function OverviewTab({ detail }: { detail: ChargePointDetail }) {
             <Table>
               <THead>
                 <tr>
+                  <TH className="w-12 text-center">№</TH>
                   <TH>Цэнэглэлт</TH>
                   <TH>Холбогч</TH>
                   <TH>Карт</TH>
@@ -380,10 +381,13 @@ function OverviewTab({ detail }: { detail: ChargePointDetail }) {
               </THead>
               <TBody>
                 {active.length === 0 ? (
-                  <TableEmpty colSpan={7}>Одоогоор цэнэглэж буй зүйл алга.</TableEmpty>
+                  <TableEmpty colSpan={8}>Одоогоор цэнэглэж буй зүйл алга.</TableEmpty>
                 ) : (
-                  active.map((tx) => (
+                  active.map((tx, idx) => (
                     <TR key={tx.transactionId ?? tx.id}>
+                      <TD align="center" className="text-xs text-[var(--color-fg-muted)] font-mono">
+                        {idx + 1}
+                      </TD>
                       <TD>
                         <Link
                           href={`/transactions/${tx.transactionId ?? tx.id}`}

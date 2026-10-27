@@ -100,7 +100,7 @@ export function ClientsView({
 
   const rows = data?.data ?? [];
   const total = data?.total ?? 0;
-  const columns = canEdit || canDelete ? 7 : 6;
+  const columns = canEdit || canDelete ? 8 : 7;
 
   async function handleDelete() {
     if (!deletingClient) return;
@@ -166,6 +166,7 @@ export function ClientsView({
           <Table>
             <THead>
               <tr>
+                <TH className="w-12 text-center">№</TH>
                 <TH>Харилцагчийн нэр</TH>
                 <TH>Регистр</TH>
                 <TH>Станцууд</TH>
@@ -189,8 +190,13 @@ export function ClientsView({
                     : 'Одоогоор бүртгэлтэй харилцагч алга байна.'}
                 </TableEmpty>
               ) : (
-                rows.map((c) => (
+                rows.map((c, idx) => {
+                  const num = (page - 1) * limit + idx + 1;
+                  return (
                   <TR key={c.id}>
+                    <TD align="center" className="text-xs text-[var(--color-fg-muted)] font-mono">
+                      {num}
+                    </TD>
                     <TD align="left" className="whitespace-nowrap">
                       {/* One line: name, then the contact person muted. */}
                       <div className="inline-flex max-w-[280px] items-center gap-2">
@@ -306,7 +312,8 @@ export function ClientsView({
                       </TD>
                     ) : null}
                   </TR>
-                ))
+                );
+              })
               )}
             </TBody>
           </Table>

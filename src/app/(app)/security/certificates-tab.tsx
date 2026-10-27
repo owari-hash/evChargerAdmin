@@ -78,28 +78,32 @@ export function CertificatesTab() {
           <Table>
             <THead>
               <tr>
+                <TH className="w-12 text-center">№</TH>
                 <TH>Эзэмшигч</TH>
                 <TH>Төрөл</TH>
                 <TH>Цэнэглэх станц</TH>
                 <TH>Олгогч</TH>
                 <TH>Сериал</TH>
                 <TH>Хүчинтэй хугацаа</TH>
-                <TH />
+                <TH>Үйлдэл</TH>
               </tr>
             </THead>
             <TBody>
               {isLoading && !data ? (
-                <TableLoading colSpan={7} />
+                <TableLoading colSpan={8} />
               ) : error ? (
-                <TableEmpty colSpan={7}>Гэрчилгээг ачаалж чадсангүй.</TableEmpty>
+                <TableEmpty colSpan={8}>Гэрчилгээг ачаалж чадсангүй.</TableEmpty>
               ) : rows.length === 0 ? (
-                <TableEmpty colSpan={7}>Бүртгэгдсэн гэрчилгээ алга.</TableEmpty>
+                <TableEmpty colSpan={8}>Бүртгэгдсэн гэрчилгээ алга.</TableEmpty>
               ) : (
-                rows.map((cert) => {
+                rows.map((cert, idx) => {
                   const expired =
                     cert.validTo != null && new Date(cert.validTo).getTime() < now;
                   return (
                     <TR key={cert._id}>
+                      <TD align="center" className="text-xs text-[var(--color-fg-muted)] font-mono">
+                        {idx + 1}
+                      </TD>
                       <TD className="max-w-[240px] truncate text-xs font-medium">
                         {cert.subject ?? '—'}
                       </TD>
@@ -122,7 +126,7 @@ export function CertificatesTab() {
                       <TD className="whitespace-nowrap text-xs">
                         <span className={expired ? 'text-[var(--color-danger)]' : undefined}>
                           {formatDate(cert.validTo)}
-                          {expired ? ' (expired)' : ''}
+                          {expired ? ' (хугацаа дууссан)' : ''}
                         </span>
                       </TD>
                       <TD>

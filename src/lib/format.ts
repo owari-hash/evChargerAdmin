@@ -67,33 +67,33 @@ export function formatPercent(value: number | undefined | null): string {
   return `${formatNumber(value, 0)}%`;
 }
 
-export function formatDateTime(value?: string | Date | null): string {
-  if (!value) return '—';
-  const d = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(d.getTime())) return '—';
-  return d.toLocaleString('mn-MN', {
-    year: 'numeric',
-    month: 'short',
-    day: '2-digit',
-    hour: '2-digit',
-    minute: '2-digit',
-    second: '2-digit',
-    hour12: false,
-  });
+function pad2(n: number): string {
+  return n < 10 ? `0${n}` : String(n);
 }
 
 export function formatDate(value?: string | Date | null): string {
   if (!value) return '—';
   const d = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(d.getTime())) return '—';
-  return d.toLocaleDateString('mn-MN', { year: 'numeric', month: '2-digit', day: '2-digit' });
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+}
+
+export function formatDateTime(value?: string | Date | null, includeSeconds = true): string {
+  if (!value) return '—';
+  const d = value instanceof Date ? value : new Date(value);
+  if (Number.isNaN(d.getTime())) return '—';
+  const date = `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+  const time = includeSeconds
+    ? `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`
+    : `${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+  return `${date} ${time}`;
 }
 
 export function formatTime(value?: string | Date | null): string {
   if (!value) return '—';
   const d = value instanceof Date ? value : new Date(value);
   if (Number.isNaN(d.getTime())) return '—';
-  return d.toLocaleTimeString('mn-MN', { hour12: false });
+  return `${pad2(d.getHours())}:${pad2(d.getMinutes())}:${pad2(d.getSeconds())}`;
 }
 
 /** "3 мин өмнө", "2 ц өмнө", "саяхан". */

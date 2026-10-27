@@ -140,6 +140,7 @@ export function IdTagsView({
           <Table>
             <THead>
               <tr>
+                <TH className="w-12 text-center">№</TH>
                 <TH>Карт</TH>
                 <TH>Төлөв</TH>
                 <TH>Нэр</TH>
@@ -152,20 +153,24 @@ export function IdTagsView({
             </THead>
             <TBody>
               {isLoading && !data ? (
-                <TableLoading colSpan={8} />
+                <TableLoading colSpan={9} />
               ) : error ? (
-                <TableEmpty colSpan={8}>Картуудыг ачаалж чадсангүй.</TableEmpty>
+                <TableEmpty colSpan={9}>Картуудыг ачаалж чадсангүй.</TableEmpty>
               ) : rows.length === 0 ? (
-                <TableEmpty colSpan={8}>
+                <TableEmpty colSpan={9}>
                   {debounced || status ? 'Энэ шүүлтүүрт тохирох карт алга.' : 'Одоогоор карт алга.'}
                 </TableEmpty>
               ) : (
                 rows.map((tag, index) => {
+                  const num = (page - 1) * limit + index + 1;
                   const expired =
                     tag.expiryDate != null && new Date(tag.expiryDate).getTime() < now;
                   const isEven = index % 2 === 1;
                   return (
                     <TR key={tag.idTag} className="group">
+                      <TD align="center" className="text-xs text-[var(--color-fg-muted)] font-mono">
+                        {num}
+                      </TD>
                       <TD className="font-mono text-xs font-medium">
                         <div className="flex items-center gap-1.5">
                           <span>{tag.idTag}</span>

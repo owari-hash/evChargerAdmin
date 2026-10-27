@@ -126,6 +126,7 @@ export function JobsView() {
           <Table>
             <THead>
               <tr>
+                <TH className="w-12 text-center">№</TH>
                 <TH>Цэнэглэх станц</TH>
                 <TH>Төрөл</TH>
                 <TH>Төлөв</TH>
@@ -139,16 +140,21 @@ export function JobsView() {
             </THead>
             <TBody>
               {isLoading && !data ? (
-                <TableLoading colSpan={9} />
+                <TableLoading colSpan={10} />
               ) : error ? (
-                <TableEmpty colSpan={9}>Ажлуудыг ачаалж чадсангүй.</TableEmpty>
+                <TableEmpty colSpan={10}>Ажлуудыг ачаалж чадсангүй.</TableEmpty>
               ) : rows.length === 0 ? (
-                <TableEmpty colSpan={9}>
+                <TableEmpty colSpan={10}>
                   {tab === 'firmware' ? 'Программын шинэчлэлт бүртгэгдээгүй.' : 'Оношилгооны ажил бүртгэгдээгүй.'}
                 </TableEmpty>
               ) : (
-                rows.map((job) => (
+                rows.map((job, idx) => {
+                  const num = (page - 1) * limit + idx + 1;
+                  return (
                   <TR key={job._id}>
+                    <TD align="center" className="text-xs text-[var(--color-fg-muted)] font-mono">
+                      {num}
+                    </TD>
                     <TD>
                       <StationName id={job.chargePointId} />
                     </TD>
@@ -175,7 +181,8 @@ export function JobsView() {
                       {formatRelative(job.createdAt)}
                     </TD>
                   </TR>
-                ))
+                );
+              })
               )}
             </TBody>
           </Table>

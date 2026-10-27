@@ -225,6 +225,7 @@ export function FeedbackView({ canEdit }: { canEdit: boolean }) {
           <Table>
             <THead>
               <TR>
+                <TH className="w-12 text-center">№</TH>
                 <TH>Огноо</TH>
                 <TH>Жолооч / Утас</TH>
                 <TH className="min-w-[280px]">Санал хүсэлт</TH>
@@ -236,14 +237,19 @@ export function FeedbackView({ canEdit }: { canEdit: boolean }) {
             </THead>
             <TBody>
               {isLoading && rows.length === 0 ? (
-                <TableLoading colSpan={canEdit ? 7 : 6} />
+                <TableLoading colSpan={canEdit ? 8 : 7} />
               ) : rows.length === 0 ? (
-                <TableEmpty colSpan={canEdit ? 7 : 6}>
+                <TableEmpty colSpan={canEdit ? 8 : 7}>
                   Ирсэн санал хүсэлт одоогоор байхгүй байна.
                 </TableEmpty>
               ) : (
-                rows.map((row) => (
+                rows.map((row, idx) => {
+                  const num = (page - 1) * limit + idx + 1;
+                  return (
                   <TR key={row.id}>
+                    <TD align="center" className="text-xs text-[var(--color-fg-muted)] font-mono">
+                      {num}
+                    </TD>
                     <TD className="text-xs text-muted whitespace-nowrap">
                       {formatDateTime(row.createdAt)}
                     </TD>
@@ -343,7 +349,8 @@ export function FeedbackView({ canEdit }: { canEdit: boolean }) {
                       </TD>
                     )}
                   </TR>
-                ))
+                );
+              })
               )}
             </TBody>
           </Table>

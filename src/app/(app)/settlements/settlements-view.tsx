@@ -90,7 +90,7 @@ export function SettlementsView({ canAdmin }: { canAdmin: boolean }) {
   const rows = data?.data ?? [];
   const totals = data?.totals;
   const totalEnergyWh = rows.reduce((acc, r) => acc + r.period.energyWh, 0);
-  const columns = 8;
+  const columns = 9;
 
   return (
     <>
@@ -132,6 +132,7 @@ export function SettlementsView({ canAdmin }: { canAdmin: boolean }) {
           <Table>
             <THead>
               <tr>
+                <TH className="w-12 text-center">№</TH>
                 <TH>Харилцагч</TH>
                 <TH>Цэнэглэлт</TH>
                 <TH>Эрчим хүч</TH>
@@ -139,9 +140,7 @@ export function SettlementsView({ canAdmin }: { canAdmin: boolean }) {
                 <TH align="right" className="text-right px-3">Eplug хураамж</TH>
                 <TH align="right" className="text-right px-3">Харилцагчид олгох</TH>
                 <TH align="right" className="text-right px-3">Нийт үлдэгдэл</TH>
-                <TH>
-                  <span className="sr-only">Үйлдэл</span>
-                </TH>
+                <TH>Үйлдэл</TH>
               </tr>
             </THead>
             <TBody>
@@ -153,11 +152,15 @@ export function SettlementsView({ canAdmin }: { canAdmin: boolean }) {
                 <TableEmpty colSpan={columns}>Бүртгэлтэй харилцагч алга байна.</TableEmpty>
               ) : (
                 <>
-                  {rows.map((r) => {
+                  {rows.map((r, idx) => {
                     const open = expanded === r.client.id;
+                    const num = idx + 1;
                     return (
                       <React.Fragment key={r.client.id}>
                         <TR>
+                          <TD align="center" className="text-xs text-[var(--color-fg-muted)] font-mono">
+                            {num}
+                          </TD>
                           <TD align="left" className="whitespace-nowrap px-3 text-left">
                             <div className="inline-flex max-w-[280px] items-center gap-2">
                               <Building2 className="h-4 w-4 shrink-0 text-[var(--color-fg-muted)]" />
@@ -234,6 +237,7 @@ export function SettlementsView({ canAdmin }: { canAdmin: boolean }) {
                   })}
                   {totals ? (
                     <TR className="bg-[var(--color-surface-2)] font-semibold">
+                      <TD align="center" className="text-xs font-mono font-semibold">—</TD>
                       <TD>Нийт</TD>
                       <TD className="tnum">{formatNumber(totals.sessions)}</TD>
                       <TD className="tnum whitespace-nowrap">{formatWh(totalEnergyWh)}</TD>

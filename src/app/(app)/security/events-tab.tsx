@@ -164,25 +164,31 @@ export function SecurityEventsTab({ canOperate }: { canOperate: boolean }) {
           <Table>
             <THead>
               <tr>
+                <TH className="w-12 text-center">№</TH>
                 <TH>Хугацаа</TH>
                 <TH>Төрөл</TH>
                 <TH>Ноцтой байдал</TH>
                 <TH>Цэнэглэх станц</TH>
                 <TH>Техникийн мэдээлэл</TH>
                 <TH>Хүлээн зөвшөөрсөн</TH>
-                <TH />
+                <TH>Үйлдэл</TH>
               </tr>
             </THead>
             <TBody>
               {isLoading && !data ? (
-                <TableLoading colSpan={7} />
+                <TableLoading colSpan={8} />
               ) : error ? (
-                <TableEmpty colSpan={7}>Аюулгүй байдлын үйл явдлыг ачаалж чадсангүй.</TableEmpty>
+                <TableEmpty colSpan={8}>Аюулгүй байдлын үйл явдлыг ачаалж чадсангүй.</TableEmpty>
               ) : rows.length === 0 ? (
-                <TableEmpty colSpan={7}>Энэ шүүлтүүрт тохирох үйл явдал алга.</TableEmpty>
+                <TableEmpty colSpan={8}>Энэ шүүлтүүрт тохирох үйл явдал алга.</TableEmpty>
               ) : (
-                rows.map((event) => (
+                rows.map((event, idx) => {
+                  const num = (page - 1) * limit + idx + 1;
+                  return (
                   <TR key={event._id}>
+                    <TD align="center" className="text-xs text-[var(--color-fg-muted)] font-mono">
+                      {num}
+                    </TD>
                     <TD className="whitespace-nowrap text-xs text-[var(--color-fg-muted)]">
                       {formatDateTime(event.timestamp)}
                     </TD>
@@ -219,7 +225,8 @@ export function SecurityEventsTab({ canOperate }: { canOperate: boolean }) {
                       ) : null}
                     </TD>
                   </TR>
-                ))
+                );
+              })
               )}
             </TBody>
           </Table>

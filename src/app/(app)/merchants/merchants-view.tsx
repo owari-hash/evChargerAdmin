@@ -220,24 +220,25 @@ export function MerchantsView({
           <Table>
             <THead>
               <tr>
+                <TH className="w-12 text-center">№</TH>
                 <TH>Нэр</TH>
                 <TH>Мерчант ID</TH>
                 <TH>Регистр</TH>
                 <TH>MCC</TH>
                 <TH>Холбоо барих</TH>
                 <TH>Хаяг</TH>
-                <TH />
+                <TH>Үйлдэл</TH>
               </tr>
             </THead>
             <TBody>
               {!ready ? (
-                <TableEmpty colSpan={7}>QuickQR тохиргоо хийгдээгүй.</TableEmpty>
+                <TableEmpty colSpan={8}>QuickQR тохиргоо хийгдээгүй.</TableEmpty>
               ) : isLoading && !data ? (
-                <TableLoading colSpan={7} />
+                <TableLoading colSpan={8} />
               ) : error ? (
-                <TableEmpty colSpan={7}>{errorMessage(error)}</TableEmpty>
+                <TableEmpty colSpan={8}>{errorMessage(error)}</TableEmpty>
               ) : rows.length === 0 ? (
-                <TableEmpty colSpan={7}>Одоогоор бүртгэсэн мерчант алга.</TableEmpty>
+                <TableEmpty colSpan={8}>Одоогоор бүртгэсэн мерчант алга.</TableEmpty>
               ) : (
                 rows.map((m, i) => {
                   const mid = getMerchantId(m);
@@ -249,6 +250,9 @@ export function MerchantsView({
 
                   return (
                     <TR key={mid || i}>
+                      <TD align="center" className="text-xs text-[var(--color-fg-muted)] font-mono">
+                        {i + 1}
+                      </TD>
                       <TD align="left" className="text-xs font-normal px-3 text-left">
                         <div className="flex items-center gap-2">
                           <span>{getMerchantDisplayName(m)}</span>

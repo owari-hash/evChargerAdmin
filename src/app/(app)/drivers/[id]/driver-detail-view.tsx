@@ -400,6 +400,7 @@ export function DriverDetailView({
               <Table>
                 <THead>
                   <TR>
+                    <TH className="w-12 text-center">№</TH>
                     <TH>Цэнэглэлт ID</TH>
                     <TH>Станц / Холбогч</TH>
                     <TH>Цаг хугацаа</TH>
@@ -410,10 +411,13 @@ export function DriverDetailView({
                 </THead>
                 <TBody>
                   {detail.recentSessions.length === 0 ? (
-                    <TableEmpty colSpan={6}>Цэнэглэлтийн түүх олдсонгүй</TableEmpty>
+                    <TableEmpty colSpan={7}>Цэнэглэлтийн түүх олдсонгүй</TableEmpty>
                   ) : (
-                    detail.recentSessions.map((s) => (
+                    detail.recentSessions.map((s, idx) => (
                       <TR key={s.id}>
+                        <TD align="center" className="text-xs text-[var(--color-fg-muted)] font-mono">
+                          {idx + 1}
+                        </TD>
                         <TD className="font-mono text-xs font-normal text-[var(--color-fg)]">
                           <Link
                             href={`/transactions/${s.id}`}

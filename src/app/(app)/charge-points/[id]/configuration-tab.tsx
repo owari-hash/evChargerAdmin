@@ -126,19 +126,23 @@ export function ConfigurationTab({
             <Table>
               <THead>
                 <tr>
+                  <TH className="w-12 text-center">№</TH>
                   <TH>Түлхүүр</TH>
                   <TH>Утга</TH>
                   <TH>Хандалт</TH>
                   <TH>Шинэчлэгдсэн</TH>
-                  <TH />
+                  <TH>Үйлдэл</TH>
                 </tr>
               </THead>
               <TBody>
                 {visible.length === 0 ? (
-                  <TableEmpty colSpan={5}>Энэ шүүлтүүрт тохирох түлхүүр алга.</TableEmpty>
+                  <TableEmpty colSpan={6}>Энэ шүүлтүүрт тохирох түлхүүр алга.</TableEmpty>
                 ) : (
-                  visible.map((k) => (
+                  visible.map((k, idx) => (
                     <TR key={k.key}>
+                      <TD align="center" className="text-xs text-[var(--color-fg-muted)] font-mono">
+                        {idx + 1}
+                      </TD>
                       <TD className="font-mono text-xs font-medium">{k.key}</TD>
                       <TD className="max-w-[420px] truncate font-mono text-xs text-[var(--color-fg-muted)]">
                         {/* AuthorizationKey is write-only per the security white paper (A01.FR.11). */}

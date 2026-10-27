@@ -98,6 +98,7 @@ export function ReservationsView({ canOperate }: { canOperate: boolean }) {
           <Table>
             <THead>
               <tr>
+                <TH className="w-12 text-center">№</TH>
                 <TH>Захиалга</TH>
                 <TH>Төлөв</TH>
                 <TH>Цэнэглэх станц</TH>
@@ -106,22 +107,26 @@ export function ReservationsView({ canOperate }: { canOperate: boolean }) {
                 <TH>Дуусах</TH>
                 <TH>Цэнэглэлт</TH>
                 <TH>Үүсгэсэн</TH>
-                <TH />
+                <TH>Үйлдэл</TH>
               </tr>
             </THead>
             <TBody>
               {isLoading && !data ? (
-                <TableLoading colSpan={9} />
+                <TableLoading colSpan={10} />
               ) : error ? (
-                <TableEmpty colSpan={9}>Захиалгыг ачаалж чадсангүй.</TableEmpty>
+                <TableEmpty colSpan={10}>Захиалгыг ачаалж чадсангүй.</TableEmpty>
               ) : rows.length === 0 ? (
-                <TableEmpty colSpan={9}>Энэ шүүлтүүрт тохирох захиалга алга.</TableEmpty>
+                <TableEmpty colSpan={10}>Энэ шүүлтүүрт тохирох захиалга алга.</TableEmpty>
               ) : (
-                rows.map((r) => {
+                rows.map((r, idx) => {
+                  const num = (page - 1) * limit + idx + 1;
                   const id = r.reservationId ?? r.id;
                   const expired = new Date(r.expiryDate).getTime() < now;
                   return (
                     <TR key={id}>
+                      <TD align="center" className="text-xs text-[var(--color-fg-muted)] font-mono">
+                        {num}
+                      </TD>
                       <TD className="font-mono text-xs font-medium">#{id}</TD>
                       <TD>
                         <ReservationBadge state={r.state} />

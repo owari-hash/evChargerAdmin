@@ -94,24 +94,30 @@ export function CsrsTab({ canOperate }: { canOperate: boolean }) {
           <Table>
             <THead>
               <tr>
+                <TH className="w-12 text-center">№</TH>
                 <TH>Цэнэглэх станц</TH>
                 <TH>Төлөв</TH>
                 <TH>Баталгаажуулсан</TH>
                 <TH>Шалтгаан</TH>
                 <TH>Хүлээн авсан</TH>
-                <TH />
+                <TH>Үйлдэл</TH>
               </tr>
             </THead>
             <TBody>
               {isLoading && !data ? (
-                <TableLoading colSpan={6} />
+                <TableLoading colSpan={7} />
               ) : error ? (
-                <TableEmpty colSpan={6}>Гэрчилгээний хүсэлтийг ачаалж чадсангүй.</TableEmpty>
+                <TableEmpty colSpan={7}>Гэрчилгээний хүсэлтийг ачаалж чадсангүй.</TableEmpty>
               ) : rows.length === 0 ? (
-                <TableEmpty colSpan={6}>Энэ шүүлтүүрт тохирох хүсэлт алга.</TableEmpty>
+                <TableEmpty colSpan={7}>Энэ шүүлтүүрт тохирох хүсэлт алга.</TableEmpty>
               ) : (
-                rows.map((csr) => (
+                rows.map((csr, idx) => {
+                  const num = (page - 1) * limit + idx + 1;
+                  return (
                   <TR key={csr._id}>
+                    <TD align="center" className="text-xs text-[var(--color-fg-muted)] font-mono">
+                      {num}
+                    </TD>
                     <TD>
                       <StationName id={csr.chargePointId} />
                     </TD>
@@ -155,7 +161,8 @@ export function CsrsTab({ canOperate }: { canOperate: boolean }) {
                       </div>
                     </TD>
                   </TR>
-                ))
+                );
+              })
               )}
             </TBody>
           </Table>

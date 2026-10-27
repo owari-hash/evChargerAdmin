@@ -200,7 +200,7 @@ export function ConnectorsView({
   );
 
   const rows = React.useMemo(() => (data?.data ?? []).filter((c) => c.connectorId > 0), [data?.data]);
-  const columns = 9;
+  const columns = 10;
 
   // Status counts
   const counts = React.useMemo(() => {
@@ -476,6 +476,7 @@ export function ConnectorsView({
             <Table>
               <THead>
                 <tr>
+                  <TH className="w-12 text-center">№</TH>
                   <TH>Цэнэглэх станц</TH>
                   <TH>Холбогч №</TH>
                   <TH>Төлөв</TH>
@@ -525,7 +526,8 @@ export function ConnectorsView({
                     </div>
                   </TableEmpty>
                 ) : (
-                  rows.map((c) => {
+                  rows.map((c, idx) => {
+                    const num = (page - 1) * limit + idx + 1;
                     const isCharging = c.status === 'Charging';
                     const hasError = c.errorCode && c.errorCode !== 'NoError';
                     const letter = c.connectorId === 0 ? '#0' : connectorLetter(c.connectorId);
@@ -536,6 +538,11 @@ export function ConnectorsView({
                         key={`${c.chargePointId}-${c.connectorId}`}
                         className={cn(isCharging && 'bg-blue-500/5 hover:bg-blue-500/10')}
                       >
+                        {/* 0. № */}
+                        <TD align="center" className="text-xs text-[var(--color-fg-muted)] font-mono">
+                          {num}
+                        </TD>
+
                         {/* 1. Цэнэглэх станц */}
                         <TD align="left">
                           <div className="max-w-[200px] truncate text-left">

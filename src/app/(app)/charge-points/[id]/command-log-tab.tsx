@@ -36,27 +36,32 @@ export function CommandLogTab({ chargePointId }: { chargePointId: string }) {
         <Table>
           <THead>
             <tr>
+              <TH className="w-12 text-center">№</TH>
               <TH>Хугацаа</TH>
               <TH>Үйлдэл</TH>
               <TH>Төлөв</TH>
               <TH>Илгээсэн</TH>
               <TH>Алдаа</TH>
-              <TH />
+              <TH>Үйлдэл</TH>
             </tr>
           </THead>
           <TBody>
             {isLoading && !data ? (
-              <TableLoading colSpan={6} />
+              <TableLoading colSpan={7} />
             ) : error ? (
-              <TableEmpty colSpan={6}>Командын түүхийг ачаалж чадсангүй.</TableEmpty>
+              <TableEmpty colSpan={7}>Командын түүхийг ачаалж чадсангүй.</TableEmpty>
             ) : rows.length === 0 ? (
-              <TableEmpty colSpan={6}>Энэ станц руу команд илгээгээгүй байна.</TableEmpty>
+              <TableEmpty colSpan={7}>Энэ станц руу команд илгээгээгүй байна.</TableEmpty>
             ) : (
-              rows.map((cmd) => {
+              rows.map((cmd, idx) => {
                 const isOpen = expanded === cmd._id;
+                const num = (page - 1) * limit + idx + 1;
                 return (
                   <React.Fragment key={cmd._id}>
                     <TR interactive onClick={() => setExpanded(isOpen ? null : cmd._id)}>
+                      <TD align="center" className="text-xs text-[var(--color-fg-muted)] font-mono">
+                        {num}
+                      </TD>
                       <TD className="whitespace-nowrap text-xs text-[var(--color-fg-muted)]">
                         {formatDateTime(cmd.createdAt)}
                       </TD>
@@ -74,7 +79,7 @@ export function CommandLogTab({ chargePointId }: { chargePointId: string }) {
                     </TR>
                     {isOpen ? (
                       <tr>
-                        <td colSpan={6} className="bg-[var(--color-surface-2)]/50 px-4 py-3">
+                        <td colSpan={7} className="bg-[var(--color-surface-2)]/50 px-4 py-3">
                           <div className="grid gap-2 lg:grid-cols-2">
                             <div>
                               <p className="mb-1 text-[10px] uppercase tracking-wide text-[var(--color-fg-subtle)]">

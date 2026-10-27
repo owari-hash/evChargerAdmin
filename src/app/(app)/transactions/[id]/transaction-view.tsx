@@ -326,6 +326,7 @@ export function TransactionView({
           <Table>
             <THead>
               <tr>
+                <TH className="w-12 text-center">№</TH>
                 <TH>Хугацаа</TH>
                 <TH>Хэмжигдэхүүн</TH>
                 <TH>Утга</TH>
@@ -337,31 +338,35 @@ export function TransactionView({
             </THead>
             <TBody>
               {meterValues.length === 0 ? (
-                <TableEmpty colSpan={7}>Энэ цэнэглэлтэд тоолуурын утга бүртгэгдээгүй.</TableEmpty>
+                <TableEmpty colSpan={8}>Энэ цэнэглэлтэд тоолуурын утга бүртгэгдээгүй.</TableEmpty>
               ) : (
                 meterValues
                   .slice()
                   .reverse()
                   .slice(0, 200)
                   .flatMap((mv) =>
-                    (mv.sampledValue ?? []).map((sv, i) => (
-                      <TR key={`${mv._id}-${i}`}>
-                        <TD className="whitespace-nowrap text-xs text-[var(--color-fg-muted)]">
-                          {formatDateTime(mv.timestamp)}
-                        </TD>
-                        <TD className="text-xs">
-                          {sv.measurand ?? 'Energy.Active.Import.Register'}
-                        </TD>
-                        <TD className="font-mono text-xs font-medium">
-                          {sv.value}
-                        </TD>
-                        <TD className="text-xs text-[var(--color-fg-muted)]">{sv.unit ?? '—'}</TD>
-                        <TD className="text-xs text-[var(--color-fg-muted)]">{sv.phase ?? '—'}</TD>
-                        <TD className="text-xs text-[var(--color-fg-muted)]">{sv.context ?? '—'}</TD>
-                        <TD className="text-xs text-[var(--color-fg-muted)]">{sv.location ?? '—'}</TD>
-                      </TR>
-                    )),
+                    (mv.sampledValue ?? []).map((sv, i) => ({ mv, sv, key: `${mv._id}-${i}` })),
                   )
+                  .map(({ mv, sv, key }, idx) => (
+                    <TR key={key}>
+                      <TD align="center" className="text-xs text-[var(--color-fg-muted)] font-mono">
+                        {idx + 1}
+                      </TD>
+                      <TD className="whitespace-nowrap text-xs text-[var(--color-fg-muted)]">
+                        {formatDateTime(mv.timestamp)}
+                      </TD>
+                      <TD className="text-xs">
+                        {sv.measurand ?? 'Energy.Active.Import.Register'}
+                      </TD>
+                      <TD className="font-mono text-xs font-medium">
+                        {sv.value}
+                      </TD>
+                      <TD className="text-xs text-[var(--color-fg-muted)]">{sv.unit ?? '—'}</TD>
+                      <TD className="text-xs text-[var(--color-fg-muted)]">{sv.phase ?? '—'}</TD>
+                      <TD className="text-xs text-[var(--color-fg-muted)]">{sv.context ?? '—'}</TD>
+                      <TD className="text-xs text-[var(--color-fg-muted)]">{sv.location ?? '—'}</TD>
+                    </TR>
+                  ))
               )}
             </TBody>
           </Table>

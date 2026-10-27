@@ -88,32 +88,37 @@ export function MessagesTab({ chargePointId }: { chargePointId: string }) {
         <Table>
           <THead>
             <tr>
+              <TH className="w-12 text-center">№</TH>
               <TH>Хугацаа</TH>
               <TH>Чиглэл</TH>
               <TH>Төрөл</TH>
               <TH>Үйлдэл</TH>
               <TH>Мессежийн дугаар</TH>
-              <TH />
+              <TH>Үйлдэл</TH>
             </tr>
           </THead>
           <TBody>
             {isLoading && !data ? (
-              <TableLoading colSpan={6} />
+              <TableLoading colSpan={7} />
             ) : error ? (
-              <TableEmpty colSpan={6}>Мессежийг ачаалж чадсангүй.</TableEmpty>
+              <TableEmpty colSpan={7}>Мессежийг ачаалж чадсангүй.</TableEmpty>
             ) : rows.length === 0 ? (
-              <TableEmpty colSpan={6}>
+              <TableEmpty colSpan={7}>
                 Лог бүртгэгдээгүй байна. Мессеж хадгалахын тулд backend дээр OCPP_LOG_MESSAGES=true болгоно уу.
               </TableEmpty>
             ) : (
-              rows.map((msg) => {
+              rows.map((msg, idx) => {
                 const isOpen = expanded === msg._id;
+                const num = (page - 1) * limit + idx + 1;
                 return (
                   <React.Fragment key={msg._id}>
                     <TR
                       interactive
                       onClick={() => setExpanded(isOpen ? null : msg._id)}
                     >
+                      <TD align="center" className="text-xs text-[var(--color-fg-muted)] font-mono">
+                        {num}
+                      </TD>
                       <TD className="whitespace-nowrap text-xs text-[var(--color-fg-muted)]">
                         {formatDateTime(msg.timestamp)}
                       </TD>
@@ -149,7 +154,7 @@ export function MessagesTab({ chargePointId }: { chargePointId: string }) {
                     </TR>
                     {isOpen ? (
                       <tr>
-                        <td colSpan={6} className="bg-[var(--color-surface-2)]/50 px-4 py-3">
+                        <td colSpan={7} className="bg-[var(--color-surface-2)]/50 px-4 py-3">
                           <CodeBlock>{formatJson(msg.payload) || '(empty payload)'}</CodeBlock>
                         </td>
                       </tr>

@@ -147,6 +147,7 @@ export default async function OverviewPage() {
             <Table>
               <THead>
                 <tr>
+                  <TH className="w-12 text-center">№</TH>
                   <TH>Цэнэглэлт</TH>
                   <TH>Цэнэглэх станц</TH>
                   <TH>Карт</TH>
@@ -158,10 +159,13 @@ export default async function OverviewPage() {
               </THead>
               <TBody>
                 {!active?.length ? (
-                  <TableEmpty colSpan={7}>Одоогоор идэвхтэй цэнэглэлт алга.</TableEmpty>
+                  <TableEmpty colSpan={8}>Одоогоор идэвхтэй цэнэглэлт алга.</TableEmpty>
                 ) : (
-                  active.slice(0, 8).map((tx) => (
+                  active.slice(0, 8).map((tx, idx) => (
                     <TR key={tx.transactionId}>
+                      <TD align="center" className="text-xs text-[var(--color-fg-muted)] font-mono">
+                        {idx + 1}
+                      </TD>
                       <TD>
                         <Link
                           href={`/transactions/${tx.transactionId}`}

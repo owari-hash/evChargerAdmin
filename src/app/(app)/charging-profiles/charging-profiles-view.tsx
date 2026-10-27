@@ -75,6 +75,7 @@ export function ChargingProfilesView() {
           <Table>
             <THead>
               <tr>
+                <TH className="w-12 text-center">№</TH>
                 <TH>Профайл</TH>
                 <TH>Цэнэглэх станц</TH>
                 <TH>Холбогч</TH>
@@ -84,22 +85,26 @@ export function ChargingProfilesView() {
                 <TH>Хуваарь</TH>
                 <TH>Хүчинтэй</TH>
                 <TH>Үүсгэсэн</TH>
-                <TH />
+                <TH>Үйлдэл</TH>
               </tr>
             </THead>
             <TBody>
               {isLoading && !data ? (
-                <TableLoading colSpan={10} />
+                <TableLoading colSpan={11} />
               ) : error ? (
-                <TableEmpty colSpan={10}>Цэнэглэх профайлыг ачаалж чадсангүй.</TableEmpty>
+                <TableEmpty colSpan={11}>Цэнэглэх профайлыг ачаалж чадсангүй.</TableEmpty>
               ) : rows.length === 0 ? (
-                <TableEmpty colSpan={10}>Суулгасан цэнэглэх профайл алга.</TableEmpty>
+                <TableEmpty colSpan={11}>Суулгасан цэнэглэх профайл алга.</TableEmpty>
               ) : (
-                rows.map((p) => {
+                rows.map((p, idx) => {
                   const isOpen = expanded === p._id;
+                  const num = idx + 1;
                   return (
                     <React.Fragment key={p._id}>
                       <TR interactive onClick={() => setExpanded(isOpen ? null : p._id)}>
+                        <TD align="center" className="text-xs text-[var(--color-fg-muted)] font-mono">
+                          {num}
+                        </TD>
                         <TD className="font-mono text-xs font-medium">#{p.chargingProfileId}</TD>
                         <TD>
                           <StationName id={p.chargePointId} />
@@ -136,7 +141,7 @@ export function ChargingProfilesView() {
                       </TR>
                       {isOpen ? (
                         <tr>
-                          <td colSpan={10} className="bg-[var(--color-surface-2)]/50 px-4 py-3">
+                          <td colSpan={11} className="bg-[var(--color-surface-2)]/50 px-4 py-3">
                             <CodeBlock>{formatJson(p.chargingSchedule) || '(no schedule)'}</CodeBlock>
                           </td>
                         </tr>

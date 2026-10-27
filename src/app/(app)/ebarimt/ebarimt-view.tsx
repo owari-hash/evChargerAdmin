@@ -5,7 +5,7 @@ import useSWR from 'swr';
 import Link from 'next/link';
 import { Eye, Receipt, RefreshCw, Search, Undo2 } from 'lucide-react';
 import { apiUrl, fetcher } from '@/lib/client';
-import { formatDateTime, formatMoney, formatNumber } from '@/lib/format';
+import { formatAmount, formatDateTime, formatMoney, formatNumber, formatPhone } from '@/lib/format';
 import { Badge, Button, Card, Dot, Input, Select, type Tone } from '@/components/ui/primitives';
 import { DateRangePicker } from '@/components/ui/date-picker';
 import { FilterBar, Pagination } from '@/components/ui/pagination';
@@ -209,8 +209,8 @@ export function EbarimtView({
                 <TH>Төрөл</TH>
                 <TH>ДДТД (Баримтын №)</TH>
                 <TH>Сугалаа</TH>
-                <TH className="text-right">Нийт дүн</TH>
-                <TH className="text-right">НӨАТ</TH>
+                <TH align="right" className="text-right px-3">Нийт дүн</TH>
+                <TH align="right" className="text-right px-3">НӨАТ</TH>
                 <TH>Хэрэглэгч / Регистр</TH>
                 <TH>Эх үүсвэр</TH>
                 <TH>Төлөв</TH>
@@ -261,29 +261,29 @@ export function EbarimtView({
                       </TD>
                       <TD className="whitespace-nowrap">
                         {row.lottery ? (
-                          <span className="font-mono text-xs font-bold text-[var(--color-brand)]">
+                          <span className="font-mono text-xs font-normal text-[var(--color-brand)]">
                             {row.lottery}
                           </span>
                         ) : (
                           <span className="text-xs text-[var(--color-fg-subtle)]">—</span>
                         )}
                       </TD>
-                      <TD className="whitespace-nowrap text-right font-medium text-xs">
-                        {formatMoney(row.totalAmount)}
+                      <TD align="right" className="whitespace-nowrap text-right font-mono text-xs font-normal px-3">
+                        {formatAmount(row.totalAmount)}
                       </TD>
-                      <TD className="whitespace-nowrap text-right text-xs text-[var(--color-fg-muted)]">
-                        {formatMoney(row.totalVAT)}
+                      <TD align="right" className="whitespace-nowrap text-right font-mono text-xs text-[var(--color-fg-muted)] font-normal px-3">
+                        {formatAmount(row.totalVAT)}
                       </TD>
                       <TD className="whitespace-nowrap text-xs">
                         <div className="min-w-0">
                           {row.customerTin ? (
-                            <span className="font-mono font-semibold text-[var(--color-fg)]">
+                            <span className="font-mono font-normal text-[var(--color-fg)]">
                               {row.customerTin}
                             </span>
                           ) : row.customerNo ? (
                             <span className="font-mono">{row.customerNo}</span>
                           ) : row.driver?.phone ? (
-                            <span className="font-mono">{row.driver.phone}</span>
+                            <span className="font-mono">{formatPhone(row.driver.phone)}</span>
                           ) : (
                             <span className="text-[var(--color-fg-subtle)]">—</span>
                           )}

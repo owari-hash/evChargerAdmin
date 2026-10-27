@@ -183,18 +183,18 @@ export function EbarimtMerchantsView({
 
                   return (
                     <TR key={itemId}>
-                      <TD className="font-semibold text-slate-900 dark:text-slate-100">
+                      <TD align="left" className="font-normal text-xs px-3 text-left">
                         {item.name}
                         {item.isDefault && (
-                          <span className="ml-2 inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
+                          <span className="ml-2 inline-flex items-center rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-normal text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
                             Үндсэн
                           </span>
                         )}
                       </TD>
-                      <TD className="font-mono text-base font-bold text-slate-900 dark:text-slate-100 tracking-wider">
+                      <TD className="font-mono text-xs font-normal tracking-wider">
                         {item.merchantTin}
                       </TD>
-                      <TD className="text-slate-700 dark:text-slate-300 text-sm font-medium">
+                      <TD className="text-xs font-normal">
                         {districtName}, {khorooName}
                       </TD>
                       <TD>

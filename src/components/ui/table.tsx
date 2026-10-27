@@ -155,7 +155,19 @@ export function TH({ className, ...props }: React.ComponentProps<'th'>) {
 }
 
 export function TBody({ className, ...props }: React.ComponentProps<'tbody'>) {
-  return <tbody className={cn('divide-y divide-[var(--color-border)]', className)} {...props} />;
+  return (
+    <tbody
+      className={cn(
+        'divide-y divide-[var(--color-border)]',
+        '[&>tr:not([data-static]):nth-child(even)]:bg-[#dcf2ea] dark:[&>tr:not([data-static]):nth-child(even)]:bg-emerald-900/35',
+        '[&>tr:not([data-static]):nth-child(even):hover]:bg-[#cbeae0] dark:[&>tr:not([data-static]):nth-child(even):hover]:bg-emerald-900/50',
+        '[&>tr:not([data-static]):nth-child(odd)]:bg-white dark:[&>tr:not([data-static]):nth-child(odd)]:bg-[var(--color-surface)]',
+        '[&>tr:not([data-static]):nth-child(odd):hover]:bg-[#f0faf6] dark:[&>tr:not([data-static]):nth-child(odd):hover]:bg-[var(--color-surface-2)]',
+        className,
+      )}
+      {...props}
+    />
+  );
 }
 
 export function TR({
@@ -167,7 +179,7 @@ export function TR({
     <tr
       className={cn(
         'transition-colors',
-        interactive && 'cursor-pointer hover:bg-[var(--color-surface-2)]',
+        interactive && 'cursor-pointer',
         className,
       )}
       {...props}
@@ -183,10 +195,10 @@ export function TD({
   return (
     <td
       className={cn(
-        'px-2.5 py-1.5 text-xs text-[var(--color-fg)] border-r border-[var(--color-border)] last:border-r-0 leading-normal',
-        align === 'right' && 'text-right',
+        'px-2.5 py-1.5 text-xs text-[var(--color-fg)] border-r border-[var(--color-border)] last:border-r-0 leading-normal font-normal',
+        align === 'right' && 'text-right px-3',
         align === 'center' && 'text-center',
-        align === 'left' && 'text-left',
+        align === 'left' && 'text-left px-3',
         className,
       )}
       {...props}
@@ -196,8 +208,8 @@ export function TD({
 
 export function TableEmpty({ colSpan, children }: { colSpan: number; children: React.ReactNode }) {
   return (
-    <tr>
-      <td colSpan={colSpan} className="px-4 py-12 text-center text-sm text-[var(--color-fg-muted)]">
+    <tr data-static className="bg-transparent hover:bg-transparent">
+      <td colSpan={colSpan} className="px-4 py-12 text-center text-sm text-[var(--color-fg-muted)] border-0">
         {children}
       </td>
     </tr>
@@ -208,8 +220,16 @@ export function TableLoading({ colSpan, rows = 5 }: { colSpan: number; rows?: nu
   return (
     <>
       {Array.from({ length: rows }).map((_, i) => (
-        <tr key={i}>
-          <td colSpan={colSpan} className="px-2.5 py-1.5">
+        <tr
+          key={i}
+          data-static
+          className={
+            i % 2 === 1
+              ? 'bg-[#dcf2ea] dark:bg-emerald-900/35'
+              : 'bg-white dark:bg-[var(--color-surface)]'
+          }
+        >
+          <td colSpan={colSpan} className="px-2.5 py-1.5 border-r border-[var(--color-border)] last:border-r-0">
             <div className="h-3.5 w-full animate-pulse rounded bg-[var(--color-surface-2)]" />
           </td>
         </tr>

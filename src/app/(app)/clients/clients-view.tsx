@@ -17,7 +17,7 @@ import {
 import { toast } from 'sonner';
 import { REFRESH } from '@/lib/live-query';
 import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
-import { formatNumber, formatRelative } from '@/lib/format';
+import { formatNumber, formatPhone, formatRelative } from '@/lib/format';
 import type { Client, Paginated } from '@/lib/types';
 import {
   Badge,
@@ -224,7 +224,7 @@ export function ClientsView({
                         <span>{c.stationCount ?? 0} станц</span>
                       </Link>
                     </TD>
-                    <TD className="whitespace-nowrap text-xs text-[var(--color-fg-muted)]">
+                    <TD align="left" className="whitespace-nowrap text-xs text-[var(--color-fg-muted)] px-3 text-left">
                       {/* Phone and email side by side; a long address truncates. */}
                       {c.phone || c.email ? (
                         <div className="inline-flex max-w-[340px] items-center gap-3">
@@ -234,7 +234,7 @@ export function ClientsView({
                               className="inline-flex shrink-0 items-center gap-1 hover:text-[var(--color-fg)]"
                             >
                               <Phone className="h-3 w-3 shrink-0" />
-                              <span className="tnum">{c.phone}</span>
+                              <span className="tnum">{formatPhone(c.phone)}</span>
                             </a>
                           ) : null}
                           {c.email ? (

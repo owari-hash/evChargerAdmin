@@ -242,7 +242,7 @@ export function DriversView({
                 <THead>
                   <TR>
                     <TH className="w-10 text-center">№</TH>
-                    <TH align="left" className="text-left px-3">Жолооч</TH>
+                    <TH className="text-center">Жолооч</TH>
                     <TH className="text-center">Утас</TH>
                     <TH className="text-center">Имэйл</TH>
                     <TH className="text-center">Тээврийн хэрэгсэл</TH>
@@ -264,14 +264,7 @@ export function DriversView({
                       const rowNum = (page - 1) * limit + index + 1;
                       const isEven = index % 2 === 1;
                       return (
-                        <TR
-                          key={d.id}
-                          className={`group transition-colors ${
-                            isEven
-                              ? 'bg-[#dcf2ea] dark:bg-emerald-900/35 hover:bg-[#cbeae0] dark:hover:bg-emerald-900/50'
-                              : 'bg-white dark:bg-[var(--color-surface)] hover:bg-[#f0faf6] dark:hover:bg-[var(--color-surface-2)]'
-                          }`}
-                        >
+                        <TR key={d.id} className="group">
                           <TD className="font-mono text-xs font-normal text-[var(--color-fg-subtle)] border-r border-[var(--color-border)] text-center py-1.5">
                             {rowNum}
                           </TD>
@@ -293,8 +286,8 @@ export function DriversView({
                             </span>
                           </TD>
 
-                          {/* Email */}
-                          <TD align="center" className="border-r border-[var(--color-border)] py-1.5 text-center">
+                          {/* Email (left start) */}
+                          <TD align="left" className="border-r border-[var(--color-border)] py-1.5 px-3 text-left">
                             <span className="text-xs font-normal text-[var(--color-fg-subtle)] truncate max-w-[170px] inline-block">
                               {d.email || '—'}
                             </span>

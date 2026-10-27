@@ -23,7 +23,7 @@ import {
 import { toast } from 'sonner';
 import { REFRESH } from '@/lib/live-query';
 import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
-import { connectorLetter, formatDateTime, formatMoney, formatNumber, formatRelative } from '@/lib/format';
+import { connectorLetter, formatDateTime, formatMoney, formatNumber, formatPhone, formatRelative } from '@/lib/format';
 import type { ChargePoint, Client, IdTag, Paginated } from '@/lib/types';
 import {
   Badge,
@@ -204,10 +204,10 @@ export function ClientDetailView({
                   ) : (
                     stations.map((cp) => (
                       <TR key={cp.id}>
-                        <TD>
+                        <TD align="left" className="text-left px-3">
                           <Link
                             href={`/charge-points/${encodeURIComponent(cp.id)}`}
-                            className="font-medium hover:text-[var(--color-brand)] hover:underline flex items-center gap-1.5 justify-center"
+                            className="font-normal hover:text-[var(--color-brand)] hover:underline flex items-center gap-1.5"
                           >
                             <span className={cp.name?.trim() ? undefined : 'font-mono'}>
                               {cp.name?.trim() || cp.cpId}
@@ -296,7 +296,7 @@ export function ClientDetailView({
                 {client.businessRegister ?? '—'}
               </DataRow>
               <DataRow label="Холбоо барих">{client.contactPerson ?? '—'}</DataRow>
-              <DataRow label="Утас">{client.phone ?? '—'}</DataRow>
+              <DataRow label="Утас">{client.phone ? formatPhone(client.phone) : '—'}</DataRow>
               <DataRow label="Имэйл">{client.email ?? '—'}</DataRow>
               <DataRow label="Хаяг">{client.address ?? '—'}</DataRow>
               <DataRow label="Төлөв">

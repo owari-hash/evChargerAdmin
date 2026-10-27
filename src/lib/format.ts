@@ -40,6 +40,22 @@ export function connectorLetter(connectorId: number): string {
   return String.fromCharCode(64 + connectorId);
 }
 
+/** Format phone number to clean Mongolian mobile without +976 or 976 prefix */
+export function formatPhone(phone?: string | null): string {
+  if (!phone) return '—';
+  const clean = String(phone).replace(/^(\+976|976)/, '').trim();
+  return clean || '—';
+}
+
+/** Formats amounts with two decimals and comma separation, without the ₮ symbol (e.g. 123,123.00) */
+export function formatAmount(value: number | undefined | null, digits = 2): string {
+  if (value === undefined || value === null || Number.isNaN(Number(value))) return '0.00';
+  return Number(value).toLocaleString('en-US', {
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  });
+}
+
 /** Mongolian tögrög. The backend stores cost in whatever unit the tariff uses. */
 export function formatMoney(value: number | undefined | null, digits = 0): string {
   if (value === undefined || value === null || Number.isNaN(value)) return '—';

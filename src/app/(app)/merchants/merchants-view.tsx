@@ -6,6 +6,7 @@ import { Check, CheckCircle2, Plus, Settings, Store, Trash2, TriangleAlert } fro
 import { toast } from 'sonner';
 import { REFRESH } from '@/lib/live-query';
 import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
+import { formatPhone } from '@/lib/format';
 import type { PaymentsConfig, QpayActiveMerchantConfig, QpayMerchant } from '@/lib/types';
 import { Badge, Button, Card, EmptyState } from '@/components/ui/primitives';
 import { CopyButton } from '@/components/ui/copy-button';
@@ -248,7 +249,7 @@ export function MerchantsView({
 
                   return (
                     <TR key={mid || i}>
-                      <TD className="text-xs font-medium">
+                      <TD align="left" className="text-xs font-normal px-3 text-left">
                         <div className="flex items-center gap-2">
                           <span>{getMerchantDisplayName(m)}</span>
                           {isActive && <Badge tone="ok">Идэвхтэй</Badge>}
@@ -273,8 +274,8 @@ export function MerchantsView({
                       <TD className="text-xs">
                         {m.mcc_code ? <Badge tone="info">{m.mcc_code}</Badge> : '—'}
                       </TD>
-                      <TD className="text-xs">
-                        {m.phone ?? '—'}
+                      <TD align="left" className="text-xs px-3 text-left">
+                        {formatPhone(m.phone)}
                         {m.email ? (
                           <p className="text-[var(--color-fg-subtle)]">{m.email}</p>
                         ) : null}

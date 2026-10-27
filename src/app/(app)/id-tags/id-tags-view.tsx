@@ -165,14 +165,7 @@ export function IdTagsView({
                     tag.expiryDate != null && new Date(tag.expiryDate).getTime() < now;
                   const isEven = index % 2 === 1;
                   return (
-                    <TR
-                      key={tag.idTag}
-                      className={`group transition-colors ${
-                        isEven
-                          ? 'bg-[#dcf2ea] dark:bg-emerald-900/35 hover:bg-[#cbeae0] dark:hover:bg-emerald-900/50'
-                          : 'bg-white dark:bg-[var(--color-surface)] hover:bg-[#f0faf6] dark:hover:bg-[var(--color-surface-2)]'
-                      }`}
-                    >
+                    <TR key={tag.idTag} className="group">
                       <TD className="font-mono text-xs font-medium">
                         <div className="flex items-center gap-1.5">
                           <span>{tag.idTag}</span>

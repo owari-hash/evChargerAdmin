@@ -8,6 +8,7 @@ import { REFRESH } from '@/lib/live-query';
 import { apiUrl, fetcher } from '@/lib/client';
 import {
   connectorLetter,
+  formatAmount,
   formatDateTime,
   formatDuration,
   formatMoney,
@@ -175,7 +176,7 @@ export function TransactionsView({
                 <TH>Үргэлжилсэн</TH>
                 <TH>Эрчим хүч</TH>
                 <TH>Чадал / SoC</TH>
-                <TH className="text-right">Төлбөр</TH>
+                <TH align="right" className="text-right px-3">Төлбөр</TH>
                 <TH>Зогссон шалтгаан</TH>
               </tr>
             </THead>
@@ -247,7 +248,7 @@ export function TransactionsView({
                           {connectorLetter(tx.connectorId)}
                         </span>
                       </TD>
-                      <TD className="text-xs">
+                      <TD align="left" className="text-xs px-3 text-left">
                         <span className="font-mono">{tx.idTag}</span>
                         {tx.driver?.name || tx.driver?.vehicleBrand ? (
                           <p className="text-[var(--color-fg-subtle)]">
@@ -308,8 +309,8 @@ export function TransactionsView({
                           </div>
                         )}
                       </TD>
-                      <TD align="right" className="text-xs font-mono font-semibold">
-                        {tx.cost != null ? formatMoney(tx.cost) : '—'}
+                      <TD align="right" className="text-xs font-mono font-normal">
+                        {tx.cost != null ? formatAmount(tx.cost) : '0.00'}
                       </TD>
                       <TD className="text-xs text-[var(--color-fg-muted)]">{tx.stopReason ?? '—'}</TD>
                     </TR>

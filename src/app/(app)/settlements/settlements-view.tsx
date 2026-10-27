@@ -7,7 +7,7 @@ import { Banknote, Building2, ChevronDown, ChevronRight, Trash2 } from 'lucide-r
 import { toast } from 'sonner';
 import { REFRESH } from '@/lib/live-query';
 import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
-import { formatDate, formatMoney, formatNumber, formatWh } from '@/lib/format';
+import { formatAmount, formatDate, formatMoney, formatNumber, formatWh } from '@/lib/format';
 import type {
   Settlement,
   SettlementInput,
@@ -135,10 +135,10 @@ export function SettlementsView({ canAdmin }: { canAdmin: boolean }) {
                 <TH>Харилцагч</TH>
                 <TH>Цэнэглэлт</TH>
                 <TH>Эрчим хүч</TH>
-                <TH>Борлуулалт</TH>
-                <TH>Eplug хураамж</TH>
-                <TH>Харилцагчид олгох</TH>
-                <TH>Нийт үлдэгдэл</TH>
+                <TH align="right" className="text-right px-3">Борлуулалт</TH>
+                <TH align="right" className="text-right px-3">Eplug хураамж</TH>
+                <TH align="right" className="text-right px-3">Харилцагчид олгох</TH>
+                <TH align="right" className="text-right px-3">Нийт үлдэгдэл</TH>
                 <TH>
                   <span className="sr-only">Үйлдэл</span>
                 </TH>
@@ -158,12 +158,12 @@ export function SettlementsView({ canAdmin }: { canAdmin: boolean }) {
                     return (
                       <React.Fragment key={r.client.id}>
                         <TR>
-                          <TD className="whitespace-nowrap">
+                          <TD align="left" className="whitespace-nowrap px-3 text-left">
                             <div className="inline-flex max-w-[280px] items-center gap-2">
                               <Building2 className="h-4 w-4 shrink-0 text-[var(--color-fg-muted)]" />
                               <Link
                                 href={`/clients/${encodeURIComponent(r.client.id)}`}
-                                className="truncate font-medium hover:text-[var(--color-brand)] hover:underline"
+                                className="truncate font-normal hover:text-[var(--color-brand)] hover:underline"
                                 title={r.client.name}
                               >
                                 {r.client.name}
@@ -178,12 +178,12 @@ export function SettlementsView({ canAdmin }: { canAdmin: boolean }) {
                           </TD>
                           <TD className="tnum">{formatNumber(r.period.sessions)}</TD>
                           <TD className="tnum whitespace-nowrap">{formatWh(r.period.energyWh)}</TD>
-                          <TD className="tnum whitespace-nowrap">{formatMoney(r.period.gross)}</TD>
-                          <TD className="tnum whitespace-nowrap text-[var(--color-fg-muted)]">
-                            {formatMoney(r.period.fee)}
+                          <TD align="right" className="tnum whitespace-nowrap font-mono font-normal text-right px-3">{formatAmount(r.period.gross)}</TD>
+                          <TD align="right" className="tnum whitespace-nowrap font-mono font-normal text-right px-3 text-[var(--color-fg-muted)]">
+                            {formatAmount(r.period.fee)}
                           </TD>
-                          <TD className="tnum whitespace-nowrap font-medium">
-                            {formatMoney(r.period.net)}
+                          <TD align="right" className="tnum whitespace-nowrap font-mono font-normal text-right px-3">
+                            {formatAmount(r.period.net)}
                           </TD>
                           <TD className="whitespace-nowrap">
                             <Outstanding value={r.outstanding} />
@@ -237,9 +237,9 @@ export function SettlementsView({ canAdmin }: { canAdmin: boolean }) {
                       <TD>Нийт</TD>
                       <TD className="tnum">{formatNumber(totals.sessions)}</TD>
                       <TD className="tnum whitespace-nowrap">{formatWh(totalEnergyWh)}</TD>
-                      <TD className="tnum whitespace-nowrap">{formatMoney(totals.gross)}</TD>
-                      <TD className="tnum whitespace-nowrap">{formatMoney(totals.fee)}</TD>
-                      <TD className="tnum whitespace-nowrap">{formatMoney(totals.net)}</TD>
+                      <TD align="right" className="tnum whitespace-nowrap font-mono font-normal text-right px-3">{formatAmount(totals.gross)}</TD>
+                      <TD align="right" className="tnum whitespace-nowrap font-mono font-normal text-right px-3">{formatAmount(totals.fee)}</TD>
+                      <TD align="right" className="tnum whitespace-nowrap font-mono font-normal text-right px-3">{formatAmount(totals.net)}</TD>
                       <TD className="whitespace-nowrap">
                         <Outstanding value={totals.outstanding} />
                       </TD>
@@ -329,7 +329,7 @@ function PayoutHistory({ row, canAdmin }: { row: SettlementSummaryRow; canAdmin:
           <THead>
             <tr>
               <TH>Олгосон огноо</TH>
-              <TH>Дүн</TH>
+              <TH align="right" className="text-right px-3">Дүн</TH>
               <TH>Хамрах хугацаа</TH>
               <TH>Гүйлгээний утга</TH>
               <TH>Бүртгэсэн</TH>
@@ -351,7 +351,7 @@ function PayoutHistory({ row, canAdmin }: { row: SettlementSummaryRow; canAdmin:
               items.map((s) => (
                 <TR key={s.id ?? s._id}>
                   <TD className="whitespace-nowrap text-xs">{formatDate(s.paidAt)}</TD>
-                  <TD className="tnum whitespace-nowrap font-medium">{formatMoney(s.amount)}</TD>
+                  <TD align="right" className="tnum whitespace-nowrap font-mono font-normal text-right px-3">{formatAmount(s.amount)}</TD>
                   <TD className="whitespace-nowrap text-xs text-[var(--color-fg-muted)]">
                     {s.periodFrom || s.periodTo
                       ? `${formatDate(s.periodFrom)} – ${formatDate(s.periodTo)}`

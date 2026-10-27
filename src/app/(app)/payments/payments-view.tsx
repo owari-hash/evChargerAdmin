@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import { RefreshCw, Search } from 'lucide-react';
 import { REFRESH } from '@/lib/live-query';
 import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
-import { formatDateTime, formatMoney, formatNumber } from '@/lib/format';
+import { formatAmount, formatDateTime, formatMoney, formatNumber, formatPhone } from '@/lib/format';
 import { Badge, Button, Card, Dot, Input, Select, type Tone } from '@/components/ui/primitives';
 import { DateRangePicker } from '@/components/ui/date-picker';
 import { FilterBar, Pagination } from '@/components/ui/pagination';
@@ -228,7 +228,7 @@ export function PaymentsView({ initialQuery, initialStatus }: { initialQuery: st
                 <TH>Огноо</TH>
                 <TH>Жолооч</TH>
                 <TH>Хэлбэр</TH>
-                <TH>Дүн</TH>
+                <TH align="right" className="text-right px-3">Дүн</TH>
                 <TH>Төлөв</TH>
                 <TH>Хэтэвч</TH>
                 <TH>Гүйлгээ</TH>
@@ -253,16 +253,16 @@ export function PaymentsView({ initialQuery, initialStatus }: { initialQuery: st
                       <TD className="whitespace-nowrap text-xs text-[var(--color-fg-muted)]">
                         {formatDateTime(p.createdAt)}
                       </TD>
-                      <TD className="text-xs">
-                        <p className="font-medium">{p.driver?.name || '—'}</p>
-                        <p className="font-mono text-[var(--color-fg-subtle)]">{p.driver?.phone ?? ''}</p>
+                      <TD align="left" className="text-xs px-3 text-left">
+                        <p className="font-normal text-[var(--color-fg)]">{p.driver?.name || '—'}</p>
+                        <p className="font-mono text-[var(--color-fg-subtle)]">{formatPhone(p.driver?.phone)}</p>
                       </TD>
                       <TD className="text-xs">
                         <p>{methodLabel(p)}</p>
                         {card ? <p className="font-mono text-[var(--color-fg-subtle)]">{card}</p> : null}
                       </TD>
-                      <TD align="right" className="whitespace-nowrap text-xs font-medium">
-                        {formatMoney(p.amount)}
+                      <TD align="right" className="whitespace-nowrap text-xs font-mono font-normal">
+                        {formatAmount(p.amount)}
                       </TD>
                       <TD>
                         <Badge tone={STATUS[p.status]?.tone ?? 'idle'}>{STATUS[p.status]?.label ?? p.status}</Badge>

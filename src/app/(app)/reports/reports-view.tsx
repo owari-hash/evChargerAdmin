@@ -22,6 +22,7 @@ import {
 import { apiUrl, fetcher } from '@/lib/client';
 import {
   connectorLetter,
+  formatAmount,
   formatDate,
   formatDateTime,
   formatMoney,
@@ -531,7 +532,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                   <THead>
                     <tr>
                       <TH className="w-10 text-center">№</TH>
-                      <TH className="text-left">Станц / Байршил</TH>
+                      <TH>Станц / Байршил</TH>
                       <TH className="text-right">Сеанс</TH>
                       <TH className="text-right">Эрчим хүч (кВтц)</TH>
                       <TH className="text-right">Тариф (₮/кВтц)</TH>
@@ -612,27 +613,27 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                               </TD>
 
                               {/* Gross (Each station's own charged amount!) */}
-                              <TD className="text-right font-mono text-xs font-semibold text-[var(--color-fg)]">
-                                {formatMoney(s.gross)}
+                              <TD align="right" className="text-right font-mono text-xs font-normal text-[var(--color-fg)] px-3">
+                                {formatAmount(s.gross)}
                               </TD>
 
                               {/* Fee Amount (Each station's own fee) */}
-                              <TD className="text-right font-mono text-xs text-blue-500">
-                                {formatMoney(s.feeAmount)}
+                              <TD align="right" className="text-right font-mono text-xs text-blue-500 font-normal px-3">
+                                {formatAmount(s.feeAmount)}
                                 <span className="text-[10px] text-[var(--color-fg-subtle)] ml-1">
                                   ({s.feePercent}%)
                                 </span>
                               </TD>
 
                               {/* Net Revenue (Each station's own client net) */}
-                              <TD className="text-right font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                                {formatMoney(s.clientNet)}
+                              <TD align="right" className="text-right font-mono text-xs font-normal text-emerald-600 dark:text-emerald-400 px-3">
+                                {formatAmount(s.clientNet)}
                               </TD>
 
                               {/* Calculation Formula */}
                               <TD className="text-center text-[10px] font-mono text-[var(--color-fg-muted)]">
                                 <span className="rounded bg-[var(--color-surface-2)] px-1.5 py-0.5 border border-[var(--color-border)]">
-                                  {formatMoney(s.gross)} - {formatMoney(s.feeAmount)} = {formatMoney(s.clientNet)}
+                                  {formatAmount(s.gross)} - {formatAmount(s.feeAmount)} = {formatAmount(s.clientNet)}
                                 </span>
                               </TD>
                             </TR>
@@ -964,8 +965,8 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
               <THead>
                 <tr>
                   <TH className="w-20 text-center">Сеанс #</TH>
-                  <TH className="text-left">Станц / Холбогч</TH>
-                  <TH className="text-left">Хугацаа</TH>
+                  <TH>Станц / Холбогч</TH>
+                  <TH>Хугацаа</TH>
                   <TH className="text-right">Хэрэглээ</TH>
                   <TH className="text-right">Тариф</TH>
                   <TH className="text-right font-semibold">Борлуулалт</TH>

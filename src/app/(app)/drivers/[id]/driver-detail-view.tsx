@@ -27,7 +27,7 @@ import {
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
-import { formatDateTime, formatMoney, formatNumber } from '@/lib/format';
+import { formatAmount, formatDateTime, formatMoney, formatNumber, formatPhone } from '@/lib/format';
 import type { DriverDetailResponse } from '@/lib/types';
 import { Badge, Button, Card, EmptyState } from '@/components/ui/primitives';
 import { StatCard, StatGrid } from '@/components/stat-card';
@@ -104,7 +104,7 @@ export function DriverDetailView({
               ) : null}
             </div>
             <p className="mt-0.5 text-xs text-[var(--color-fg-muted)] flex items-center gap-2">
-              <span className="font-mono">{d.phone || 'Утасгүй'}</span>
+              <span className="font-mono">{d.phone ? formatPhone(d.phone) : 'Утасгүй'}</span>
               {d.email ? <span>· {d.email}</span> : null}
             </p>
           </div>
@@ -209,7 +209,7 @@ export function DriverDetailView({
 
               <div>
                 <dt className="text-[var(--color-fg-subtle)]">Утасны дугаар:</dt>
-                <dd className="font-mono font-medium text-[var(--color-fg)] mt-0.5">{d.phone || '—'}</dd>
+                <dd className="font-mono font-normal text-[var(--color-fg)] mt-0.5">{d.phone ? formatPhone(d.phone) : '—'}</dd>
               </div>
 
               <div>
@@ -403,8 +403,8 @@ export function DriverDetailView({
                     <TH>Цэнэглэлт ID</TH>
                     <TH>Станц / Холбогч</TH>
                     <TH>Цаг хугацаа</TH>
-                    <TH className="text-right">Хэмжээ</TH>
-                    <TH className="text-right">Төлбөр</TH>
+                    <TH align="right" className="text-right px-3">Хэмжээ</TH>
+                    <TH align="right" className="text-right px-3">Төлбөр</TH>
                     <TH>Төлөв</TH>
                   </TR>
                 </THead>
@@ -413,8 +413,8 @@ export function DriverDetailView({
                     <TableEmpty colSpan={6}>Цэнэглэлтийн түүх олдсонгүй</TableEmpty>
                   ) : (
                     detail.recentSessions.map((s) => (
-                      <TR key={s.id} className="hover:bg-[var(--color-surface-2)]">
-                        <TD className="font-mono text-xs font-semibold text-[var(--color-fg)]">
+                      <TR key={s.id}>
+                        <TD className="font-mono text-xs font-normal text-[var(--color-fg)]">
                           <Link
                             href={`/transactions/${s.id}`}
                             className="hover:text-[var(--color-brand)] underline-offset-2 hover:underline"
@@ -424,7 +424,7 @@ export function DriverDetailView({
                         </TD>
 
                         <TD>
-                          <p className="text-xs font-medium text-[var(--color-fg)]">{s.stationName}</p>
+                          <p className="text-xs font-normal text-[var(--color-fg)]">{s.stationName}</p>
                           <p className="text-[11px] text-[var(--color-fg-subtle)] font-mono">Холбогч #{s.connectorId}</p>
                         </TD>
 
@@ -432,12 +432,12 @@ export function DriverDetailView({
                           {formatDateTime(s.startTimestamp)}
                         </TD>
 
-                        <TD className="text-right font-mono text-xs font-medium text-[var(--color-fg)]">
+                        <TD align="right" className="text-right font-mono text-xs font-normal text-[var(--color-fg)] px-3">
                           {s.energyKwh} кВт.ц
                         </TD>
 
-                        <TD className="text-right font-mono text-xs font-bold text-[var(--color-fg)]">
-                          {formatMoney(s.cost)}
+                        <TD align="right" className="text-right font-mono text-xs font-normal text-[var(--color-fg)] px-3">
+                          {formatAmount(s.cost)}
                         </TD>
 
                         <TD>

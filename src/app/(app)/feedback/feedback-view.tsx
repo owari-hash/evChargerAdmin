@@ -15,7 +15,7 @@ import {
 import { toast } from 'sonner';
 import { REFRESH } from '@/lib/live-query';
 import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
-import { formatDateTime } from '@/lib/format';
+import { formatDateTime, formatPhone } from '@/lib/format';
 import type { Feedback } from '@/lib/types';
 import { Badge, Button, Card, Input } from '@/components/ui/primitives';
 import {
@@ -249,22 +249,22 @@ export function FeedbackView({ canEdit }: { canEdit: boolean }) {
                     </TD>
                     <TD className="whitespace-nowrap text-xs">
                       {row.userName && (
-                        <div className="font-semibold text-foreground">{row.userName}</div>
+                        <div className="font-normal text-foreground">{row.userName}</div>
                       )}
                       {row.phone ? (
                         <a
                           href={`tel:${row.phone}`}
-                          className="inline-flex items-center gap-1 font-mono text-brand hover:underline"
+                          className="inline-flex items-center gap-1 font-mono text-brand hover:underline font-normal"
                         >
                           <Phone className="size-3 text-muted" />
-                          <span>{row.phone}</span>
+                          <span>{formatPhone(row.phone)}</span>
                         </a>
                       ) : (
                         <span className="text-muted">Зочин (утасгүй)</span>
                       )}
                     </TD>
-                    <TD>
-                      <p className="text-xs text-foreground whitespace-pre-wrap leading-relaxed">
+                    <TD align="left" className="text-left px-3">
+                      <p className="text-xs text-foreground whitespace-pre-wrap leading-relaxed font-normal">
                         {row.message}
                       </p>
                       {row.handledBy && (

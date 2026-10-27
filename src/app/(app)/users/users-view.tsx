@@ -87,7 +87,7 @@ export function UsersView({ currentUserId }: { currentUserId: string }) {
 
                   return (
                     <TR key={user.id}>
-                      <TD className="text-xs font-medium">
+                      <TD align="left" className="text-xs font-normal">
                         {user.email}
                         {isSelf ? (
                           <Badge tone="brand" className="ml-2">
@@ -95,7 +95,7 @@ export function UsersView({ currentUserId }: { currentUserId: string }) {
                           </Badge>
                         ) : null}
                       </TD>
-                      <TD className="text-xs text-[var(--color-fg-muted)]">{user.name ?? '—'}</TD>
+                      <TD align="left" className="text-xs text-[var(--color-fg-muted)] font-normal">{user.name ?? '—'}</TD>
                       <TD>
                         <RoleBadge role={user.role} />
                       </TD>

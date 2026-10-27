@@ -18,6 +18,7 @@ import {
   ExternalLink,
   Menu,
   Trash2,
+  PowerOff,
 } from 'lucide-react';
 import { toast } from 'sonner';
 import { REFRESH } from '@/lib/live-query';
@@ -226,11 +227,7 @@ export function ConnectorsView({
   // Live charging statistics
   const chargingCount = counts['Charging'] ?? 0;
   const availableCount = counts['Available'] ?? 0;
-  const attentionCount =
-    (counts['Faulted'] ?? 0) +
-    (counts['Unavailable'] ?? 0) +
-    (counts['SuspendedEV'] ?? 0) +
-    (counts['SuspendedEVSE'] ?? 0);
+  const inactiveCount = counts['Unavailable'] ?? 0;
 
   function handleRefresh() {
     void mutate();
@@ -387,31 +384,31 @@ export function ConnectorsView({
           </div>
         </button>
 
-        {/* Card 4: Анхаарал шаардлагатай */}
+        {/* Card 4: Идэвхгүй */}
         <button
           type="button"
           onClick={() => {
-            setStatus(status === 'Faulted' ? '' : 'Faulted');
+            setStatus(status === 'Unavailable' ? '' : 'Unavailable');
             setPage(1);
           }}
           className={cn(
             'group flex flex-col justify-between rounded-xl border p-4 text-left transition-all shadow-sm',
-            status === 'Faulted' || status === 'Unavailable'
-              ? 'border-rose-500 bg-rose-500/10 ring-1 ring-rose-500/30'
+            status === 'Unavailable'
+              ? 'border-zinc-500 bg-zinc-500/10 ring-1 ring-zinc-500/30'
               : 'border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-border-strong)] hover:bg-[var(--color-surface-2)]',
           )}
         >
           <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-rose-500">Анхаарал шаардлагатай</span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-rose-500/15 text-rose-500">
-              <AlertTriangle className="h-4 w-4" />
+            <span className="text-xs font-medium text-[var(--color-fg-muted)]">Идэвхгүй</span>
+            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-500/15 text-zinc-500 dark:text-zinc-400">
+              <PowerOff className="h-4 w-4" />
             </div>
           </div>
           <div className="mt-3">
-            <span className="text-2xl font-bold tracking-tight text-rose-500 tnum font-mono">
-              {formatNumber(attentionCount)}
+            <span className="text-2xl font-bold tracking-tight text-[var(--color-fg)] tnum font-mono">
+              {formatNumber(inactiveCount)}
             </span>
-            <p className="mt-1 text-[11px] text-[var(--color-fg-subtle)]">Эвдрэл, сааталтай холбогч</p>
+            <p className="mt-1 text-[11px] text-[var(--color-fg-subtle)]">Ашиглах боломжгүй холбогч</p>
           </div>
         </button>
       </div>

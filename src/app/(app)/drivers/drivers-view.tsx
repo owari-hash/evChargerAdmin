@@ -37,6 +37,14 @@ function formatPhone(phone?: string | null): string {
   return clean || '—';
 }
 
+function formatAmount(val?: number | null): string {
+  const num = typeof val === 'number' && !isNaN(val) ? val : 0;
+  return num.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  });
+}
+
 export function DriversView({
   canEdit,
   initialTab = 'drivers',
@@ -172,7 +180,7 @@ export function DriversView({
             />
             <StatCard
               label="Нийт хэтэвчний үлдэгдэл"
-              value={formatMoney(totalBalance)}
+              value={formatAmount(totalBalance)}
               sub="Бүх жолооч нарын нийт үлдэгдэл"
               icon={Wallet}
               tone="ok"
@@ -234,22 +242,23 @@ export function DriversView({
                 <THead>
                   <TR>
                     <TH className="w-10 text-center">№</TH>
-                    <TH className="text-center">Жолооч</TH>
+                    <TH align="left" className="text-left px-3">Жолооч</TH>
                     <TH className="text-center">Утас</TH>
                     <TH className="text-center">Имэйл</TH>
                     <TH className="text-center">Тээврийн хэрэгсэл</TH>
-                    <TH className="text-center">Хэтэвч үлдэгдэл</TH>
                     <TH className="text-center">RFID карт</TH>
                     <TH className="text-center">Цэнэглэлт</TH>
+                    <TH align="right" className="text-right px-3">Хэтэвч үлдэгдэл</TH>
+                    <TH className="text-center">Төрөл</TH>
                     <TH className="text-center">Төлөв</TH>
                     <TH className="text-center">Үйлдэл</TH>
                   </TR>
                 </THead>
                 <TBody>
                   {isLoading && drivers.length === 0 ? (
-                    <TableLoading colSpan={10} rows={8} />
+                    <TableLoading colSpan={11} rows={8} />
                   ) : drivers.length === 0 ? (
-                    <TableEmpty colSpan={10}>Жолоочийн бүртгэл олдсонгүй</TableEmpty>
+                    <TableEmpty colSpan={11}>Жолоочийн бүртгэл олдсонгүй</TableEmpty>
                   ) : (
                     drivers.map((d, index) => {
                       const rowNum = (page - 1) * limit + index + 1;
@@ -267,8 +276,8 @@ export function DriversView({
                             {rowNum}
                           </TD>
 
-                          {/* Driver Name */}
-                          <TD align="center" className="border-r border-[var(--color-border)] py-1.5">
+                          {/* Driver Name (starts from start / left-aligned) */}
+                          <TD align="left" className="border-r border-[var(--color-border)] py-1.5 px-3 text-left">
                             <Link
                               href={`/drivers/${d.id}`}
                               className="text-xs font-normal text-[var(--color-fg)] hover:text-[var(--color-brand)] hover:underline transition"
@@ -278,21 +287,21 @@ export function DriversView({
                           </TD>
 
                           {/* Phone */}
-                          <TD align="center" className="border-r border-[var(--color-border)] py-1.5">
+                          <TD align="center" className="border-r border-[var(--color-border)] py-1.5 text-center">
                             <span className="font-mono text-xs font-normal text-[var(--color-fg)]">
                               {formatPhone(d.phone)}
                             </span>
                           </TD>
 
                           {/* Email */}
-                          <TD align="center" className="border-r border-[var(--color-border)] py-1.5">
+                          <TD align="center" className="border-r border-[var(--color-border)] py-1.5 text-center">
                             <span className="text-xs font-normal text-[var(--color-fg-subtle)] truncate max-w-[170px] inline-block">
                               {d.email || '—'}
                             </span>
                           </TD>
 
                           {/* Vehicle */}
-                          <TD align="center" className="border-r border-[var(--color-border)] py-1.5">
+                          <TD align="center" className="border-r border-[var(--color-border)] py-1.5 text-center">
                             {d.vehicleBrand || d.vehicleModel ? (
                               <span className="text-xs font-normal text-[var(--color-fg)]">
                                 {[d.vehicleBrand, d.vehicleModel].filter(Boolean).join(' ')}
@@ -302,15 +311,8 @@ export function DriversView({
                             )}
                           </TD>
 
-                          {/* Wallet balance */}
-                          <TD align="center" className="border-r border-[var(--color-border)] py-1.5">
-                            <span className="font-mono text-xs font-normal text-[var(--color-fg)]">
-                              {formatMoney(d.wallet.balance)}
-                            </span>
-                          </TD>
-
                           {/* RFID Cards */}
-                          <TD align="center" className="border-r border-[var(--color-border)] py-1.5">
+                          <TD align="center" className="border-r border-[var(--color-border)] py-1.5 text-center">
                             <div className="flex flex-wrap items-center justify-center gap-1">
                               {d.idTag ? (
                                 <Badge tone="info" className="font-mono text-[10px] font-normal">
@@ -329,7 +331,7 @@ export function DriversView({
                           </TD>
 
                           {/* Sessions */}
-                          <TD align="center" className="border-r border-[var(--color-border)] py-1.5">
+                          <TD align="center" className="border-r border-[var(--color-border)] py-1.5 text-center">
                             <button
                               type="button"
                               onClick={() => setViewingSessionsDriver(d)}
@@ -340,16 +342,29 @@ export function DriversView({
                             </button>
                           </TD>
 
-                          {/* Status (Төлөв) */}
-                          <TD align="center" className="border-r border-[var(--color-border)] py-1.5">
-                            <div className="flex flex-wrap items-center justify-center gap-1">
-                              {d.isActive ? (
-                                <Badge tone="ok" className="font-normal">Идэвхтэй</Badge>
-                              ) : (
-                                <Badge tone="danger" className="font-normal">Түгжигдсэн</Badge>
-                              )}
-                              {d.isInternal && <Badge tone="brand" className="font-normal">Дотоод</Badge>}
-                            </div>
+                          {/* Wallet balance (Amount related field into end, right-aligned, formatted 123,123.00 without tugrug) */}
+                          <TD align="right" className="border-r border-[var(--color-border)] py-1.5 px-3 text-right">
+                            <span className="font-mono text-xs font-normal text-[var(--color-fg)]">
+                              {formatAmount(d.wallet.balance)}
+                            </span>
+                          </TD>
+
+                          {/* Төрөл (SEPARATE) */}
+                          <TD align="center" className="border-r border-[var(--color-border)] py-1.5 text-center">
+                            {d.isInternal ? (
+                              <Badge tone="brand" className="font-normal">Дотоод</Badge>
+                            ) : (
+                              <Badge tone="idle" className="font-normal">Энгийн</Badge>
+                            )}
+                          </TD>
+
+                          {/* Төлөв (SEPARATE) */}
+                          <TD align="center" className="border-r border-[var(--color-border)] py-1.5 text-center">
+                            {d.isActive ? (
+                              <Badge tone="ok" className="font-normal">Идэвхтэй</Badge>
+                            ) : (
+                              <Badge tone="danger" className="font-normal">Түгжигдсэн</Badge>
+                            )}
                           </TD>
 
                           {/* Actions */}

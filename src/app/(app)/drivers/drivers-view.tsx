@@ -21,9 +21,9 @@ import {
 import { toast } from 'sonner';
 import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
 import { formatDateTime, formatMoney, formatNumber } from '@/lib/format';
-import type { DriverListItem, Paginated } from '@/lib/types';
+import type { DriverDetailResponse, DriverListItem, Paginated } from '@/lib/types';
 import { Badge, Button, Card, EmptyState, Input, Select } from '@/components/ui/primitives';
-import { ConfirmModal } from '@/components/ui/modal';
+import { ConfirmModal, Modal } from '@/components/ui/modal';
 import { Pagination } from '@/components/ui/pagination';
 import { StatCard, StatGrid } from '@/components/stat-card';
 import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty, TableLoading } from '@/components/ui/table';
@@ -50,7 +50,13 @@ export function DriversView({
   const [creatingDriver, setCreatingDriver] = React.useState(false);
   const [editingDriver, setEditingDriver] = React.useState<DriverListItem | null>(null);
   const [deletingDriver, setDeletingDriver] = React.useState<DriverListItem | null>(null);
+  const [viewingSessionsDriver, setViewingSessionsDriver] = React.useState<DriverListItem | null>(null);
   const [busyDelete, setBusyDelete] = React.useState(false);
+
+  const { data: detailData, isLoading: loadingDetail } = useSWR<DriverDetailResponse>(
+    viewingSessionsDriver ? apiUrl(`drivers/${encodeURIComponent(viewingSessionsDriver.id)}`) : null,
+    fetcher,
+  );
 
   async function removeDriver() {
     if (!deletingDriver) return;
@@ -315,12 +321,19 @@ export function DriversView({
 
                           {/* Sessions */}
                           <TD className="text-right">
-                            <span className="font-mono text-xs font-medium text-[var(--color-fg)]">
-                              {formatNumber(d.sessionsCount)} удаа
-                            </span>
-                            <p className="text-[10px] text-[var(--color-fg-subtle)] font-mono">
-                              {d.totalEnergyKwh} кВт.ц
-                            </p>
+                            <button
+                              type="button"
+                              onClick={() => setViewingSessionsDriver(d)}
+                              className="inline-flex flex-col items-end text-right underline underline-offset-2 hover:opacity-80 transition cursor-pointer"
+                              title="Цэнэглэлтийн мэдээлэл харах"
+                            >
+                              <span className="font-mono text-xs font-semibold text-[var(--color-brand)]">
+                                {formatNumber(d.sessionsCount)} удаа
+                              </span>
+                              <span className="text-[10px] text-[var(--color-fg-subtle)] font-mono">
+                                {d.totalEnergyKwh} кВт.ц
+                              </span>
+                            </button>
                           </TD>
 
                           {/* Status */}
@@ -431,6 +444,89 @@ export function DriversView({
           </>
         }
       />
+
+      <Modal
+        open={viewingSessionsDriver !== null}
+        onClose={() => setViewingSessionsDriver(null)}
+        title="Цэнэглэлтийн мэдээлэл"
+        description={`${viewingSessionsDriver?.name || 'Жолооч'} (${viewingSessionsDriver?.phone || ''})`}
+        size="md"
+      >
+        <div className="space-y-4 py-1">
+          {/* Summary stats */}
+          <div className="grid grid-cols-3 gap-2 rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-3 text-center">
+            <div>
+              <p className="text-[11px] text-[var(--color-fg-muted)]">Нийт цэнэглэлт</p>
+              <p className="font-mono text-sm font-bold text-[var(--color-fg)]">
+                {viewingSessionsDriver?.sessionsCount ?? 0} удаа
+              </p>
+            </div>
+            <div>
+              <p className="text-[11px] text-[var(--color-fg-muted)]">Нийт эрчим хүч</p>
+              <p className="font-mono text-sm font-bold text-[var(--color-brand)]">
+                {viewingSessionsDriver?.totalEnergyKwh ?? 0} кВт.ц
+              </p>
+            </div>
+            <div>
+              <p className="text-[11px] text-[var(--color-fg-muted)]">Хэтэвчний үлдэгдэл</p>
+              <p className="font-mono text-sm font-bold text-[var(--color-fg)]">
+                {formatMoney(viewingSessionsDriver?.wallet.balance ?? 0)}
+              </p>
+            </div>
+          </div>
+
+          {/* Recent Sessions list */}
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <h4 className="text-xs font-semibold text-[var(--color-fg)]">
+                Сүүлийн цэнэглэлтүүд
+              </h4>
+              {viewingSessionsDriver ? (
+                <Link
+                  href={`/drivers/${viewingSessionsDriver.id}`}
+                  onClick={() => setViewingSessionsDriver(null)}
+                  className="text-xs font-medium text-[var(--color-brand)] hover:underline flex items-center gap-1"
+                >
+                  Бүх түүхийг харах <ChevronRight className="h-3 w-3" />
+                </Link>
+              ) : null}
+            </div>
+
+            {loadingDetail ? (
+              <div className="py-8 text-center text-xs text-[var(--color-fg-subtle)]">
+                Уншиж байна…
+              </div>
+            ) : detailData?.recentSessions?.length ? (
+              <div className="max-h-60 overflow-y-auto rounded-xl border border-[var(--color-border)] divide-y divide-[var(--color-border)]">
+                {detailData.recentSessions.map((s) => (
+                  <div key={s.id} className="flex items-center justify-between p-2.5 text-xs hover:bg-[var(--color-surface-2)] transition">
+                    <div>
+                      <p className="font-medium text-[var(--color-fg)]">
+                        {s.stationName} <span className="text-[var(--color-fg-muted)]">#{s.id}</span>
+                      </p>
+                      <p className="text-[10px] text-[var(--color-fg-subtle)] font-mono">
+                        {s.startTimestamp ? formatDateTime(s.startTimestamp) : '—'}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-mono font-semibold text-[var(--color-fg)]">
+                        {s.energyKwh} кВт.ц
+                      </p>
+                      <p className="text-[10px] text-[var(--color-fg-subtle)] font-mono">
+                        {formatMoney(s.cost)}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="py-6 text-center text-xs text-[var(--color-fg-subtle)] rounded-xl border border-dashed border-[var(--color-border)]">
+                Цэнэглэлтийн түүх байхгүй байна.
+              </div>
+            )}
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

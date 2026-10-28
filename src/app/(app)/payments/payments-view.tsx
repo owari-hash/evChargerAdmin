@@ -25,7 +25,7 @@ interface PaymentRow {
   id: string;
   senderInvoiceNo: string;
   invoiceId?: string;
-  provider: 'QPAY' | 'QPAY_QUICKQR' | 'GOLOMT';
+  provider: 'QPAY' | 'QPAY_QUICKQR' | 'GOLOMT' | 'TOKI';
   golomtMode?: 'PAGE' | 'TOKEN';
   golomtChannel?: 'CARD' | 'SOCIALPAY';
   purpose: 'CHARGING' | 'WALLET_TOPUP';
@@ -62,6 +62,7 @@ function isUuid(val?: string): boolean {
 }
 
 function methodLabel(p: PaymentRow): string {
+  if (p.provider === 'TOKI') return 'Toki Pay';
   if (p.provider === 'GOLOMT') {
     if (p.golomtMode === 'TOKEN') return 'Хадгалсан карт';
     return p.golomtChannel === 'SOCIALPAY' ? 'SocialPay' : 'Карт · Голомт';
@@ -236,6 +237,7 @@ export function PaymentsView({
             aria-label="Төлбөрийн хэлбэр"
           >
             <option value="">Бүх хэлбэр</option>
+            <option value="TOKI">Toki Pay</option>
             <option value="GOLOMT">Карт · Голомт</option>
             <option value="QPAY_QUICKQR">QPay</option>
             <option value="QPAY">QPay (merchant)</option>

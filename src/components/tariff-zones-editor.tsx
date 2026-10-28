@@ -142,7 +142,7 @@ function timeToMinutes(time: string): number {
 }
 
 function formatDuration(start: number, end: number): string {
-  const duration = Math.max(0, end - start);
+  const duration = end >= start ? end - start : (1440 - start) + end;
   const hours = Math.floor(duration / 60);
   const mins = duration % 60;
   if (hours > 0 && mins > 0) return `${hours}ц ${mins}м`;
@@ -150,17 +150,37 @@ function formatDuration(start: number, end: number): string {
   return `${mins} минут`;
 }
 
+/**
+ * Expands any overnight zone (e.g. 22:00 -> 06:00) into two intra-day segments
+ * [startMinute, 1440) and [0, endMinute) for overlap checking and 24h timeline bar.
+ */
+function expandTariffZones(zones: TariffZone[]) {
+  const expanded: (TariffZone & { origIdx: number; isOvernight?: boolean })[] = [];
+  zones.forEach((z, idx) => {
+    if (z.startMinute > z.endMinute) {
+      expanded.push({ ...z, startMinute: z.startMinute, endMinute: 1440, origIdx: idx, isOvernight: true });
+      expanded.push({ ...z, startMinute: 0, endMinute: z.endMinute, origIdx: idx, isOvernight: true });
+    } else {
+      expanded.push({ ...z, origIdx: idx });
+    }
+  });
+  return expanded;
+}
+
 /** Overlap check mirrors backend validateTariffZones */
 function overlapError(zones: TariffZone[]): string | null {
   for (const z of zones) {
-    if (z.endMinute <= z.startMinute) {
-      return 'Дуусах цаг эхлэх цагаас хойш байх ёстой (нэг өдрийн 00:00 – 24:00 хооронд)';
+    if (z.startMinute === z.endMinute) {
+      return `"${z.name || 'Цагийн бүс'}" эхлэх болон дуусах цаг ижил байж болохгүй`;
     }
   }
-  const sorted = [...zones].sort((a, b) => a.startMinute - b.startMinute);
+  const expanded = expandTariffZones(zones);
+  const sorted = [...expanded].sort((a, b) => a.startMinute - b.startMinute);
   for (let i = 1; i < sorted.length; i++) {
     if (sorted[i].startMinute < sorted[i - 1].endMinute) {
-      return `"${sorted[i - 1].name || 'Цагийн бүс ' + i}" болон "${sorted[i].name || 'Цагийн бүс ' + (i + 1)}" цагийн бүсүүд давхцаж байна`;
+      const nameA = sorted[i - 1].name || `Бүс #${sorted[i - 1].origIdx + 1}`;
+      const nameB = sorted[i].name || `Бүс #${sorted[i].origIdx + 1}`;
+      return `"${nameA}" болон "${nameB}" цагийн бүсүүд давхцаж байна`;
     }
   }
   return null;
@@ -175,10 +195,9 @@ const ZONE_COLORS = [
 ];
 
 const PRESETS = [
-  { name: 'Шөнийн тариф', startMinute: 0, endMinute: 360, defaultPrice: 168, label: 'Шөнийн (00:00–06:00 · 168₮)' },
+  { name: 'Шөнийн тариф', startMinute: 1320, endMinute: 360, defaultPrice: 168, label: 'Шөнийн (22:00–06:00 · 168₮)' },
   { name: 'Өдрийн тариф', startMinute: 360, endMinute: 1020, defaultPrice: 278, label: 'Өдрийн (06:00–17:00 · 278₮)' },
   { name: 'Оргил ачаалал', startMinute: 1020, endMinute: 1320, defaultPrice: 417, label: 'Оргил цаг (17:00–22:00 · 417₮)' },
-  { name: 'Шөнийн тариф', startMinute: 1320, endMinute: 1440, defaultPrice: 168, label: 'Шөнийн (22:00–24:00 · 168₮)' },
 ];
 
 export function TariffZonesEditor({
@@ -230,11 +249,11 @@ export function TariffZonesEditor({
       endMinute: preset.endMinute,
       tariffPerKwh: preset.defaultPrice,
     };
-    onChange([...zones, newZone].sort((a, b) => a.startMinute - b.startMinute));
+    onChange([...zones, newZone]);
   }
 
   // Calculate timeline segments for 24-hour visual bar (0 to 1440 min)
-  const sortedZones = [...zones].sort((a, b) => a.startMinute - b.startMinute);
+  const sortedZones = expandTariffZones(zones).sort((a, b) => a.startMinute - b.startMinute);
 
   return (
     <div className="space-y-4">
@@ -281,7 +300,8 @@ export function TariffZonesEditor({
 
                 // The zone itself
                 const zoneWidth = (Math.max(0, z.endMinute - z.startMinute) / 1440) * 100;
-                const color = ZONE_COLORS[idx % ZONE_COLORS.length];
+                const origIdx = (z as any).origIdx ?? idx;
+                const color = ZONE_COLORS[origIdx % ZONE_COLORS.length];
                 segments.push(
                   <div
                     key={`zone-${idx}-${z.startMinute}`}
@@ -290,11 +310,11 @@ export function TariffZonesEditor({
                       'h-full flex items-center justify-center overflow-hidden border-r border-black/10 px-1 font-medium transition-all text-[10px] text-white select-none',
                       color.bar
                     )}
-                    title={`${z.name || 'Бүс ' + (idx + 1)}: ${minutesToTime(z.startMinute)} – ${minutesToTime(z.endMinute)} (${formatNumber(z.tariffPerKwh, 2)}₮/кВт·ц)`}
+                    title={`${z.name || 'Бүс ' + (origIdx + 1)}: ${minutesToTime(z.startMinute)} – ${minutesToTime(z.endMinute)} (${formatNumber(z.tariffPerKwh, 2)}₮/кВт·ц)`}
                   >
                     {zoneWidth > 14 ? (
                       <span className="truncate">
-                        {z.name || `Бүс ${idx + 1}`} ({formatNumber(z.tariffPerKwh, 2)}₮)
+                        {z.name || `Бүс ${origIdx + 1}`} ({formatNumber(z.tariffPerKwh, 2)}₮)
                       </span>
                     ) : zoneWidth > 8 ? (
                       <span className="truncate">{formatNumber(z.tariffPerKwh, 2)}₮</span>
@@ -362,7 +382,7 @@ export function TariffZonesEditor({
           const isAdded = zones.some((z) => z.startMinute === preset.startMinute && z.endMinute === preset.endMinute);
           return (
             <button
-              key={preset.name}
+              key={`${preset.name}-${preset.startMinute}`}
               type="button"
               onClick={() => applyPreset(preset)}
               disabled={isAdded}
@@ -417,6 +437,7 @@ export function TariffZonesEditor({
         ) : (
           zones.map((zone, i) => {
             const color = ZONE_COLORS[i % ZONE_COLORS.length];
+            const isOvernight = zone.startMinute > zone.endMinute;
             const isMidnightEnd = zone.endMinute === 1440;
             return (
               <div
@@ -440,7 +461,8 @@ export function TariffZonesEditor({
                     <span className="text-xs font-semibold text-[var(--color-fg)]">
                       {zone.name?.trim() ? zone.name : `Цагийн бүс #${i + 1}`}
                     </span>
-                    <span className="rounded-md bg-[var(--color-surface-2)] px-2 py-0.5 text-[11px] font-medium text-[var(--color-fg-muted)]">
+                    <span className="rounded-md bg-[var(--color-surface-2)] px-2 py-0.5 text-[11px] font-medium text-[var(--color-fg-muted)] flex items-center gap-1">
+                      {isOvernight ? <span className="text-indigo-400 font-semibold">🌙 Шөнө дамнасан · </span> : null}
                       {formatDuration(zone.startMinute, zone.endMinute)}
                     </span>
                     <span className="rounded-md bg-[var(--color-surface-2)] px-2 py-0.5 text-[11px] font-semibold text-[var(--color-brand)] font-mono">
@@ -481,7 +503,9 @@ export function TariffZonesEditor({
                   <div className="sm:col-span-4 space-y-1">
                     <label className="text-[11px] font-medium text-[var(--color-fg-muted)] flex items-center justify-between">
                       <span>Цагийн интервал</span>
-                      {isMidnightEnd ? (
+                      {isOvernight ? (
+                        <span className="text-[10px] text-indigo-400 font-medium">Шөнө дамнасан (+1 өдөр)</span>
+                      ) : isMidnightEnd ? (
                         <span className="text-[10px] text-amber-500 font-medium">24:00 хүртэл</span>
                       ) : null}
                     </label>
@@ -499,7 +523,8 @@ export function TariffZonesEditor({
                         value={minutesToTime(isMidnightEnd ? 0 : zone.endMinute)}
                         onChange={(e) => {
                           const minutes = timeToMinutes(e.target.value);
-                          update(i, { endMinute: minutes === 0 ? 1440 : minutes });
+                          const resolvedEnd = minutes === 0 && zone.startMinute >= 720 ? 1440 : minutes;
+                          update(i, { endMinute: resolvedEnd });
                         }}
                         className="h-9 text-xs font-mono text-center px-1"
                         title="Дуусах цаг (00:00 сонговол 24:00 шөнө дунд гэж тооцогдоно)"

@@ -216,7 +216,11 @@ export function TransactionView({
         <StatCard label="Эрчим хүч" value={formatWh(energyWh)} />
         <StatCard
           label="Боломжит кВт"
-          value={tx.maxAllowedEnergyKwh != null ? `${tx.maxAllowedEnergyKwh.toFixed(2)} кВт·ц` : 'Хязгааргүй'}
+          value={
+            tx.maxAllowedEnergyKwh != null
+              ? `${tx.maxAllowedEnergyKwh.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 3 })} кВт·ц`
+              : 'Хязгааргүй'
+          }
           sub={tx.maxAllowedCost != null ? `Төсөв: ${formatMoney(tx.maxAllowedCost)}` : 'Хязгааргүй'}
         />
         <StatCard label="Үргэлжилсэн" value={formatDuration(tx.startTimestamp, tx.stopTimestamp)} />
@@ -287,7 +291,7 @@ export function TransactionView({
             <DataRow label="Сүүлийн хэмжилт">{formatDateTime(tx.lastMeterValueAt)}</DataRow>
             <DataRow label="Боломжит эрчим хүч">
               {tx.maxAllowedEnergyKwh != null
-                ? `${tx.maxAllowedEnergyKwh.toFixed(2)} кВт·ц (${formatMoney(tx.maxAllowedCost ?? 0)})`
+                ? `${tx.maxAllowedEnergyKwh.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 3 })} кВт·ц (${formatMoney(tx.maxAllowedCost ?? 0)})`
                 : 'Хязгааргүй'}
             </DataRow>
             {tx.energyCost != null ? (

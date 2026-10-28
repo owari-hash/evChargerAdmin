@@ -12,10 +12,14 @@ export default async function TransactionsPage({
 }) {
   const params = await searchParams;
   const user = await getSessionUser();
+  const isClient = user?.role === 'CLIENT' || Boolean(user?.clientId);
+  const canAdmin = hasRole(user, 'ADMIN');
 
   return (
     <TransactionsView
       canOperate={hasRole(user, 'OPERATOR')}
+      canAdmin={canAdmin}
+      isClient={isClient}
       initialStatus={params.status ?? ''}
       initialChargePointId={params.chargePointId ?? ''}
       initialIdTag={params.idTag ?? ''}

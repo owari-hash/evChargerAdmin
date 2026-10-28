@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import useSWR from 'swr';
-import { Zap } from 'lucide-react';
+import { Eye, Trash2, Zap } from 'lucide-react';
 import { REFRESH } from '@/lib/live-query';
 import { apiUrl, fetcher } from '@/lib/client';
 import {
@@ -23,6 +23,7 @@ import { TransactionStatusBadge } from '@/components/ui/status';
 import { FilterBar, Pagination } from '@/components/ui/pagination';
 import { TRANSACTION_STATUS, mn } from '@/lib/mn';
 import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty, TableLoading } from '@/components/ui/table';
+import { ConfirmModal } from '@/components/ui/modal';
 import { StationName } from '@/components/station-name';
 import { cn } from '@/lib/cn';
 
@@ -44,6 +45,8 @@ function toEndOfDayIso(dateStr: string): string {
 
 export function TransactionsView({
   canOperate,
+  canAdmin = false,
+  isClient = false,
   initialStatus,
   initialChargePointId,
   initialIdTag,
@@ -51,6 +54,8 @@ export function TransactionsView({
   initialTo,
 }: {
   canOperate: boolean;
+  canAdmin?: boolean;
+  isClient?: boolean;
   initialStatus: string;
   initialChargePointId: string;
   initialIdTag: string;
@@ -60,6 +65,9 @@ export function TransactionsView({
   const [status, setStatus] = React.useState(initialStatus);
   const [chargePointId, setChargePointId] = React.useState(initialChargePointId);
   const [idTag, setIdTag] = React.useState(initialIdTag);
+
+  const [deleting, setDeleting] = React.useState<Transaction | null>(null);
+  const [isDeleting, setIsDeleting] = React.useState(false);
 
   // Default to today's date if no date filter is passed in URL
   const todayIso = React.useMemo(() => toIsoDate(new Date()), []);
@@ -87,11 +95,32 @@ export function TransactionsView({
     limit,
   });
 
-  const { data, error, isLoading } = useSWR<Paginated<Transaction>>(key, fetcher, {
+  const { data, error, isLoading, mutate } = useSWR<Paginated<Transaction>>(key, fetcher, {
     // Active sessions change constantly; completed ones rarely do.
     refreshInterval: status === 'Completed' ? REFRESH.config : REFRESH.live,
     keepPreviousData: true,
   });
+
+  const handleDelete = async () => {
+    if (!deleting) return;
+    setIsDeleting(true);
+    try {
+      const id = deleting.transactionId ?? deleting.id;
+      const res = await fetch(apiUrl(`transactions/${id}`), {
+        method: 'DELETE',
+      });
+      if (!res.ok) {
+        const d = await res.json().catch(() => ({}));
+        throw new Error(d.message || 'Устгаж чадсангүй');
+      }
+      setDeleting(null);
+      await mutate();
+    } catch (err: any) {
+      alert(err.message || 'Алдаа гарлаа');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   const rows = data?.data ?? [];
   const totals = rows.reduce(
@@ -180,15 +209,16 @@ export function TransactionsView({
                 <TH>Чадал / SoC</TH>
                 <TH align="right" className="text-right px-3">Төлбөр</TH>
                 <TH>Зогссон шалтгаан</TH>
+                {!isClient ? <TH align="center" className="text-center w-24">Үйлдэл</TH> : null}
               </tr>
             </THead>
             <TBody>
               {isLoading && !data ? (
-                <TableLoading colSpan={13} />
+                <TableLoading colSpan={isClient ? 13 : 14} />
               ) : error ? (
-                <TableEmpty colSpan={13}>Цэнэглэлтийг ачаалж чадсангүй.</TableEmpty>
+                <TableEmpty colSpan={isClient ? 13 : 14}>Цэнэглэлтийг ачаалж чадсангүй.</TableEmpty>
               ) : rows.length === 0 ? (
-                <TableEmpty colSpan={13}>Энэ шүүлтүүрт тохирох цэнэглэлт алга.</TableEmpty>
+                <TableEmpty colSpan={isClient ? 13 : 14}>Энэ шүүлтүүрт тохирох цэнэглэлт алга.</TableEmpty>
               ) : (
                 rows.map((tx, idx) => {
                   const num = (page - 1) * limit + idx + 1;
@@ -285,7 +315,7 @@ export function TransactionsView({
                             className="text-[var(--color-fg-muted)] font-medium"
                             title={tx.maxAllowedCost != null ? `Хязгаар: ${formatMoney(tx.maxAllowedCost)}` : undefined}
                           >
-                            {tx.maxAllowedEnergyKwh.toFixed(2)} кВт·ц
+                            {tx.maxAllowedEnergyKwh.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 3 })} кВт·ц
                           </span>
                         ) : (
                           <span className="text-[var(--color-fg-subtle)] text-[11px]">Хязгааргүй</span>
@@ -337,6 +367,31 @@ export function TransactionsView({
                         {tx.cost != null ? formatAmount(tx.cost) : '0.00'}
                       </TD>
                       <TD className="text-xs text-[var(--color-fg-muted)]">{tx.stopReason ?? '—'}</TD>
+                      {!isClient ? (
+                        <TD align="center" className="py-1.5">
+                          <div className="flex items-center justify-center gap-1.5">
+                            <Link
+                              href={`/transactions/${id}`}
+                              title="Дэлгэрэнгүй харах"
+                              aria-label={`#${id} дэлгэрэнгүй харах`}
+                              className="flex h-7 w-7 items-center justify-center rounded-lg border border-[var(--color-brand)]/30 bg-[var(--color-brand-soft)] text-[var(--color-brand)] hover:bg-[var(--color-brand)]/20 transition cursor-pointer"
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                            </Link>
+                            {canAdmin ? (
+                              <button
+                                type="button"
+                                onClick={() => setDeleting(tx)}
+                                aria-label={`#${id} устгах`}
+                                title="Устгах"
+                                className="flex h-7 w-7 items-center justify-center rounded-lg border border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400 hover:bg-rose-500/20 transition cursor-pointer"
+                              >
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </button>
+                            ) : null}
+                          </div>
+                        </TD>
+                      ) : null}
                     </TR>
                   );
                 })
@@ -367,6 +422,16 @@ export function TransactionsView({
           {canOperate ? ' Цэнэглэлтийг зогсоох эсвэл албадан дуусгах бол тухайн цэнэглэлт дээр дарж нээнэ үү.' : ''}
         </p>
       ) : null}
+
+      <ConfirmModal
+        open={!!deleting}
+        onClose={() => setDeleting(null)}
+        onConfirm={handleDelete}
+        title="Цэнэглэлтийн түүх устгах"
+        message={`#${deleting?.transactionId ?? deleting?.id} дугаартай цэнэглэлтийн бичлэгийг устгахдаа итгэлтэй байна уу? Энэ үйлдлийг буцаах боломжгүй.`}
+        confirmLabel="Устгах"
+        loading={isDeleting}
+      />
     </>
   );
 }

@@ -214,6 +214,11 @@ export function TransactionView({
 
       <StatGrid>
         <StatCard label="Эрчим хүч" value={formatWh(energyWh)} />
+        <StatCard
+          label="Боломжит кВт"
+          value={tx.maxAllowedEnergyKwh != null ? `${tx.maxAllowedEnergyKwh.toFixed(2)} кВт·ц` : 'Хязгааргүй'}
+          sub={tx.maxAllowedCost != null ? `Төсөв: ${formatMoney(tx.maxAllowedCost)}` : 'Хязгааргүй'}
+        />
         <StatCard label="Үргэлжилсэн" value={formatDuration(tx.startTimestamp, tx.stopTimestamp)} />
         <StatCard
           label="Одоогийн чадал"
@@ -280,6 +285,11 @@ export function TransactionView({
               {tx.reservationId != null ? `#${tx.reservationId}` : '—'}
             </DataRow>
             <DataRow label="Сүүлийн хэмжилт">{formatDateTime(tx.lastMeterValueAt)}</DataRow>
+            <DataRow label="Боломжит эрчим хүч">
+              {tx.maxAllowedEnergyKwh != null
+                ? `${tx.maxAllowedEnergyKwh.toFixed(2)} кВт·ц (${formatMoney(tx.maxAllowedCost ?? 0)})`
+                : 'Хязгааргүй'}
+            </DataRow>
             {tx.energyCost != null ? (
               <>
                 <DataRow label="Эрчим хүчний төлбөр">{formatMoney(tx.energyCost)}</DataRow>

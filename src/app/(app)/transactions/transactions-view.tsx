@@ -176,6 +176,7 @@ export function TransactionsView({
                 <TH>Эхэлсэн</TH>
                 <TH>Үргэлжилсэн</TH>
                 <TH>Эрчим хүч</TH>
+                <TH>Боломжит кВт</TH>
                 <TH>Чадал / SoC</TH>
                 <TH align="right" className="text-right px-3">Төлбөр</TH>
                 <TH>Зогссон шалтгаан</TH>
@@ -183,11 +184,11 @@ export function TransactionsView({
             </THead>
             <TBody>
               {isLoading && !data ? (
-                <TableLoading colSpan={12} />
+                <TableLoading colSpan={13} />
               ) : error ? (
-                <TableEmpty colSpan={12}>Цэнэглэлтийг ачаалж чадсангүй.</TableEmpty>
+                <TableEmpty colSpan={13}>Цэнэглэлтийг ачаалж чадсангүй.</TableEmpty>
               ) : rows.length === 0 ? (
-                <TableEmpty colSpan={12}>Энэ шүүлтүүрт тохирох цэнэглэлт алга.</TableEmpty>
+                <TableEmpty colSpan={13}>Энэ шүүлтүүрт тохирох цэнэглэлт алга.</TableEmpty>
               ) : (
                 rows.map((tx, idx) => {
                   const num = (page - 1) * limit + idx + 1;
@@ -277,6 +278,18 @@ export function TransactionsView({
                       </TD>
                       <TD className="text-xs font-medium font-mono">
                         {formatWh(energyWh)}
+                      </TD>
+                      <TD className="text-xs font-mono">
+                        {tx.maxAllowedEnergyKwh != null ? (
+                          <span
+                            className="text-[var(--color-fg-muted)] font-medium"
+                            title={tx.maxAllowedCost != null ? `Хязгаар: ${formatMoney(tx.maxAllowedCost)}` : undefined}
+                          >
+                            {tx.maxAllowedEnergyKwh.toFixed(2)} кВт·ц
+                          </span>
+                        ) : (
+                          <span className="text-[var(--color-fg-subtle)] text-[11px]">Хязгааргүй</span>
+                        )}
                       </TD>
                       <TD className="text-xs">
                         {isActive ? (

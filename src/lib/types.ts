@@ -275,6 +275,10 @@ export interface Transaction {
   tariffPerKwh?: number;
   /** Total the driver pays: energyCost + feeAmount. */
   cost?: number;
+  /** User's maximum allowed prepaid limit at start */
+  maxAllowedCost?: number;
+  /** Боломжит кВт */
+  maxAllowedEnergyKwh?: number;
   /** Energy part of the cost. Missing on sessions from before the service fee. */
   energyCost?: number;
   /** Eplug's service fee, energyCost × feePercent / 100. */

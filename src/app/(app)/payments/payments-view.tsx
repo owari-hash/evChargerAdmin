@@ -3,7 +3,7 @@
 import * as React from 'react';
 import useSWR from 'swr';
 import { toast } from 'sonner';
-import { Menu, RefreshCw, Search, Trash2 } from 'lucide-react';
+import { Menu, RefreshCw, RotateCcw, Search, Trash2 } from 'lucide-react';
 import { REFRESH } from '@/lib/live-query';
 import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
 import { formatAmount, formatDateTime, formatMoney, formatNumber, formatPhone } from '@/lib/format';
@@ -92,6 +92,9 @@ export function PaymentsView({
   const [checking, setChecking] = React.useState<string | null>(null);
   const [deleting, setDeleting] = React.useState<PaymentRow | null>(null);
   const [deletingBusy, setDeletingBusy] = React.useState(false);
+  const [refunding, setRefunding] = React.useState<PaymentRow | null>(null);
+  const [refundingBusy, setRefundingBusy] = React.useState(false);
+  const [refundNote, setRefundNote] = React.useState('');
   const [viewing, setViewing] = React.useState<PaymentRow | null>(null);
 
   React.useEffect(() => {
@@ -123,6 +126,7 @@ export function PaymentsView({
   });
   const rows = data?.data ?? [];
   const paid = data?.summary.PAID;
+  const refunded = data?.summary.REFUNDED;
   const pending = data?.summary.PENDING;
   const failed = data?.summary.FAILED;
 
@@ -140,6 +144,25 @@ export function PaymentsView({
       toast.error(errorMessage(err));
     } finally {
       setChecking(null);
+    }
+  }
+
+  async function handleRefundPayment() {
+    if (!refunding) return;
+    setRefundingBusy(true);
+    try {
+      await api.post(`payments/${refunding.id}/refund`, {
+        note: refundNote.trim() || undefined,
+      });
+      toast.success(
+        `${formatMoney(refunding.paidAmount || refunding.amount)} буцаагдаж, хэтэвчнээс хасагдлаа`,
+      );
+      setRefunding(null);
+      await mutate();
+    } catch (err) {
+      toast.error(errorMessage(err));
+    } finally {
+      setRefundingBusy(false);
     }
   }
 
@@ -163,7 +186,7 @@ export function PaymentsView({
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-2.5 sm:gap-3 grid-cols-1 sm:grid-cols-3">
+      <div className="grid gap-2.5 sm:gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
         <Stat
           label="Төлөгдсөн"
           value={formatMoney(paid?.amount ?? 0)}
@@ -172,6 +195,17 @@ export function PaymentsView({
           active={status === 'PAID'}
           onClick={() => {
             setStatus((prev) => (prev === 'PAID' ? '' : 'PAID'));
+            setPage(1);
+          }}
+        />
+        <Stat
+          label="Буцаасан"
+          value={formatMoney(refunded?.amount ?? 0)}
+          hint={`${formatNumber(refunded?.count ?? 0)} төлбөр буцаагдсан`}
+          tone="info"
+          active={status === 'REFUNDED'}
+          onClick={() => {
+            setStatus((prev) => (prev === 'REFUNDED' ? '' : 'REFUNDED'));
             setPage(1);
           }}
         />
@@ -350,6 +384,27 @@ export function PaymentsView({
                             >
                               <Menu className="h-3.5 w-3.5" />
                             </button>
+                            {p.status === 'PAID' ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setRefunding(p);
+                                  setRefundNote('');
+                                }}
+                                title="Буцаалт хийх (хэтэвчнээс хасах)"
+                                aria-label="Буцаалт хийх"
+                                className="flex h-7 w-7 items-center justify-center rounded-lg border border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 transition cursor-pointer"
+                              >
+                                <RotateCcw className="h-3.5 w-3.5" />
+                              </button>
+                            ) : p.status === 'REFUNDED' ? (
+                              <span
+                                className="flex h-7 w-7 items-center justify-center rounded-lg border border-sky-500/20 bg-sky-500/5 text-sky-500"
+                                title="Буцаагдсан"
+                              >
+                                <RotateCcw className="h-3.5 w-3.5 opacity-40" />
+                              </span>
+                            ) : null}
                             <button
                               type="button"
                               onClick={() => setDeleting(p)}
@@ -430,6 +485,22 @@ export function PaymentsView({
                 ) : null}
               </div>
               <div className="flex items-center gap-2">
+                {viewing.status === 'PAID' ? (
+                  <Button
+                    size="sm"
+                    variant="secondary"
+                    className="text-amber-600 border-amber-500/30 hover:bg-amber-500/10"
+                    onClick={() => {
+                      const target = viewing;
+                      setViewing(null);
+                      setRefunding(target);
+                      setRefundNote('');
+                    }}
+                  >
+                    <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                    Буцаалт хийх
+                  </Button>
+                ) : null}
                 <Button variant="ghost" onClick={() => setViewing(null)}>
                   Хаах
                 </Button>
@@ -531,6 +602,84 @@ export function PaymentsView({
                 <p className="break-words font-mono text-[11px]">{viewing.lastError}</p>
               </div>
             ) : null}
+          </div>
+        </Modal>
+      ) : null}
+
+      {/* Refund modal */}
+      {canAdmin && refunding ? (
+        <Modal
+          open={Boolean(refunding)}
+          onClose={() => {
+            if (!refundingBusy) setRefunding(null);
+          }}
+          title="Төлбөрийн буцаалт хийх"
+          size="md"
+          footer={
+            <div className="flex items-center justify-end gap-2 w-full">
+              <Button
+                variant="ghost"
+                onClick={() => setRefunding(null)}
+                disabled={refundingBusy}
+              >
+                Болих
+              </Button>
+              <Button
+                variant="danger"
+                className="bg-amber-600 hover:bg-amber-700 text-white border-transparent"
+                onClick={handleRefundPayment}
+                loading={refundingBusy}
+              >
+                <RotateCcw className="h-3.5 w-3.5 mr-1" />
+                Буцаалт баталгаажуулах
+              </Button>
+            </div>
+          }
+        >
+          <div className="space-y-4">
+            <div className="p-3.5 rounded-lg border border-amber-500/30 bg-amber-500/10 text-xs text-amber-800 dark:text-amber-300">
+              <p className="font-semibold text-sm mb-1">Анхааруулга</p>
+              <p>
+                Энэ төлбөрийг буцааснаар жолоочийн хэтэвчнээс{' '}
+                <strong>{formatMoney(refunding.paidAmount || refunding.amount)}</strong> хасагдаж,
+                төлбөрийн төлөв <strong>Буцаасан</strong> болж өөрчлөгдөнө.
+              </p>
+            </div>
+
+            <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-bg-subtle)] p-3 text-xs space-y-2">
+              <div className="flex justify-between">
+                <span className="text-[var(--color-fg-muted)]">Жолооч:</span>
+                <span className="font-medium text-[var(--color-fg)]">
+                  {refunding.driver?.name || '—'} ({formatPhone(refunding.driver?.phone)})
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[var(--color-fg-muted)]">Гүйлгээний дугаар:</span>
+                <span className="font-mono text-[var(--color-fg)]">{refunding.senderInvoiceNo}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[var(--color-fg-muted)]">Хэлбэр:</span>
+                <span className="text-[var(--color-fg)]">{methodLabel(refunding)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-[var(--color-fg-muted)]">Буцаах дүн:</span>
+                <span className="font-mono font-bold text-base text-[var(--color-fg)]">
+                  {formatMoney(refunding.paidAmount || refunding.amount)}
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-xs font-medium text-[var(--color-fg)]">
+                Буцаалтын тайлбар / шалтгаан (заавал биш):
+              </label>
+              <Input
+                placeholder="Жишээ: Жолоочийн хүсэлтээр, дансаар буцаав"
+                value={refundNote}
+                onChange={(e) => setRefundNote(e.target.value)}
+                disabled={refundingBusy}
+              />
+            </div>
           </div>
         </Modal>
       ) : null}

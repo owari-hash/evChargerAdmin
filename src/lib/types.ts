@@ -492,6 +492,8 @@ export interface StatsOverview {
   transactions: { active: number; last24h: number; completedLast24h: number };
   energyLast24hKwh: number;
   revenueLast24h: number;
+  refundedCount?: number;
+  refundedAmount?: number;
   unacknowledgedCriticalSecurityEvents: number;
 }
 

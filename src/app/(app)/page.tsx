@@ -4,10 +4,12 @@ import {
   BatteryCharging,
   Coins,
   Plug,
+  RotateCcw,
   ShieldAlert,
   Zap,
 } from 'lucide-react';
 import { csmsSafe } from '@/lib/server-api';
+import { getSessionUser } from '@/lib/session';
 import { connectorLetter, formatKwh, formatMoney, formatNumber, formatRelative, formatWh } from '@/lib/format';
 import type {
   EnergySeriesPoint,
@@ -30,7 +32,7 @@ import { AutoRefresh } from '@/components/auto-refresh';
 export const dynamic = 'force-dynamic';
 
 export default async function OverviewPage() {
-  const [stats, series, top, active, security] = await Promise.all([
+  const [stats, series, top, active, security, user] = await Promise.all([
     csmsSafe<StatsOverview>('/stats/overview'),
     csmsSafe<EnergySeriesPoint[]>('/stats/energy-series', { query: { days: 30 } }),
     csmsSafe<TopChargePoint[]>('/stats/top-charge-points', { query: { days: 30 } }),
@@ -38,9 +40,12 @@ export default async function OverviewPage() {
     csmsSafe<Paginated<SecurityEvent>>('/security/events', {
       query: { critical: 'true', acknowledged: 'false', limit: 5 },
     }),
+    getSessionUser(),
   ]);
 
   if (!stats) return <BackendDown />;
+
+  const isClient = user?.role === 'CLIENT' || Boolean(user?.clientId);
 
   const connectorEntries = Object.entries(stats.connectors ?? {}).sort((a, b) => b[1] - a[1]);
   const totalConnectors = connectorEntries.reduce((sum, [, n]) => sum + n, 0);
@@ -90,6 +95,14 @@ export default async function OverviewPage() {
             sub="Тарифтай цэнэглэлтээс"
             icon={Coins}
             tone="ok"
+          />
+          <StatCard
+            label="Буцаагдсан"
+            value={formatMoney(stats.refundedAmount ?? 0)}
+            sub={`${formatNumber(stats.refundedCount ?? 0)} гүйлгээ`}
+            icon={RotateCcw}
+            tone={stats.refundedCount && stats.refundedCount > 0 ? 'warn' : 'idle'}
+            href={isClient ? '/transactions?status=Refunded' : '/payments?status=REFUNDED'}
           />
           <StatCard
             label="Аюулгүй байдлын сэрэмжлүүлэг"

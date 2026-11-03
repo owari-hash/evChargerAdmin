@@ -102,8 +102,8 @@ export function PaymentsView({
   const [query, setQuery] = React.useState(initialQuery);
   const [status, setStatus] = React.useState(initialStatus);
   const [provider, setProvider] = React.useState('');
-  const [from, setFrom] = React.useState(todayIso);
-  const [to, setTo] = React.useState(todayIso);
+  const [from, setFrom] = React.useState('');
+  const [to, setTo] = React.useState('');
   const [page, setPage] = React.useState(1);
   const [limit, setLimit] = React.useState(50);
   const [checking, setChecking] = React.useState<string | null>(null);
@@ -131,7 +131,6 @@ export function PaymentsView({
     q: debouncedQuery,
     status,
     provider,
-    purpose: 'WALLET_TOPUP',
     from: toStartOfDayIso(from) || undefined,
     to: toEndOfDayIso(to) || undefined,
     page,

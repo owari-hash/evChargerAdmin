@@ -14,27 +14,27 @@ import type { SessionUser } from '@/lib/types';
 
 export function Topbar({ user, onMenu }: { user: SessionUser; onMenu: () => void }) {
   return (
-    // 1fr / auto / 1fr keeps the search centred on the header itself rather than
-    // on whatever is left over once the side controls have taken their space.
-    <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center justify-between gap-1.5 border-b border-[var(--color-border)] bg-[var(--color-surface)]/90 px-2 sm:px-4 sm:grid sm:grid-cols-[1fr_auto_1fr] sm:gap-3 backdrop-blur">
-      <div className="flex shrink-0 items-center justify-start">
+    <header className="sticky top-0 z-20 flex h-14 shrink-0 items-center justify-between gap-2 sm:gap-3 border-b border-[var(--color-border)] bg-[var(--color-surface)]/90 px-3 sm:px-4 backdrop-blur">
+      <div className="flex items-center gap-2 min-w-0 flex-1 max-w-[220px] xs:max-w-xs sm:max-w-sm md:max-w-md">
         <Button
           variant="ghost"
           size="icon"
-          className="lg:hidden"
+          className="lg:hidden shrink-0"
           onClick={onMenu}
           aria-label="Цэс нээх"
         >
           <Menu className="h-4 w-4" />
         </Button>
+        <GlobalSearch role={user.role} className="w-full" />
       </div>
 
-      <GlobalSearch role={user.role} className="flex-1 min-w-0 max-w-[145px] xs:max-w-[180px] sm:max-w-none sm:w-72 md:w-96" />
-
       <div className="flex shrink-0 items-center justify-end gap-1 sm:gap-2">
-        {user.role === 'CLIENT' && (
-          <span className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md bg-[var(--color-brand)]/10 text-[var(--color-brand)] border border-[var(--color-brand)]/20">
-            {user.clientName ?? 'Харилцагч'}
+        {user.role === 'CLIENT' && user.clientName && (
+          <span
+            title={user.clientName}
+            className="hidden xl:inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md bg-[var(--color-brand)]/10 text-[var(--color-brand)] border border-[var(--color-brand)]/20 max-w-[180px] 2xl:max-w-[260px] whitespace-nowrap"
+          >
+            <span className="truncate">{user.clientName}</span>
           </span>
         )}
         <LiveChargingButton />

@@ -51,6 +51,7 @@ export const CLIENT_NAV_SECTIONS: NavSection[] = [
       { href: '/charge-points', label: 'Цэнэглэх станц', icon: Zap, prefix: true },
       { href: '/connectors', label: 'Холбогч', icon: Plug },
       { href: '/transactions', label: 'Цэнэглэлт', icon: BatteryCharging, prefix: true },
+      { href: '/payments', label: 'Төлбөр', icon: Wallet },
       { href: '/ebarimt', label: 'И-Баримт', icon: Receipt, prefix: true },
     ],
   },

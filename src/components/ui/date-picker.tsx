@@ -400,9 +400,9 @@ function RangeTrigger({
   ariaLabel?: string;
   onKeyDown: (e: React.KeyboardEvent) => void;
 }) {
-  const todayIso = toIsoDate(today);
   const displayFrom = anchor || from;
-  const displayTo = anchor ? (hover || (open ? todayIso : to)) : to;
+  // While picking (anchor is active), right side is empty inside unless hovered over a date
+  const displayTo = anchor ? (hover || '') : to;
 
   return (
     <span className={cn('relative inline-flex', /(^|\s)w-auto(\s|$)/.test(className ?? '') ? 'w-auto' : 'w-full', className)}>
@@ -428,11 +428,10 @@ function RangeTrigger({
             {displayFrom || 'Эхлэх'}
           </span>
           <span className="text-[var(--color-fg-subtle)] font-normal">→</span>
-          <span className={cn(!displayTo && !anchor && 'text-[var(--color-fg-subtle)]', 'flex items-center')}>
+          <span className={cn('min-w-[5.5rem] flex items-center', !displayTo && !anchor && 'text-[var(--color-fg-subtle)]')}>
             {anchor && !hover && open ? (
               <span className="inline-flex items-center text-[var(--color-fg)]">
-                <span className="inline-block w-[1.5px] h-3.5 bg-[var(--color-brand)] animate-pulse mr-0.5" />
-                {todayIso}
+                <span className="inline-block w-[1.5px] h-3.5 bg-[var(--color-brand)] animate-pulse" />
               </span>
             ) : (
               displayTo || 'Дуусах'
@@ -742,7 +741,7 @@ export function DateRangePicker({
     triggerRef,
     panelRef,
     width: 304,
-    height: presets.length ? 440 : 380,
+    height: 310,
   });
 
   function openPicker() {
@@ -786,11 +785,6 @@ export function DateRangePicker({
   const shownFrom = anchor ?? value.from;
   const shownTo = anchor ? (hover ?? anchor) : value.to;
 
-  const activePreset = presets.find((p) => {
-    const r = p.range(today);
-    return r.from === value.from && r.to === value.to;
-  });
-
   return (
     <>
       <RangeTrigger
@@ -830,29 +824,6 @@ export function DateRangePicker({
                 }
               }}
             >
-              {presets.length ? (
-                <div className="mb-3 flex flex-wrap gap-1.5 border-b border-[var(--color-border)] pb-3">
-                  {presets.map((p) => (
-                    <button
-                      key={p.label}
-                      type="button"
-                      onClick={() => {
-                        onChange(p.range(today));
-                        close();
-                      }}
-                      className={cn(
-                        'rounded-full border px-2.5 py-1 text-xs transition',
-                        activePreset === p
-                          ? 'border-[var(--color-brand)] bg-[var(--color-brand-soft)] font-medium text-[var(--color-brand)]'
-                          : 'border-[var(--color-border)] text-[var(--color-fg-muted)] hover:border-[var(--color-border-strong)] hover:text-[var(--color-fg)]',
-                      )}
-                    >
-                      {p.label}
-                    </button>
-                  ))}
-                </div>
-              ) : null}
-
               <Calendar
                 autoFocus
                 focused={focused}
@@ -864,43 +835,6 @@ export function DateRangePicker({
                 onHover={setHover}
                 onEscape={() => close()}
               />
-
-              <p className="mt-2 text-center text-[11px] text-[var(--color-fg-subtle)]">
-                {anchor ? 'Дуусах өдрөө сонгоно уу' : 'Эхлэх өдрөө сонгоно уу'}
-              </p>
-
-              <div className="mt-2 flex items-center justify-between border-t border-[var(--color-border)] pt-2">
-                <button
-                  type="button"
-                  className={cn(footerBtn, 'text-[var(--color-fg-muted)] hover:text-[var(--color-fg)]')}
-                  onClick={() => {
-                    if (anchor) {
-                      setAnchor(null);
-                    } else {
-                      onChange({ from: '', to: '' });
-                      close();
-                    }
-                  }}
-                >
-                  {anchor ? 'Буцах' : 'Цэвэрлэх'}
-                </button>
-                <button
-                  type="button"
-                  className={cn(footerBtn, 'text-[var(--color-brand)] font-medium')}
-                  onClick={() => {
-                    const todayIso = toIsoDate(today);
-                    if (anchor) {
-                      const [from, to] = anchor <= todayIso ? [anchor, todayIso] : [todayIso, anchor];
-                      onChange({ from, to });
-                      close();
-                    } else {
-                      setFocused(today);
-                    }
-                  }}
-                >
-                  Өнөөдөр
-                </button>
-              </div>
             </div>,
             container,
           )

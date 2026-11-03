@@ -9,7 +9,7 @@ import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
 import { formatAmount, formatDateTime, formatMoney, formatNumber, formatPhone } from '@/lib/format';
 import { Badge, Button, Card, Dot, Input, Select, type Tone } from '@/components/ui/primitives';
 import { ConfirmModal, Modal } from '@/components/ui/modal';
-import { DateRangePicker } from '@/components/ui/date-picker';
+import { DateRangePicker, toIsoDate } from '@/components/ui/date-picker';
 import { FilterBar, Pagination } from '@/components/ui/pagination';
 import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty, TableLoading } from '@/components/ui/table';
 
@@ -73,6 +73,22 @@ function methodLabel(p: PaymentRow): string {
 /** Open payments can be re-asked of the bank; settled ones need nothing. */
 const RECHECKABLE: ReadonlySet<PaymentStatus> = new Set(['PENDING', 'PARTIALLY_PAID', 'EXPIRED', 'FAILED']);
 
+function toStartOfDayIso(dateStr: string): string {
+  if (!dateStr) return '';
+  if (dateStr.includes('T')) return new Date(dateStr).toISOString();
+  const [y, m, d] = dateStr.split('-').map(Number);
+  if (!y || !m || !d) return '';
+  return new Date(y, m - 1, d, 0, 0, 0, 0).toISOString();
+}
+
+function toEndOfDayIso(dateStr: string): string {
+  if (!dateStr) return '';
+  if (dateStr.includes('T')) return new Date(dateStr).toISOString();
+  const [y, m, d] = dateStr.split('-').map(Number);
+  if (!y || !m || !d) return '';
+  return new Date(y, m - 1, d, 23, 59, 59, 999).toISOString();
+}
+
 export function PaymentsView({
   initialQuery,
   initialStatus,
@@ -82,11 +98,12 @@ export function PaymentsView({
   initialStatus: string;
   canAdmin?: boolean;
 }) {
+  const todayIso = React.useMemo(() => toIsoDate(new Date()), []);
   const [query, setQuery] = React.useState(initialQuery);
   const [status, setStatus] = React.useState(initialStatus);
   const [provider, setProvider] = React.useState('');
-  const [from, setFrom] = React.useState('');
-  const [to, setTo] = React.useState('');
+  const [from, setFrom] = React.useState(todayIso);
+  const [to, setTo] = React.useState(todayIso);
   const [page, setPage] = React.useState(1);
   const [limit, setLimit] = React.useState(50);
   const [checking, setChecking] = React.useState<string | null>(null);
@@ -115,8 +132,8 @@ export function PaymentsView({
     status,
     provider,
     purpose: 'WALLET_TOPUP',
-    from: from ? new Date(from).toISOString() : '',
-    to: to ? new Date(to).toISOString() : '',
+    from: toStartOfDayIso(from) || undefined,
+    to: toEndOfDayIso(to) || undefined,
     page,
     limit,
   });

@@ -8,7 +8,7 @@ import { Eye, Receipt, RefreshCw, Search, Trash2, Undo2 } from 'lucide-react';
 import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
 import { formatAmount, formatDateTime, formatMoney, formatNumber, formatPhone } from '@/lib/format';
 import { Badge, Button, Card, Dot, Input, Select, type Tone } from '@/components/ui/primitives';
-import { DateRangePicker } from '@/components/ui/date-picker';
+import { DateRangePicker, toIsoDate } from '@/components/ui/date-picker';
 import { FilterBar, Pagination } from '@/components/ui/pagination';
 import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty, TableLoading } from '@/components/ui/table';
 import { ConfirmModal } from '@/components/ui/modal';
@@ -38,6 +38,22 @@ const STATUS_CONFIG: Record<string, { label: string; tone: Tone }> = {
   PENDING: { label: 'Хүлээгдэж буй', tone: 'warn' },
 };
 
+function toStartOfDayIso(dateStr: string): string {
+  if (!dateStr) return '';
+  if (dateStr.includes('T')) return new Date(dateStr).toISOString();
+  const [y, m, d] = dateStr.split('-').map(Number);
+  if (!y || !m || !d) return '';
+  return new Date(y, m - 1, d, 0, 0, 0, 0).toISOString();
+}
+
+function toEndOfDayIso(dateStr: string): string {
+  if (!dateStr) return '';
+  if (dateStr.includes('T')) return new Date(dateStr).toISOString();
+  const [y, m, d] = dateStr.split('-').map(Number);
+  if (!y || !m || !d) return '';
+  return new Date(y, m - 1, d, 23, 59, 59, 999).toISOString();
+}
+
 export function EbarimtView({
   initialQuery = '',
   initialStatus = 'ALL',
@@ -49,11 +65,12 @@ export function EbarimtView({
   canAdmin?: boolean;
   isClient?: boolean;
 }) {
+  const todayIso = React.useMemo(() => toIsoDate(new Date()), []);
   const [query, setQuery] = React.useState(initialQuery);
   const [status, setStatus] = React.useState(initialStatus);
   const [type, setType] = React.useState('');
-  const [from, setFrom] = React.useState('');
-  const [to, setTo] = React.useState('');
+  const [from, setFrom] = React.useState(todayIso);
+  const [to, setTo] = React.useState(todayIso);
   const [page, setPage] = React.useState(1);
   const [limit, setLimit] = React.useState(50);
 
@@ -91,8 +108,8 @@ export function EbarimtView({
     q: debouncedQuery || undefined,
     status: status !== 'ALL' ? status : undefined,
     type: type || undefined,
-    from: from || undefined,
-    to: to || undefined,
+    from: toStartOfDayIso(from) || undefined,
+    to: toEndOfDayIso(to) || undefined,
     page,
     limit,
   });

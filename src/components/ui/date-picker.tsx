@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { createPortal } from 'react-dom';
-import { CalendarDays, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import { CalendarDays, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, X } from 'lucide-react';
 import { cn } from '@/lib/cn';
 import { useNow } from '@/lib/use-now';
 import { TRIGGER_BASE } from './select';
@@ -56,7 +56,7 @@ const WEEKDAYS_LONG = ['Даваа', 'Мягмар', 'Лхагва', 'Пүрэв
 function formatDisplay(iso: string, withTime = false): string {
   const d = parseIsoDate(iso);
   if (!d) return '';
-  const date = `${d.getFullYear()}.${pad(d.getMonth() + 1)}.${pad(d.getDate())}`;
+  const date = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   const t = withTime ? parseTime(iso) : null;
   return t ? `${date} ${pad(t.h)}:${pad(t.m)}` : date;
 }
@@ -145,14 +145,24 @@ function Calendar({
   return (
     <div className="w-[17.5rem] select-none">
       <div className="mb-2 flex items-center justify-between gap-1">
-        <button
-          type="button"
-          className={navBtn}
-          aria-label={view === 'days' ? 'Өмнөх сар' : 'Өмнөх жил'}
-          onClick={() => onFocusedChange(addMonths(focused, view === 'days' ? -1 : -12))}
-        >
-          <ChevronLeft className="h-4 w-4" />
-        </button>
+        <div className="flex items-center gap-0.5">
+          <button
+            type="button"
+            className={navBtn}
+            aria-label="Өмнөх жил"
+            onClick={() => onFocusedChange(addMonths(focused, -12))}
+          >
+            <ChevronsLeft className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            className={navBtn}
+            aria-label="Өмнөх сар"
+            onClick={() => onFocusedChange(addMonths(focused, -1))}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </button>
+        </div>
         <button
           type="button"
           onClick={() => setView((v) => (v === 'days' ? 'months' : 'days'))}
@@ -160,16 +170,26 @@ function Calendar({
           aria-label="Сар, жил сонгох"
           aria-expanded={view === 'months'}
         >
-          {view === 'days' ? `${focused.getFullYear()} оны ${MONTHS[focused.getMonth()]}` : `${focused.getFullYear()} он`}
+          {view === 'days' ? `${focused.getFullYear()} он ${MONTHS[focused.getMonth()]}` : `${focused.getFullYear()} он`}
         </button>
-        <button
-          type="button"
-          className={navBtn}
-          aria-label={view === 'days' ? 'Дараах сар' : 'Дараах жил'}
-          onClick={() => onFocusedChange(addMonths(focused, view === 'days' ? 1 : 12))}
-        >
-          <ChevronRight className="h-4 w-4" />
-        </button>
+        <div className="flex items-center gap-0.5">
+          <button
+            type="button"
+            className={navBtn}
+            aria-label="Дараах сар"
+            onClick={() => onFocusedChange(addMonths(focused, 1))}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            className={navBtn}
+            aria-label="Дараах жил"
+            onClick={() => onFocusedChange(addMonths(focused, 12))}
+          >
+            <ChevronsRight className="h-4 w-4" />
+          </button>
+        </div>
       </div>
 
       {view === 'months' ? (
@@ -315,25 +335,124 @@ function Trigger({
         aria-label={ariaLabel ? `${ariaLabel}${label ? `: ${label}` : ''}` : undefined}
         onClick={onToggle}
         onKeyDown={onKeyDown}
-        className={cn(TRIGGER_BASE, 'h-9 whitespace-nowrap pl-9', onClear && label && 'pr-8')}
+        className={cn(
+          TRIGGER_BASE,
+          'h-9 px-3 flex items-center justify-between gap-2 whitespace-nowrap text-left',
+          open && 'border-[var(--color-brand)] ring-1 ring-[var(--color-brand)]',
+          onClear && label && 'pr-8',
+        )}
       >
-        <CalendarDays
-          aria-hidden="true"
-          className={cn(
-            'pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[var(--color-fg-subtle)]',
-            open && 'text-[var(--color-brand)]',
-          )}
-        />
         <span className={cn('truncate tabular-nums', !label && 'text-[var(--color-fg-subtle)]')}>
           {label || placeholder}
         </span>
+        <CalendarDays
+          aria-hidden="true"
+          className={cn(
+            'pointer-events-none ml-auto h-4 w-4 shrink-0 text-[var(--color-fg-subtle)]',
+            open && 'text-[var(--color-brand)]',
+          )}
+        />
       </button>
       {onClear && label && !disabled ? (
         <button
           type="button"
           onClick={onClear}
           aria-label="Цэвэрлэх"
-          className="absolute right-1.5 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-md text-[var(--color-fg-subtle)] transition hover:bg-[var(--color-surface-2)] hover:text-[var(--color-fg)]"
+          className="absolute right-8 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-md text-[var(--color-fg-subtle)] transition hover:bg-[var(--color-surface-2)] hover:text-[var(--color-fg)]"
+        >
+          <X className="h-3.5 w-3.5" />
+        </button>
+      ) : null}
+    </span>
+  );
+}
+
+function RangeTrigger({
+  triggerRef,
+  open,
+  from,
+  to,
+  anchor,
+  hover,
+  today,
+  placeholder,
+  onToggle,
+  onClear,
+  disabled,
+  id,
+  className,
+  ariaLabel,
+  onKeyDown,
+}: {
+  triggerRef: React.RefObject<HTMLButtonElement | null>;
+  open: boolean;
+  from?: string;
+  to?: string;
+  anchor: string | null;
+  hover: string | null;
+  today: Date;
+  placeholder: string;
+  onToggle: () => void;
+  onClear?: () => void;
+  disabled?: boolean;
+  id?: string;
+  className?: string;
+  ariaLabel?: string;
+  onKeyDown: (e: React.KeyboardEvent) => void;
+}) {
+  const todayIso = toIsoDate(today);
+  const displayFrom = anchor || from;
+  const displayTo = anchor ? (hover || (open ? todayIso : to)) : to;
+
+  return (
+    <span className={cn('relative inline-flex', /(^|\s)w-auto(\s|$)/.test(className ?? '') ? 'w-auto' : 'w-full', className)}>
+      <button
+        ref={triggerRef}
+        type="button"
+        id={id}
+        disabled={disabled}
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-label={ariaLabel ? `${ariaLabel}: ${from || '…'} - ${to || '…'}` : undefined}
+        onClick={onToggle}
+        onKeyDown={onKeyDown}
+        className={cn(
+          TRIGGER_BASE,
+          'h-9 px-3 flex items-center justify-between gap-2.5 text-sm font-normal text-left transition select-none',
+          open && 'border-[var(--color-brand)] ring-1 ring-[var(--color-brand)]',
+          onClear && (from || to || anchor) && 'pr-8',
+        )}
+      >
+        <div className="flex items-center gap-2 tabular-nums">
+          <span className={cn(!displayFrom && 'text-[var(--color-fg-subtle)]')}>
+            {displayFrom || 'Эхлэх'}
+          </span>
+          <span className="text-[var(--color-fg-subtle)] font-normal">→</span>
+          <span className={cn(!displayTo && !anchor && 'text-[var(--color-fg-subtle)]', 'flex items-center')}>
+            {anchor && !hover && open ? (
+              <span className="inline-flex items-center text-[var(--color-fg)]">
+                <span className="inline-block w-[1.5px] h-3.5 bg-[var(--color-brand)] animate-pulse mr-0.5" />
+                {todayIso}
+              </span>
+            ) : (
+              displayTo || 'Дуусах'
+            )}
+          </span>
+        </div>
+        <CalendarDays
+          aria-hidden="true"
+          className={cn(
+            'pointer-events-none ml-auto h-4 w-4 shrink-0 text-[var(--color-fg-subtle)]',
+            open && 'text-[var(--color-brand)]',
+          )}
+        />
+      </button>
+      {onClear && (from || to) && !disabled ? (
+        <button
+          type="button"
+          onClick={onClear}
+          aria-label="Цэвэрлэх"
+          className="absolute right-8 top-1/2 grid h-6 w-6 -translate-y-1/2 place-items-center rounded-md text-[var(--color-fg-subtle)] transition hover:bg-[var(--color-surface-2)] hover:text-[var(--color-fg)]"
         >
           <X className="h-3.5 w-3.5" />
         </button>
@@ -628,7 +747,7 @@ export function DateRangePicker({
 
   function openPicker() {
     if (disabled) return;
-    setFocused(parseIsoDate(value.to || value.from) ?? new Date(now));
+    setFocused(parseIsoDate(value.from || value.to) ?? new Date(now));
     setAnchor(null);
     setHover(null);
     place();
@@ -644,6 +763,7 @@ export function DateRangePicker({
   function pick(iso: string) {
     if (!anchor) {
       setAnchor(iso);
+      setFocused(new Date(now));
       return;
     }
     const [from, to] = anchor <= iso ? [anchor, iso] : [iso, anchor];
@@ -662,11 +782,6 @@ export function DateRangePicker({
     }
   }
 
-  const label =
-    value.from || value.to
-      ? `${value.from ? formatDisplay(value.from) : '…'} – ${value.to ? formatDisplay(value.to) : '…'}`
-      : '';
-
   // Preview while choosing the second end; otherwise show the committed range.
   const shownFrom = anchor ?? value.from;
   const shownTo = anchor ? (hover ?? anchor) : value.to;
@@ -678,13 +793,20 @@ export function DateRangePicker({
 
   return (
     <>
-      <Trigger
+      <RangeTrigger
         triggerRef={triggerRef}
         open={open}
-        label={label}
+        from={value.from}
+        to={value.to}
+        anchor={anchor}
+        hover={hover}
+        today={today}
         placeholder={placeholder}
         onToggle={() => (open ? close(false) : openPicker())}
-        onClear={() => onChange({ from: '', to: '' })}
+        onClear={() => {
+          onChange({ from: '', to: '' });
+          setAnchor(null);
+        }}
         disabled={disabled}
         id={id}
         className={className}
@@ -752,16 +874,29 @@ export function DateRangePicker({
                   type="button"
                   className={cn(footerBtn, 'text-[var(--color-fg-muted)] hover:text-[var(--color-fg)]')}
                   onClick={() => {
-                    onChange({ from: '', to: '' });
-                    close();
+                    if (anchor) {
+                      setAnchor(null);
+                    } else {
+                      onChange({ from: '', to: '' });
+                      close();
+                    }
                   }}
                 >
-                  Цэвэрлэх
+                  {anchor ? 'Буцах' : 'Цэвэрлэх'}
                 </button>
                 <button
                   type="button"
-                  className={cn(footerBtn, 'text-[var(--color-brand)]')}
-                  onClick={() => setFocused(new Date())}
+                  className={cn(footerBtn, 'text-[var(--color-brand)] font-medium')}
+                  onClick={() => {
+                    const todayIso = toIsoDate(today);
+                    if (anchor) {
+                      const [from, to] = anchor <= todayIso ? [anchor, todayIso] : [todayIso, anchor];
+                      onChange({ from, to });
+                      close();
+                    } else {
+                      setFocused(today);
+                    }
+                  }}
                 >
                   Өнөөдөр
                 </button>

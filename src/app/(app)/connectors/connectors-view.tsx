@@ -10,7 +10,6 @@ import {
   AlertTriangle,
   Search,
   X,
-  RefreshCw,
   SlidersHorizontal,
   Pencil,
   Clock,
@@ -33,6 +32,7 @@ import {
 import { Badge, Button, Card, Dot, Input, Select } from '@/components/ui/primitives';
 import { ErrorCodeBadge } from '@/components/ui/status';
 import { FilterBar, Pagination } from '@/components/ui/pagination';
+import { StatCard, StatGrid } from '@/components/stat-card';
 import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty, TableLoading } from '@/components/ui/table';
 import { ConfirmModal } from '@/components/ui/modal';
 import { EditConnectorModal } from './edit-connector-modal';
@@ -191,7 +191,7 @@ export function ConnectorsView({
     page,
     limit,
   });
-  const { data, error, isLoading, isValidating, mutate } = useSWR<Paginated<Connector>>(
+  const { data, error, isLoading, mutate } = useSWR<Paginated<Connector>>(
     key,
     fetcher,
     {
@@ -229,11 +229,6 @@ export function ConnectorsView({
   const availableCount = counts['Available'] ?? 0;
   const inactiveCount = counts['Unavailable'] ?? 0;
 
-  function handleRefresh() {
-    void mutate();
-    void mutateOverview();
-  }
-
   async function handleDeleteConnector() {
     if (!deleting) return;
     setBusyDelete(true);
@@ -261,159 +256,58 @@ export function ConnectorsView({
   const hasActiveFilter = Boolean(status || debouncedCp);
 
   return (
-    <div className="space-y-5">
-      {/* 1. Header Title matching Image 2 */}
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 shadow-sm">
-            <Plug className="h-6 w-6" />
-          </div>
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--color-fg)]">
-              Холбогч
-            </h1>
-            <p className="text-xs sm:text-sm text-[var(--color-fg-muted)]">
-              Бүх станцын холбогчуудын бодит цагийн төлөв ба ашиглалт
-            </p>
-          </div>
-        </div>
-
-        {/* Top Right: Live indicator & Refresh */}
-        <div className="flex items-center gap-2">
-          <span className="inline-flex items-center gap-1.5 rounded-full border border-[var(--color-border)] bg-[var(--color-surface)] px-3 py-1 text-xs font-medium text-[var(--color-fg-muted)] shadow-sm">
-            <Dot tone="ok" pulse />
-            Бодит цагийн хяналт
-          </span>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={handleRefresh}
-            aria-label="Мэдээлэл шинэчлэх"
-            className="text-xs h-8"
-            disabled={isValidating}
-          >
-            <RefreshCw className={cn('h-3.5 w-3.5 mr-1.5', isValidating && 'animate-spin')} />
-            Шинэчлэх
-          </Button>
-        </div>
-      </div>
-
-      {/* 2. 4 KPI Stat Cards matching Image 2 */}
-      <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-        {/* Card 1: Нийт холбогч */}
-        <button
-          type="button"
+    <div className="space-y-4">
+      <StatGrid>
+        <StatCard
+          label="Нийт холбогч"
+          value={formatNumber(totalCount)}
+          sub="Сүлжээнд буй бүгд"
+          icon={Plug}
+          tone="brand"
+          active={status === ''}
           onClick={() => {
             setStatus('');
             setPage(1);
           }}
-          className={cn(
-            'group flex flex-col justify-between rounded-xl border p-4 text-left transition-all shadow-sm',
-            status === ''
-              ? 'border-emerald-500 bg-emerald-500/5 ring-1 ring-emerald-500/20'
-              : 'border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-border-strong)] hover:bg-[var(--color-surface-2)]',
-          )}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-[var(--color-fg-muted)]">Нийт холбогч</span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500">
-              <Plug className="h-4 w-4" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <span className="text-2xl font-bold tracking-tight text-[var(--color-fg)] tnum font-mono">
-              {formatNumber(totalCount)}
-            </span>
-            <p className="mt-1 text-[11px] text-[var(--color-fg-subtle)]">Сүлжээнд буй бүгд</p>
-          </div>
-        </button>
-
-        {/* Card 2: Цэнэглэж байгаа */}
-        <button
-          type="button"
+        />
+        <StatCard
+          label="Цэнэглэж байгаа"
+          value={formatNumber(chargingCount)}
+          sub="Идэвхтэй цэнэглэлт явагдаж байна"
+          icon={Zap}
+          tone="info"
+          active={status === 'Charging'}
           onClick={() => {
             setStatus(status === 'Charging' ? '' : 'Charging');
             setPage(1);
           }}
-          className={cn(
-            'group flex flex-col justify-between rounded-xl border p-4 text-left transition-all shadow-sm',
-            status === 'Charging'
-              ? 'border-blue-500 bg-blue-500/10 ring-1 ring-blue-500/30'
-              : 'border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-border-strong)] hover:bg-[var(--color-surface-2)]',
-          )}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-blue-500">Цэнэглэж байгаа</span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-500/15 text-blue-500">
-              <Zap className="h-4 w-4" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <span className="text-2xl font-bold tracking-tight text-blue-500 tnum font-mono">
-              {formatNumber(chargingCount)}
-            </span>
-            <p className="mt-1 text-[11px] text-[var(--color-fg-subtle)]">Идэвхтэй цэнэглэлт явагдаж байна</p>
-          </div>
-        </button>
-
-        {/* Card 3: Ашиглахад бэлэн */}
-        <button
-          type="button"
+        />
+        <StatCard
+          label="Ашиглахад бэлэн"
+          value={formatNumber(availableCount)}
+          sub="Жолооч цэнэглэх боломжтой"
+          icon={CheckCircle2}
+          tone="ok"
+          active={status === 'Available'}
           onClick={() => {
             setStatus(status === 'Available' ? '' : 'Available');
             setPage(1);
           }}
-          className={cn(
-            'group flex flex-col justify-between rounded-xl border p-4 text-left transition-all shadow-sm',
-            status === 'Available'
-              ? 'border-emerald-500 bg-emerald-500/10 ring-1 ring-emerald-500/30'
-              : 'border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-border-strong)] hover:bg-[var(--color-surface-2)]',
-          )}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">Ашиглахад бэлэн</span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-500/15 text-emerald-500">
-              <CheckCircle2 className="h-4 w-4" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <span className="text-2xl font-bold tracking-tight text-emerald-600 dark:text-emerald-400 tnum font-mono">
-              {formatNumber(availableCount)}
-            </span>
-            <p className="mt-1 text-[11px] text-[var(--color-fg-subtle)]">Жолооч цэнэглэх боломжтой</p>
-          </div>
-        </button>
-
-        {/* Card 4: Идэвхгүй */}
-        <button
-          type="button"
+        />
+        <StatCard
+          label="Идэвхгүй"
+          value={formatNumber(inactiveCount)}
+          sub="Ашиглах боломжгүй холбогч"
+          icon={PowerOff}
+          tone="idle"
+          active={status === 'Unavailable'}
           onClick={() => {
             setStatus(status === 'Unavailable' ? '' : 'Unavailable');
             setPage(1);
           }}
-          className={cn(
-            'group flex flex-col justify-between rounded-xl border p-4 text-left transition-all shadow-sm',
-            status === 'Unavailable'
-              ? 'border-zinc-500 bg-zinc-500/10 ring-1 ring-zinc-500/30'
-              : 'border-[var(--color-border)] bg-[var(--color-surface)] hover:border-[var(--color-border-strong)] hover:bg-[var(--color-surface-2)]',
-          )}
-        >
-          <div className="flex items-center justify-between">
-            <span className="text-xs font-medium text-[var(--color-fg-muted)]">Идэвхгүй</span>
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-zinc-500/15 text-zinc-500 dark:text-zinc-400">
-              <PowerOff className="h-4 w-4" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <span className="text-2xl font-bold tracking-tight text-[var(--color-fg)] tnum font-mono">
-              {formatNumber(inactiveCount)}
-            </span>
-            <p className="mt-1 text-[11px] text-[var(--color-fg-subtle)]">Ашиглах боломжгүй холбогч</p>
-          </div>
-        </button>
-      </div>
+        />
+      </StatGrid>
 
-      {/* 3. Main Connectors Table Card matching Image 2 */}
       <Card>
         {/* Filter Bar */}
         <FilterBar>
@@ -495,7 +389,11 @@ export function ConnectorsView({
                       <p className="text-xs text-[var(--color-fg-muted)]">
                         Холбогчийн мэдээлэл ачаалж чадсангүй.
                       </p>
-                      <Button variant="secondary" size="sm" onClick={handleRefresh}>
+                      <Button variant="secondary" size="sm" onClick={() => {
+                          void mutate();
+                          void mutateOverview();
+                        }}
+                      >
                         Дахин оролдох
                       </Button>
                     </div>

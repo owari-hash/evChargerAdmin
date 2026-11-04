@@ -126,8 +126,8 @@ export function THead({ className, ...props }: React.ComponentProps<'thead'>) {
       className={cn(
         // Sticky inside TableWrap. Borders on sticky rows vanish with
         // border-collapse, so the divider is an inset shadow on the cells.
-        'sticky top-0 z-[1] bg-[var(--color-surface)]',
-        '[&_th]:bg-[var(--color-surface)] [&_th]:shadow-[inset_0_-1px_0_var(--color-border)]',
+        'sticky top-0 z-[1]',
+        '[&_th]:bg-[color-mix(in_srgb,var(--color-surface)_80%,transparent)] [&_th]:backdrop-blur-xl [&_th]:shadow-[inset_0_-1px_0_var(--color-border)]',
         'group-data-[scrolled]/table:[&_th]:shadow-[inset_0_-1px_0_var(--color-border),0_6px_10px_-8px_rgba(0,0,0,0.35)]',
         className,
       )}
@@ -141,13 +141,15 @@ export function THead({ className, ...props }: React.ComponentProps<'thead'>) {
  * same default so every column lines up under its header. `align` on TD stays
  * available for the rare cell that genuinely needs it.
  */
-export function TH({ className, ...props }: React.ComponentProps<'th'>) {
+/** Column headings are always centered, whatever the cells below them do. */
+export function TH({ className, align: _align, ...props }: React.ComponentProps<'th'>) {
   return (
     <th
       scope="col"
       className={cn(
-        'whitespace-nowrap px-2.5 py-1.5 text-center text-xs font-medium text-[var(--color-fg-muted)] border-r border-[var(--color-border)] last:border-r-0 leading-normal',
+        'whitespace-nowrap px-2.5 py-1.5 text-xs font-medium text-[var(--color-fg-muted)] border-r border-[var(--color-border)] last:border-r-0 leading-normal',
         className,
+        'text-center',
       )}
       {...props}
     />
@@ -159,10 +161,10 @@ export function TBody({ className, ...props }: React.ComponentProps<'tbody'>) {
     <tbody
       className={cn(
         'divide-y divide-[var(--color-border)]',
-        '[&>tr:not([data-static]):nth-child(even)]:bg-[#dcf2ea] dark:[&>tr:not([data-static]):nth-child(even)]:bg-emerald-900/35',
+        '[&>tr:not([data-static]):nth-child(even)]:bg-[#dcf2ea]/70 dark:[&>tr:not([data-static]):nth-child(even)]:bg-emerald-900/25',
         '[&>tr:not([data-static]):nth-child(even):hover]:bg-[#cbeae0] dark:[&>tr:not([data-static]):nth-child(even):hover]:bg-emerald-900/50',
-        '[&>tr:not([data-static]):nth-child(odd)]:bg-white dark:[&>tr:not([data-static]):nth-child(odd)]:bg-[var(--color-surface)]',
-        '[&>tr:not([data-static]):nth-child(odd):hover]:bg-[#f0faf6] dark:[&>tr:not([data-static]):nth-child(odd):hover]:bg-[var(--color-surface-2)]',
+        '[&>tr:not([data-static]):nth-child(odd)]:bg-white/45 dark:[&>tr:not([data-static]):nth-child(odd)]:bg-transparent',
+        '[&>tr:not([data-static]):nth-child(odd):hover]:bg-[#f0faf6]/80 dark:[&>tr:not([data-static]):nth-child(odd):hover]:bg-white/[0.04]',
         className,
       )}
       {...props}
@@ -225,8 +227,8 @@ export function TableLoading({ colSpan, rows = 5 }: { colSpan: number; rows?: nu
           data-static
           className={
             i % 2 === 1
-              ? 'bg-[#dcf2ea] dark:bg-emerald-900/35'
-              : 'bg-white dark:bg-[var(--color-surface)]'
+              ? 'bg-[#dcf2ea]/70 dark:bg-emerald-900/25'
+              : 'bg-white/45 dark:bg-transparent'
           }
         >
           <td colSpan={colSpan} className="px-2.5 py-1.5 border-r border-[var(--color-border)] last:border-r-0">

@@ -269,6 +269,8 @@ export interface Transaction {
   lastMeterWh?: number;
   lastPowerW?: number;
   lastSocPercent?: number;
+  /** Battery % when the session started; lastSocPercent is where it ended. */
+  startSocPercent?: number;
   lastMeterValueAt?: string;
   vehicleVin?: string;
   vehicleModel?: string;

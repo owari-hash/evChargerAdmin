@@ -44,6 +44,8 @@ import {
   THead,
   TR,
 } from '@/components/ui/table';
+import { PageToolbar } from '@/components/ui/page-toolbar';
+import { StatCard, StatGrid } from '@/components/stat-card';
 import { cn } from '@/lib/cn';
 
 function localDate(iso: string): Date | null {
@@ -224,25 +226,35 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
   }
 
   return (
-    <div className="space-y-3.5 sm:space-y-4">
-      {/* 1. Header Title & Range Controls */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div className="flex items-center gap-2.5">
-          <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-emerald-500/10 text-emerald-500 border border-emerald-500/20 shadow-sm">
-            <BarChart3 className="h-5 w-5" />
-          </div>
-          <div>
-            <h1 className="text-lg sm:text-xl font-bold tracking-tight text-[var(--color-fg)]">
-              Орлого, тайлан
-            </h1>
-            <p className="text-xs text-[var(--color-fg-muted)]">
-              Цэнэглэлтийн орлого, Eplug шимтгэл болон цэвэр орлогын тайлан
-            </p>
-          </div>
-        </div>
+    <div className="space-y-4">
 
-        {/* Date Picker & Station Selector in Top Right */}
-        <div className="flex flex-wrap items-center gap-2">
+      <StatGrid min="11rem">
+        <StatCard label="Нийт борлуулалт (брутто)" value={formatMoney(totals?.gross)} sub="Жолоочийн төлсөн нийт" icon={Coins} tone="brand" />
+        <StatCard label="Хэрэглэгчийн цэвэр орлого" value={formatMoney(totals?.net)} sub="Шимтгэл хассан дүн" icon={User} tone="ok" />
+        <StatCard
+          label="Eplug үйлчилгээний шимтгэл"
+          value={formatMoney(totals?.fee)}
+          sub={`${avgFeePercent}% үйлчилгээний хувь`}
+          icon={ShieldCheck}
+          tone="info"
+        />
+        <StatCard
+          label="Нийлүүлсэн эрчим хүч"
+          value={`${formatNumber(totals?.energyKwh, 2)} кВтц`}
+          sub="Сонгосон хугацаанд"
+          icon={Zap}
+          tone="warn"
+        />
+        <StatCard
+          label="Төлбөрийн үлдэгдэл"
+          value={formatMoney(totals?.outstanding ?? totals?.net ?? 0)}
+          sub="Шилжүүлэх боломжтой"
+          icon={CreditCard}
+          tone="idle"
+        />
+      </StatGrid>
+
+      <PageToolbar>
           <DateRangePicker
             className="w-full sm:w-auto min-w-[15rem]"
             value={range}
@@ -285,114 +297,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
               ))}
             </Select>
           )}
-        </div>
-      </div>
-
-      {/* 2. Compact 5 Stat Cards in horizontal row */}
-      <div className="grid grid-cols-2 gap-2 sm:gap-2.5 lg:grid-cols-5">
-        {/* Card 1: Нийт борлуулалт (брутто) */}
-        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-2.5 sm:p-3 shadow-sm flex flex-col justify-between">
-          <div className="flex items-center justify-between gap-1.5">
-            <span className="text-[11px] sm:text-xs font-medium text-[var(--color-fg-muted)] truncate">
-              Нийт борлуулалт (брутто)
-            </span>
-            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-emerald-500/10 text-emerald-500">
-              <Coins className="h-3.5 w-3.5" />
-            </div>
-          </div>
-          <div className="mt-1.5">
-            <div className="text-base sm:text-lg font-bold tracking-tight text-[var(--color-fg)] tnum font-mono truncate">
-              {formatMoney(totals?.gross)}
-            </div>
-            <div className="mt-0.5 flex items-center gap-1 text-[10px] sm:text-[11px] font-medium text-emerald-500 truncate">
-              <span className="inline-flex items-center">↑ 12.5%</span>
-              <span className="text-[var(--color-fg-subtle)] font-normal truncate">Өмнөх хугацаатай харьцуулахад</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Card 2: Хэрэглэгчийн цэвэр орлого */}
-        <div className="rounded-xl border border-emerald-500/25 bg-emerald-500/5 p-2.5 sm:p-3 shadow-sm flex flex-col justify-between">
-          <div className="flex items-center justify-between gap-1.5">
-            <span className="text-[11px] sm:text-xs font-semibold text-emerald-600 dark:text-emerald-400 truncate">
-              Хэрэглэгчийн цэвэр орлого
-            </span>
-            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-emerald-500/15 text-emerald-500">
-              <User className="h-3.5 w-3.5" />
-            </div>
-          </div>
-          <div className="mt-1.5">
-            <div className="text-base sm:text-lg font-bold tracking-tight text-emerald-600 dark:text-emerald-400 tnum font-mono truncate">
-              {formatMoney(totals?.net)}
-            </div>
-            <div className="mt-0.5 flex items-center gap-1 text-[10px] sm:text-[11px] font-medium text-emerald-500 truncate">
-              <span className="inline-flex items-center">↑ 8.2%</span>
-              <span className="text-[var(--color-fg-subtle)] font-normal truncate">Өмнөх хугацаатай харьцуулахад</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Card 3: Eplug үйлчилгээний шимтгэл */}
-        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-2.5 sm:p-3 shadow-sm flex flex-col justify-between">
-          <div className="flex items-center justify-between gap-1.5">
-            <span className="text-[11px] sm:text-xs font-medium text-[var(--color-fg-muted)] truncate">
-              Eplug үйлчилгээний шимтгэл
-            </span>
-            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-blue-500/10 text-blue-500">
-              <ShieldCheck className="h-3.5 w-3.5" />
-            </div>
-          </div>
-          <div className="mt-1.5">
-            <div className="text-base sm:text-lg font-bold tracking-tight text-[var(--color-fg)] tnum font-mono truncate">
-              {formatMoney(totals?.fee)}
-            </div>
-            <div className="mt-0.5 text-[10px] sm:text-[11px] text-[var(--color-fg-muted)] truncate">
-              <span className="font-semibold text-blue-500">{avgFeePercent}%</span> Үйлчилгээний хувь
-            </div>
-          </div>
-        </div>
-
-        {/* Card 4: Нийлүүлсэн эрчим хүч */}
-        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-2.5 sm:p-3 shadow-sm flex flex-col justify-between">
-          <div className="flex items-center justify-between gap-1.5">
-            <span className="text-[11px] sm:text-xs font-medium text-[var(--color-fg-muted)] truncate">
-              Нийлүүлсэн эрчим хүч
-            </span>
-            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-amber-500/10 text-amber-500">
-              <Zap className="h-3.5 w-3.5" />
-            </div>
-          </div>
-          <div className="mt-1.5">
-            <div className="text-base sm:text-lg font-bold tracking-tight text-[var(--color-fg)] tnum font-mono truncate">
-              {formatNumber(totals?.energyKwh, 2)} кВтц
-            </div>
-            <div className="mt-0.5 flex items-center gap-1 text-[10px] sm:text-[11px] font-medium text-emerald-500 truncate">
-              <span className="inline-flex items-center">↑ 15.3%</span>
-              <span className="text-[var(--color-fg-subtle)] font-normal truncate">Өмнөх хугацаатай харьцуулахад</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Card 5: Төлбөрийн үлдэгдэл */}
-        <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] p-2.5 sm:p-3 shadow-sm flex flex-col justify-between col-span-2 lg:col-span-1">
-          <div className="flex items-center justify-between gap-1.5">
-            <span className="text-[11px] sm:text-xs font-medium text-[var(--color-fg-muted)] truncate">
-              Төлбөрийн үлдэгдэл
-            </span>
-            <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md bg-purple-500/10 text-purple-500">
-              <CreditCard className="h-3.5 w-3.5" />
-            </div>
-          </div>
-          <div className="mt-1.5">
-            <div className="text-base sm:text-lg font-bold tracking-tight text-[var(--color-fg)] tnum font-mono truncate">
-              {formatMoney(totals?.outstanding ?? totals?.net ?? 0)}
-            </div>
-            <div className="mt-0.5 text-[10px] sm:text-[11px] text-emerald-500 font-medium truncate">
-              Шилжүүлэх боломжтой
-            </div>
-          </div>
-        </div>
-      </div>
+      </PageToolbar>
 
       {/* 3. Tabs & Table Card directly below resized dashboard */}
       <Card>
@@ -667,15 +572,15 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                                           <thead>
                                             <tr className="border-b border-[var(--color-border)] text-[11px] text-[var(--color-fg-subtle)] font-medium">
                                               <th className="py-1.5 px-2.5 w-10 text-center border-r border-[var(--color-border)]">№</th>
-                                              <th className="py-1.5 px-2.5 border-r border-[var(--color-border)]">Сеанс ID</th>
-                                              <th className="py-1.5 px-2.5 border-r border-[var(--color-border)]">Холбогч</th>
-                                              <th className="py-1.5 px-2.5 border-r border-[var(--color-border)]">Машин / Карт</th>
-                                              <th className="py-1.5 px-2.5 border-r border-[var(--color-border)]">Эхэлсэн хугацаа</th>
-                                              <th className="py-1.5 px-2.5 text-right border-r border-[var(--color-border)]">Эрчим хүч</th>
-                                              <th className="py-1.5 px-2.5 text-right border-r border-[var(--color-border)]">Тариф</th>
-                                              <th className="py-1.5 px-2.5 text-right font-semibold border-r border-[var(--color-border)]">Борлуулалт</th>
-                                              <th className="py-1.5 px-2.5 text-right text-blue-500 border-r border-[var(--color-border)]">Шимтгэл</th>
-                                              <th className="py-1.5 px-2.5 text-right font-bold text-emerald-600 dark:text-emerald-400">Цэвэр орлого</th>
+                                              <th className="text-center py-1.5 px-2.5 border-r border-[var(--color-border)]">Сеанс ID</th>
+                                              <th className="text-center py-1.5 px-2.5 border-r border-[var(--color-border)]">Холбогч</th>
+                                              <th className="text-center py-1.5 px-2.5 border-r border-[var(--color-border)]">Машин / Карт</th>
+                                              <th className="text-center py-1.5 px-2.5 border-r border-[var(--color-border)]">Эхэлсэн хугацаа</th>
+                                              <th className="text-center py-1.5 px-2.5 border-r border-[var(--color-border)]">Эрчим хүч</th>
+                                              <th className="text-center py-1.5 px-2.5 border-r border-[var(--color-border)]">Тариф</th>
+                                              <th className="text-center py-1.5 px-2.5 font-semibold border-r border-[var(--color-border)]">Борлуулалт</th>
+                                              <th className="text-center py-1.5 px-2.5 text-blue-500 border-r border-[var(--color-border)]">Шимтгэл</th>
+                                              <th className="text-center py-1.5 px-2.5 font-bold text-emerald-600 dark:text-emerald-400">Цэвэр орлого</th>
                                             </tr>
                                           </thead>
                                           <tbody className="divide-y divide-[var(--color-border)]">

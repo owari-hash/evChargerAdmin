@@ -200,7 +200,7 @@ export function TariffsView() {
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6 pb-12 pt-2">
+    <div className="space-y-4">
       {/* Header controls */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <div className="inline-flex items-center gap-2 rounded-full border border-[var(--color-border)] bg-[var(--color-surface-2)] px-3 py-1 text-xs font-medium text-[var(--color-brand)]">
@@ -531,10 +531,10 @@ export function TariffsView() {
                     <table className="w-full text-left text-xs border-collapse">
                       <thead className="bg-[var(--color-surface-2)] text-[11px] font-semibold text-[var(--color-fg-muted)]">
                         <tr>
-                          <th className="px-2.5 py-1.5 border-r border-[var(--color-border)]">Тариф</th>
-                          <th className="px-2.5 py-1.5 text-right border-r border-[var(--color-border)]">кВт·ц</th>
-                          <th className="px-2.5 py-1.5 text-right border-r border-[var(--color-border)]">Нэгж үнэ</th>
-                          <th className="px-2.5 py-1.5 text-right">Дүн</th>
+                          <th className="text-center px-2.5 py-1.5 border-r border-[var(--color-border)]">Тариф</th>
+                          <th className="text-center px-2.5 py-1.5 border-r border-[var(--color-border)]">кВт·ц</th>
+                          <th className="text-center px-2.5 py-1.5 border-r border-[var(--color-border)]">Нэгж үнэ</th>
+                          <th className="text-center px-2.5 py-1.5 ">Дүн</th>
                         </tr>
                       </thead>
                       <tbody className="divide-y divide-[var(--color-border)]">

@@ -2,7 +2,6 @@ import {
   Activity,
   Banknote,
   Building2,
-  CalendarClock,
   CreditCard,
   Cpu,
   FileText,
@@ -162,7 +161,6 @@ const MENU_KEYWORDS: Record<string, string[]> = {
     'driver', 'drivers', 'wallet', 'balance', 'jolooch', 'user', 'users',
   ],
   '/id-tags': ['карт', 'rfid', 'таг', 'нфс', 'tag', 'card', 'kart'],
-  '/reservations': ['захиалга', 'урьдчилсан', 'reservation', 'booking', 'zahialga'],
   '/clients': [
     'харилцагч', 'түнш', 'эзэмшигч', 'байгууллага', 'компани', 'client', 'partner', 'haritsagch',
   ],
@@ -449,18 +447,6 @@ const FUNCTION_ENTRIES: SearchEntry[] = [
     keywords: [
       'зөвшөөрөл', 'шалгах', 'тест', 'authorize', 'check', 'test', 'zuvshuurul', 'shalgalt',
     ],
-  },
-
-  // ---- Захиалга ----
-  {
-    id: 'fn:reservation-cancel',
-    kind: 'function',
-    label: 'Захиалга цуцлах',
-    href: '/reservations',
-    icon: CalendarClock,
-    section: 'Захиалга',
-    keywords: ['захиалга', 'цуцлах', 'болих', 'cancel', 'reservation', 'tsutslah'],
-    minRole: 'OPERATOR',
   },
 
   // ---- Харилцагч ----

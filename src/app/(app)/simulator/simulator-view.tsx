@@ -13,7 +13,6 @@ import {
   Layers,
   Play,
   Plug,
-  RefreshCw,
   Search,
   Sliders,
   Square,
@@ -1150,7 +1149,7 @@ function VehicleDetectionsTab() {
   const [search, setSearch] = React.useState('');
   const [selectedLog, setSelectedLog] = React.useState<VehicleDetectionRecord | null>(null);
 
-  const { data, isLoading, mutate } = useSWR<{
+  const { data, isLoading } = useSWR<{
     data: VehicleDetectionRecord[];
     total: number;
   }>(apiUrl('vehicle-detections', { limit: 50, vin: search || undefined }), fetcher, {
@@ -1170,12 +1169,6 @@ function VehicleDetectionsTab() {
             </div>
           }
           description="Станц дээр кабель залгагдах эсвэл цэнэглэлт эхлэх бүрт машин болон VIN-ийг автоматаар өгөгдлийн санд (vehicledetections) хадгалсан түүх."
-          actions={
-            <Button variant="secondary" size="sm" onClick={() => mutate()} className="gap-1.5">
-              <RefreshCw className="h-3.5 w-3.5" />
-              Шинэчлэх
-            </Button>
-          }
         />
         <CardBody className="p-4 space-y-4">
           <div className="flex gap-3">

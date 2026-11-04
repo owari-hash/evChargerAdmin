@@ -16,12 +16,10 @@ import {
 import {
   Activity,
   ArrowUpRight,
-  BarChart3,
   Clock,
   ExternalLink,
   Globe,
   Laptop,
-  RefreshCw,
   Smartphone,
   TrendingUp,
   Users,
@@ -32,7 +30,20 @@ import { apiUrl, fetcher } from '@/lib/client';
 import { formatNumber } from '@/lib/format';
 import type { AnalyticsOverview } from '@/lib/types';
 import { StatCard, StatGrid } from '@/components/stat-card';
-import { Badge, Button, Card } from '@/components/ui/primitives';
+import {
+  BAR_CURSOR,
+  BarGradient,
+  FadeGradient,
+  GlassLegend,
+  GlassTooltip,
+  GlowFilter,
+  GRID_PROPS,
+  LINE_CURSOR,
+  activeDot,
+  useChartIds,
+} from '@/components/charts/glass';
+import { Badge, Card } from '@/components/ui/primitives';
+import { PageToolbar } from '@/components/ui/page-toolbar';
 import { Table, TableWrap, TBody, TD, TH, THead, TR } from '@/components/ui/table';
 
 const AXIS = 'var(--color-fg-subtle)';
@@ -45,37 +56,13 @@ const AXIS_PROPS = {
   axisLine: false,
 } as const;
 
-function ChartTooltip({
-  active,
-  payload,
-  label,
-}: {
-  active?: boolean;
-  payload?: { name?: string; dataKey?: string | number; value?: number; color?: string }[];
-  label?: string | number;
-}) {
-  if (!active || !payload?.length) return null;
-  return (
-    <div className="rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] px-3.5 py-2.5 text-xs shadow-xl backdrop-blur-md">
-      <p className="mb-1.5 font-semibold text-[var(--color-fg)]">{label}</p>
-      {payload.map((entry) => {
-        return (
-          <p key={String(entry.dataKey || entry.name)} className="flex items-center gap-2.5 py-0.5 text-[var(--color-fg-muted)]">
-            <span
-              className="inline-block h-2.5 w-2.5 rounded-full ring-1 ring-black/10"
-              style={{ background: entry.color }}
-              aria-hidden="true"
-            />
-            <span className="font-medium">{entry.name}:</span>
-            <span className="ml-auto font-semibold text-[var(--color-fg)] tnum">
-              {formatNumber(entry.value ?? 0)}
-            </span>
-          </p>
-        );
-      })}
-    </div>
-  );
-}
+const WEB = '#06b6d4';
+const IOS = '#10b981';
+const ANDROID = '#8b5cf6';
+const COUNT_FORMAT = { web: formatNumber, ios: formatNumber, android: formatNumber, total: formatNumber } as Record<
+  string,
+  (v: number) => string
+>;
 
 function shortDateLabel(value: string): string {
   const parts = value.split('-');
@@ -87,7 +74,8 @@ function shortDateLabel(value: string): string {
 
 export function AnalyticsView({ initialData }: { initialData: AnalyticsOverview }) {
   const [days, setDays] = React.useState<number>(7);
-  const { data, mutate, isValidating } = useSWR<AnalyticsOverview>(
+  const ids = useChartIds('web', 'ios', 'android', 'glow', 'bar');
+  const { data } = useSWR<AnalyticsOverview>(
     apiUrl(`/analytics/overview?days=${days}`),
     fetcher,
     {
@@ -108,52 +96,7 @@ export function AnalyticsView({ initialData }: { initialData: AnalyticsOverview 
   ];
 
   return (
-    <div className="space-y-6">
-      {/* Header with Title and Time range switcher */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--color-brand-soft)] text-[var(--color-brand)]">
-              <BarChart3 className="h-5 w-5" />
-            </span>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--color-fg)]">
-              Вэб & Апп Хандалт
-            </h1>
-          </div>
-          <p className="mt-1 text-xs sm:text-sm text-[var(--color-fg-muted)]">
-            Өдөр тутмын хэрэглэгчийн хандалт, мобайл апп болон Google Analytics статистик
-          </p>
-        </div>
-
-        <div className="flex flex-wrap items-center gap-2">
-          <div className="inline-flex rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-1">
-            {periods.map((p) => (
-              <button
-                key={p.value}
-                type="button"
-                onClick={() => setDays(p.value)}
-                className={`rounded-lg px-2.5 py-1 text-xs font-medium transition ${
-                  days === p.value
-                    ? 'bg-[var(--color-surface)] text-[var(--color-fg)] shadow-xs'
-                    : 'text-[var(--color-fg-subtle)] hover:text-[var(--color-fg)]'
-                }`}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-
-          <Button
-            size="sm"
-            variant="secondary"
-            onClick={() => mutate()}
-            disabled={isValidating}
-            title="Шинэчлэх"
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${isValidating ? 'animate-spin' : ''}`} />
-          </Button>
-        </div>
-      </div>
+    <div className="space-y-4">
 
       {/* KPI Cards */}
       <StatGrid>
@@ -191,8 +134,27 @@ export function AnalyticsView({ initialData }: { initialData: AnalyticsOverview 
         />
       </StatGrid>
 
+      <PageToolbar>
+          <div className="inline-flex rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-1">
+            {periods.map((p) => (
+              <button
+                key={p.value}
+                type="button"
+                onClick={() => setDays(p.value)}
+                className={`rounded-lg px-2.5 py-1 text-xs font-medium transition ${
+                  days === p.value
+                    ? 'bg-[var(--color-surface)] text-[var(--color-fg)] shadow-xs'
+                    : 'text-[var(--color-fg-subtle)] hover:text-[var(--color-fg)]'
+                }`}
+              >
+                {p.label}
+              </button>
+            ))}
+          </div>
+      </PageToolbar>
+
       {/* Main Charts: Daily Trend & Hourly Peak */}
-      <div className="grid gap-6 lg:grid-cols-3">
+      <div className="grid gap-4 lg:grid-cols-3">
         {/* Daily Visits Area Chart */}
         <Card className="lg:col-span-2 p-4 sm:p-5">
           <div className="flex flex-row items-center justify-between pb-4">
@@ -204,69 +166,57 @@ export function AnalyticsView({ initialData }: { initialData: AnalyticsOverview 
                 Вэбсайт, iOS апп болон Android апп-ын өдрийн үзүүлэлт
               </p>
             </div>
-            <div className="flex flex-wrap items-center gap-3 text-xs">
-              <span className="flex items-center gap-1.5 text-[var(--color-fg-muted)]">
-                <span className="h-2.5 w-2.5 rounded-full bg-[#06b6d4]" />
-                Вэб
-              </span>
-              <span className="flex items-center gap-1.5 text-[var(--color-fg-muted)]">
-                <span className="h-2.5 w-2.5 rounded-full bg-[#10b981]" />
-                iOS
-              </span>
-              <span className="flex items-center gap-1.5 text-[var(--color-fg-muted)]">
-                <span className="h-2.5 w-2.5 rounded-full bg-[#8b5cf6]" />
-                Android
-              </span>
-            </div>
+            <GlassLegend
+              items={[
+                { label: 'Вэб', color: WEB },
+                { label: 'iOS', color: IOS },
+                { label: 'Android', color: ANDROID },
+              ]}
+            />
           </div>
 
           <div className="h-[280px] w-full pt-2">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={stats.dailyTrend} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                 <defs>
-                  <linearGradient id="webGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.4} />
-                    <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.0} />
-                  </linearGradient>
-                  <linearGradient id="iosGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
-                    <stop offset="95%" stopColor="#10b981" stopOpacity={0.0} />
-                  </linearGradient>
-                  <linearGradient id="androidGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.4} />
-                    <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.0} />
-                  </linearGradient>
+                  <FadeGradient id={ids.web} color={WEB} />
+                  <FadeGradient id={ids.ios} color={IOS} />
+                  <FadeGradient id={ids.android} color={ANDROID} />
+                  <GlowFilter id={ids.glow} />
                 </defs>
-                <CartesianGrid stroke={GRID} strokeDasharray="3 3" vertical={false} />
+                <CartesianGrid {...GRID_PROPS} />
                 <XAxis dataKey="date" tickFormatter={shortDateLabel} {...AXIS_PROPS} />
                 <YAxis allowDecimals={false} {...AXIS_PROPS} />
-                <Tooltip content={<ChartTooltip />} />
+                <Tooltip cursor={LINE_CURSOR} content={<GlassTooltip formatters={COUNT_FORMAT} />} />
                 <Area
-                  type="monotone"
+                  type="natural"
                   dataKey="web"
                   name="Вэб хандалт"
-                  stroke="#06b6d4"
-                  strokeWidth={2}
-                  fillOpacity={1}
-                  fill="url(#webGrad)"
+                  stroke={WEB}
+                  strokeWidth={2.5}
+                  fill={`url(#${ids.web})`}
+                  filter={`url(#${ids.glow})`}
+                  activeDot={activeDot(WEB)}
                 />
                 <Area
-                  type="monotone"
+                  type="natural"
                   dataKey="ios"
                   name="iOS Апп"
-                  stroke="#10b981"
-                  strokeWidth={2}
-                  fillOpacity={1}
-                  fill="url(#iosGrad)"
+                  stroke={IOS}
+                  strokeWidth={2.5}
+                  fill={`url(#${ids.ios})`}
+                  filter={`url(#${ids.glow})`}
+                  activeDot={activeDot(IOS)}
                 />
                 <Area
-                  type="monotone"
+                  type="natural"
                   dataKey="android"
                   name="Android Апп"
-                  stroke="#8b5cf6"
-                  strokeWidth={2}
-                  fillOpacity={1}
-                  fill="url(#androidGrad)"
+                  stroke={ANDROID}
+                  strokeWidth={2.5}
+                  fill={`url(#${ids.android})`}
+                  filter={`url(#${ids.glow})`}
+                  activeDot={activeDot(ANDROID)}
                 />
               </AreaChart>
             </ResponsiveContainer>
@@ -290,11 +240,14 @@ export function AnalyticsView({ initialData }: { initialData: AnalyticsOverview 
           <div className="h-[280px] w-full pt-2">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={stats.hourlyDistribution} margin={{ top: 10, right: 5, left: -25, bottom: 0 }}>
-                <CartesianGrid stroke={GRID} strokeDasharray="3 3" vertical={false} />
+                <CartesianGrid {...GRID_PROPS} />
                 <XAxis dataKey="label" {...AXIS_PROPS} interval={3} />
                 <YAxis allowDecimals={false} {...AXIS_PROPS} />
-                <Tooltip content={<ChartTooltip />} />
-                <Bar dataKey="total" name="Нийт хандалт" fill="var(--color-brand)" radius={[4, 4, 0, 0]} />
+                <defs>
+                  <BarGradient id={ids.bar} color="var(--color-brand)" />
+                </defs>
+                <Tooltip cursor={BAR_CURSOR} content={<GlassTooltip formatters={COUNT_FORMAT} />} />
+                <Bar dataKey="total" name="Нийт хандалт" fill={`url(#${ids.bar})`} radius={[6, 6, 6, 6]} maxBarSize={14} />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -302,7 +255,7 @@ export function AnalyticsView({ initialData }: { initialData: AnalyticsOverview 
       </div>
 
       {/* Breakdowns & Google Analytics Integration Info */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         {/* Platform Share */}
         <Card className="p-4 sm:p-5">
           <h3 className="text-sm font-semibold text-[var(--color-fg)]">Платформ хуваарилалт</h3>

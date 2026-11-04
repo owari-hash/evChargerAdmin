@@ -80,7 +80,7 @@ export function ContactView({ canEdit }: { canEdit: boolean }) {
   if (error) return <ErrorNote>{errorMessage(error)}</ErrorNote>;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {isLoading ? (
         <div className="grid gap-6 lg:grid-cols-2">
           <Skeleton className="h-96" />

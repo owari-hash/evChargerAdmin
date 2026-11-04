@@ -4,7 +4,9 @@ import * as React from 'react';
 import useSWR from 'swr';
 import Link from 'next/link';
 import { toast } from 'sonner';
-import { Eye, Receipt, RefreshCw, Search, Trash2, Undo2 } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Eye, Receipt, Search, Trash2, Undo2 } from 'lucide-react';
+import { REFRESH } from '@/lib/live-query';
+import { StatCard, StatGrid } from '@/components/stat-card';
 import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
 import { formatAmount, formatDateTime, formatMoney, formatNumber, formatPhone } from '@/lib/format';
 import { Badge, Button, Card, Dot, Input, Select, type Tone } from '@/components/ui/primitives';
@@ -114,7 +116,8 @@ export function EbarimtView({
     limit,
   });
 
-  const { data, error, isLoading, mutate, isValidating } = useSWR<EbarimtListResponse>(key, fetcher, {
+  const { data, error, isLoading, mutate } = useSWR<EbarimtListResponse>(key, fetcher, {
+    refreshInterval: REFRESH.live,
     keepPreviousData: true,
   });
 
@@ -126,32 +129,36 @@ export function EbarimtView({
   return (
     <div className="space-y-4">
       {/* Header Stat Cards */}
-      <div className="grid gap-2.5 sm:gap-3 grid-cols-2 lg:grid-cols-4">
+      <StatGrid>
         <StatCard
           label="Нийт баримт"
           value={formatNumber(summary?.totalCount ?? 0)}
-          hint={formatMoney(summary?.totalAmount ?? 0)}
-          tone="idle"
+          sub={formatMoney(summary?.totalAmount ?? 0)}
+          icon={Receipt}
+          tone="brand"
         />
         <StatCard
           label="Хүчинтэй (Олгосон)"
           value={formatNumber(summary?.successCount ?? 0)}
-          hint={formatMoney(summary?.successAmount ?? 0)}
+          sub={formatMoney(summary?.successAmount ?? 0)}
+          icon={CheckCircle2}
           tone="ok"
         />
         <StatCard
           label="Буцаагдсан"
           value={formatNumber(summary?.refundedCount ?? 0)}
-          hint={formatMoney(summary?.refundedAmount ?? 0)}
+          sub={formatMoney(summary?.refundedAmount ?? 0)}
+          icon={Undo2}
           tone="danger"
         />
         <StatCard
           label="Алдаатай"
           value={formatNumber(summary?.failedCount ?? 0)}
-          hint="Татварын алдаатай"
+          sub="Татварын алдаатай"
+          icon={AlertTriangle}
           tone="warn"
         />
-      </div>
+      </StatGrid>
 
       <Card>
         <FilterBar>
@@ -226,17 +233,6 @@ export function EbarimtView({
               Цэвэрлэх
             </Button>
           )}
-
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => void mutate()}
-            title="Шинэчлэх"
-            aria-label="Шинэчлэх"
-            disabled={isValidating}
-          >
-            <RefreshCw className={`h-4 w-4 ${isValidating ? 'animate-spin' : ''}`} />
-          </Button>
         </FilterBar>
 
         <TableWrap>
@@ -463,34 +459,5 @@ export function EbarimtView({
         }
       />
     </div>
-  );
-}
-
-function StatCard({
-  label,
-  value,
-  hint,
-  tone,
-}: {
-  label: string;
-  value: string;
-  hint: string;
-  tone: Tone;
-}) {
-  return (
-    <Card className="min-w-0 max-w-full overflow-hidden p-3.5 sm:p-4">
-      <div className="flex items-center justify-between gap-1.5 min-w-0">
-        <span className="inline-flex items-center gap-1.5 min-w-0">
-          <Dot tone={tone} />
-          <p className="text-xs font-semibold text-[var(--color-fg-muted)] truncate">{label}</p>
-        </span>
-      </div>
-      <p className="mt-1.5 truncate text-xl sm:text-2xl font-bold tabular-nums tracking-tight text-[var(--color-fg)]">
-        {value}
-      </p>
-      <p className="mt-0.5 truncate text-[11px] text-[var(--color-fg-subtle)]" title={hint}>
-        {hint}
-      </p>
-    </Card>
   );
 }

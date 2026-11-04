@@ -24,6 +24,7 @@ import type { DriverDetailResponse, DriverListItem, Paginated } from '@/lib/type
 import { Badge, Button, Card, EmptyState, Input, Select } from '@/components/ui/primitives';
 import { ConfirmModal, Modal } from '@/components/ui/modal';
 import { Pagination } from '@/components/ui/pagination';
+import { PageToolbar } from '@/components/ui/page-toolbar';
 import { StatCard, StatGrid } from '@/components/stat-card';
 import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty, TableLoading } from '@/components/ui/table';
 import { IdTagsView } from '../id-tags/id-tags-view';
@@ -112,60 +113,50 @@ export function DriversView({
   const totalSessions =
     data?.summary?.totalSessions ?? drivers.reduce((sum, d) => sum + d.sessionsCount, 0);
 
-  return (
-    <div className="space-y-6">
-      {/* Top Header & Tab Switcher */}
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <div className="flex items-center gap-2.5">
-            <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--color-brand-soft)] text-[var(--color-brand)]">
-              <Users className="h-5 w-5" />
-            </span>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight text-[var(--color-fg)]">
-              Жолооч ба RFID карт
-            </h1>
-          </div>
-          <p className="mt-1 text-xs sm:text-sm text-[var(--color-fg-muted)]">
-            Цэнэглэгч ашиглагч жолооч нарын бүртгэл, хэтэвч болон холбогдсон RFID картын удирдлага
-          </p>
-        </div>
+  const tabs = (
+    <PageToolbar>
+      <div className="inline-flex rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-1">
+        <button
+          type="button"
+          onClick={() => setActiveTab('drivers')}
+          className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+            activeTab === 'drivers'
+              ? 'bg-[var(--color-surface)] text-[var(--color-fg)] shadow-xs'
+              : 'text-[var(--color-fg-subtle)] hover:text-[var(--color-fg)]'
+          }`}
+        >
+          <Users className="h-3.5 w-3.5" />
+          Жолооч нар
+          <span className="ml-1 rounded-full bg-[var(--color-border)] px-1.5 py-0.2 text-[10px]">
+            {total}
+          </span>
+        </button>
 
-        {/* Tab selection */}
-        <div className="inline-flex rounded-xl border border-[var(--color-border)] bg-[var(--color-surface-muted)] p-1">
-          <button
-            type="button"
-            onClick={() => setActiveTab('drivers')}
-            className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-              activeTab === 'drivers'
-                ? 'bg-[var(--color-surface)] text-[var(--color-fg)] shadow-xs'
-                : 'text-[var(--color-fg-subtle)] hover:text-[var(--color-fg)]'
-            }`}
-          >
-            <Users className="h-3.5 w-3.5" />
-            Жолооч нар
-            <span className="ml-1 rounded-full bg-[var(--color-border)] px-1.5 py-0.2 text-[10px]">
-              {total}
-            </span>
-          </button>
-
-          <button
-            type="button"
-            onClick={() => setActiveTab('rfid')}
-            className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
-              activeTab === 'rfid'
-                ? 'bg-[var(--color-surface)] text-[var(--color-fg)] shadow-xs'
-                : 'text-[var(--color-fg-subtle)] hover:text-[var(--color-fg)]'
-            }`}
-          >
-            <CreditCard className="h-3.5 w-3.5" />
-            RFID картууд
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => setActiveTab('rfid')}
+          className={`flex items-center gap-2 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+            activeTab === 'rfid'
+              ? 'bg-[var(--color-surface)] text-[var(--color-fg)] shadow-xs'
+              : 'text-[var(--color-fg-subtle)] hover:text-[var(--color-fg)]'
+          }`}
+        >
+          <CreditCard className="h-3.5 w-3.5" />
+          RFID картууд
+        </button>
       </div>
+    </PageToolbar>
+  );
+
+  return (
+    <div className="space-y-4">
 
       {activeTab === 'rfid' ? (
         /* RFID Cards Tab (Preserves existing full RFID management inside Drivers) */
-        <IdTagsView canEdit={canEdit} initialSearch="" />
+        <>
+          {tabs}
+          <IdTagsView canEdit={canEdit} initialSearch="" />
+        </>
       ) : (
         /* Drivers Directory Tab */
         <>
@@ -193,6 +184,8 @@ export function DriversView({
               tone="info"
             />
           </StatGrid>
+
+          {tabs}
 
           {/* Filter Bar */}
           <Card className="p-3 sm:p-4">

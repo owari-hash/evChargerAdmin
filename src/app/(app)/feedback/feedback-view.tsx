@@ -7,7 +7,6 @@ import {
   CheckCircle2,
   MessageSquareText,
   Phone,
-  RefreshCw,
   RotateCcw,
   Send,
   Trash2,
@@ -17,7 +16,7 @@ import { REFRESH } from '@/lib/live-query';
 import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
 import { formatDateTime, formatPhone } from '@/lib/format';
 import type { Feedback } from '@/lib/types';
-import { Badge, Button, Card, Input } from '@/components/ui/primitives';
+import { Badge, Card, Input } from '@/components/ui/primitives';
 import {
   Table,
   TableWrap,
@@ -30,7 +29,7 @@ import {
   TableLoading,
 } from '@/components/ui/table';
 import { ConfirmModal } from '@/components/ui/modal';
-import { FilterActions, FilterBar, Pagination } from '@/components/ui/pagination';
+import { FilterBar, Pagination } from '@/components/ui/pagination';
 import { PageGuide } from '@/components/shell/page-guide';
 
 interface FeedbackResponse {
@@ -72,7 +71,7 @@ export function FeedbackView({ canEdit }: { canEdit: boolean }) {
 
   const key = apiUrl('feedback', queryParams);
   const { data, error, isLoading, mutate } = useSWR<FeedbackResponse>(key, fetcher, {
-    refreshInterval: REFRESH.config,
+    refreshInterval: REFRESH.live,
     keepPreviousData: true,
   });
 
@@ -109,7 +108,7 @@ export function FeedbackView({ canEdit }: { canEdit: boolean }) {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Top Notification Overview Banner */}
       <Card className="border-emerald-500/30 bg-gradient-to-r from-emerald-500/10 via-emerald-500/5 to-transparent p-4 sm:p-5">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -208,17 +207,6 @@ export function FeedbackView({ canEdit }: { canEdit: boolean }) {
             />
           </div>
 
-          <FilterActions>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => void mutate()}
-              className="gap-1.5 text-xs"
-            >
-              <RefreshCw className="size-3.5" />
-              <span>Шинэчлэх</span>
-            </Button>
-          </FilterActions>
         </FilterBar>
 
         <TableWrap>

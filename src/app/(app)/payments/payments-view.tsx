@@ -3,15 +3,40 @@
 import * as React from 'react';
 import useSWR from 'swr';
 import { toast } from 'sonner';
-import { Menu, RefreshCw, RotateCcw, Search, Trash2 } from 'lucide-react';
+import { AlertTriangle, CheckCircle2, Clock, Menu, RefreshCw, RotateCcw, Search, Trash2 } from 'lucide-react';
+import { StatCard, StatGrid } from '@/components/stat-card';
 import { REFRESH } from '@/lib/live-query';
 import { api, apiUrl, errorMessage, fetcher } from '@/lib/client';
 import { formatAmount, formatDateTime, formatMoney, formatNumber, formatPhone } from '@/lib/format';
-import { Badge, Button, Card, Dot, Input, Select, type Tone } from '@/components/ui/primitives';
+import { Badge, Button, Card, Input, Select, type Tone } from '@/components/ui/primitives';
 import { ConfirmModal, Modal } from '@/components/ui/modal';
 import { DateRangePicker, toIsoDate } from '@/components/ui/date-picker';
 import { FilterBar, Pagination } from '@/components/ui/pagination';
 import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty, TableLoading } from '@/components/ui/table';
+import { ColumnPicker, useVisibleColumns, type PickerColumn } from '@/components/ui/column-picker';
+
+type ColumnKey = 'date' | 'driver' | 'method' | 'amount' | 'status' | 'wallet' | 'invoice';
+
+const COLUMNS: PickerColumn<ColumnKey>[] = [
+  { key: 'date', label: 'Огноо' },
+  { key: 'driver', label: 'Жолооч' },
+  { key: 'method', label: 'Хэлбэр' },
+  { key: 'amount', label: 'Дүн' },
+  { key: 'status', label: 'Төлөв' },
+  { key: 'wallet', label: 'Хэтэвч' },
+  { key: 'invoice', label: 'Гүйлгээ' },
+];
+
+/** Гүйлгээ (invoice number) is hidden until someone asks for it. */
+const DEFAULT_COLUMNS: Record<ColumnKey, boolean> = {
+  date: true,
+  driver: true,
+  method: true,
+  amount: true,
+  status: true,
+  wallet: true,
+  invoice: false,
+};
 
 /**
  * Every payment a driver has made — QPay QRs and Golomt card payments — for
@@ -197,57 +222,62 @@ export function PaymentsView({
     }
   }
 
-  const columns = canAdmin ? 9 : 8;
+  const { visible: show, toggle: toggleColumn } = useVisibleColumns('payments.columns', DEFAULT_COLUMNS);
+  const columns = 1 + COLUMNS.filter((c) => show[c.key]).length + (canAdmin ? 1 : 0);
   const filtered = Boolean(query || status || provider || from || to);
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-2.5 sm:gap-3 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-        <Stat
+      <StatGrid>
+        <StatCard
           label="Төлөгдсөн"
           value={formatMoney(paid?.amount ?? 0)}
-          hint={`${formatNumber(paid?.count ?? 0)} төлбөр амжилттай`}
+          sub={`${formatNumber(paid?.count ?? 0)} төлбөр амжилттай`}
           tone="ok"
+          icon={CheckCircle2}
           active={status === 'PAID'}
           onClick={() => {
             setStatus((prev) => (prev === 'PAID' ? '' : 'PAID'));
             setPage(1);
           }}
         />
-        <Stat
+        <StatCard
           label="Буцаасан"
           value={formatMoney(refunded?.amount ?? 0)}
-          hint={`${formatNumber(refunded?.count ?? 0)} төлбөр буцаагдсан`}
+          sub={`${formatNumber(refunded?.count ?? 0)} төлбөр буцаагдсан`}
           tone="info"
+          icon={RotateCcw}
           active={status === 'REFUNDED'}
           onClick={() => {
             setStatus((prev) => (prev === 'REFUNDED' ? '' : 'REFUNDED'));
             setPage(1);
           }}
         />
-        <Stat
+        <StatCard
           label="Хүлээгдэж буй"
           value={`${formatNumber(pending?.count ?? 0)} гүйлгээ`}
-          hint="Банкны хариу хүлээж байна"
+          sub="Банкны хариу хүлээж байна"
           tone="warn"
+          icon={Clock}
           active={status === 'PENDING'}
           onClick={() => {
             setStatus((prev) => (prev === 'PENDING' ? '' : 'PENDING'));
             setPage(1);
           }}
         />
-        <Stat
+        <StatCard
           label="Амжилтгүй"
           value={`${formatNumber(failed?.count ?? 0)} гүйлгээ`}
-          hint="Карт татгалзсан эсвэл алдаа"
+          sub="Карт татгалзсан эсвэл алдаа"
           tone="danger"
+          icon={AlertTriangle}
           active={status === 'FAILED'}
           onClick={() => {
             setStatus((prev) => (prev === 'FAILED' ? '' : 'FAILED'));
             setPage(1);
           }}
         />
-      </div>
+      </StatGrid>
 
       <Card>
         <FilterBar>
@@ -302,22 +332,7 @@ export function PaymentsView({
             }}
             aria-label="Огнооны муж"
           />
-          {filtered ? (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => {
-                setQuery('');
-                setStatus('');
-                setProvider('');
-                setFrom('');
-                setTo('');
-                setPage(1);
-              }}
-            >
-              Цэвэрлэх
-            </Button>
-          ) : null}
+          <ColumnPicker columns={COLUMNS} visible={show} onToggle={toggleColumn} />
         </FilterBar>
 
         <TableWrap>
@@ -325,13 +340,13 @@ export function PaymentsView({
             <THead>
               <tr>
                 <TH className="w-12 text-center">№</TH>
-                <TH className="text-center">Огноо</TH>
-                <TH className="text-center">Жолооч</TH>
-                <TH className="text-center">Хэлбэр</TH>
-                <TH align="right" className="text-right px-3">Дүн</TH>
-                <TH className="text-center">Төлөв</TH>
-                <TH className="text-center">Хэтэвч</TH>
-                <TH className="text-center">Гүйлгээ</TH>
+                {show.date ? <TH className="text-center">Огноо</TH> : null}
+                {show.driver ? <TH className="text-center">Жолооч</TH> : null}
+                {show.method ? <TH className="text-center">Хэлбэр</TH> : null}
+                {show.amount ? <TH className="text-center px-3">Дүн</TH> : null}
+                {show.status ? <TH className="text-center">Төлөв</TH> : null}
+                {show.wallet ? <TH className="text-center">Хэтэвч</TH> : null}
+                {show.invoice ? <TH className="text-center">Гүйлгээ</TH> : null}
                 {canAdmin ? <TH className="text-center">Үйлдэл</TH> : null}
               </tr>
             </THead>
@@ -354,40 +369,54 @@ export function PaymentsView({
                       <TD align="center" className="text-xs text-[var(--color-fg-muted)] font-mono text-center">
                         {num}
                       </TD>
-                      <TD align="center" className="whitespace-nowrap text-xs text-[var(--color-fg-muted)] text-center">
-                        {formatDateTime(p.createdAt)}
-                      </TD>
-                      <TD align="left" className="text-xs px-3 text-left">
-                        <p className="font-normal text-[var(--color-fg)]">{p.driver?.name || '—'}</p>
-                        <p className="font-mono text-[var(--color-fg-subtle)]">{formatPhone(p.driver?.phone)}</p>
-                      </TD>
-                      <TD align="center" className="text-xs text-center">
-                        <p>{methodLabel(p)}</p>
-                        {card ? <p className="font-mono text-[var(--color-fg-subtle)]">{card}</p> : null}
-                      </TD>
-                      <TD align="right" className="whitespace-nowrap text-xs font-mono font-normal px-3 text-right">
-                        {formatAmount(p.amount)}
-                      </TD>
-                      <TD align="center" className="text-center">
-                        <Badge tone={STATUS[p.status]?.tone ?? 'idle'}>{STATUS[p.status]?.label ?? p.status}</Badge>
-                        {p.lastError && p.status !== 'PAID' ? (
-                          <p className="mt-1 max-w-[16rem] mx-auto truncate text-xs text-[var(--color-fg-subtle)]" title={p.lastError}>
-                            {p.lastError}
-                          </p>
-                        ) : null}
-                      </TD>
-                      <TD align="center" className="text-xs text-center">
-                        {p.walletCreditedAt ? (
-                          <span className="text-[var(--color-ok)]">✓ Орсон</span>
-                        ) : p.status === 'PAID' ? (
-                          <span className="text-[var(--color-danger)]">Ороогүй</span>
-                        ) : (
-                          '—'
-                        )}
-                      </TD>
-                      <TD align="center" className="font-mono text-xs text-[var(--color-fg-muted)] text-center">
-                        {p.senderInvoiceNo}
-                      </TD>
+                      {show.date ? (
+                        <TD align="center" className="whitespace-nowrap text-xs text-[var(--color-fg-muted)] text-center">
+                          {formatDateTime(p.createdAt)}
+                        </TD>
+                      ) : null}
+                      {show.driver ? (
+                        <TD align="left" className="text-xs px-3 text-left">
+                          <p className="font-normal text-[var(--color-fg)]">{p.driver?.name || '—'}</p>
+                          <p className="font-mono text-[var(--color-fg-subtle)]">{formatPhone(p.driver?.phone)}</p>
+                        </TD>
+                      ) : null}
+                      {show.method ? (
+                        <TD align="center" className="text-xs text-center">
+                          <p>{methodLabel(p)}</p>
+                          {card ? <p className="font-mono text-[var(--color-fg-subtle)]">{card}</p> : null}
+                        </TD>
+                      ) : null}
+                      {show.amount ? (
+                        <TD align="right" className="whitespace-nowrap text-xs font-mono font-normal px-3 text-right">
+                          {formatAmount(p.amount)}
+                        </TD>
+                      ) : null}
+                      {show.status ? (
+                        <TD align="center" className="text-center">
+                          <Badge tone={STATUS[p.status]?.tone ?? 'idle'}>{STATUS[p.status]?.label ?? p.status}</Badge>
+                          {p.lastError && p.status !== 'PAID' ? (
+                            <p className="mt-1 max-w-[16rem] mx-auto truncate text-xs text-[var(--color-fg-subtle)]" title={p.lastError}>
+                              {p.lastError}
+                            </p>
+                          ) : null}
+                        </TD>
+                      ) : null}
+                      {show.wallet ? (
+                        <TD align="center" className="text-xs text-center">
+                          {p.walletCreditedAt ? (
+                            <span className="text-[var(--color-ok)]">✓ Орсон</span>
+                          ) : p.status === 'PAID' ? (
+                            <span className="text-[var(--color-danger)]">Ороогүй</span>
+                          ) : (
+                            '—'
+                          )}
+                        </TD>
+                      ) : null}
+                      {show.invoice ? (
+                        <TD align="center" className="font-mono text-xs text-[var(--color-fg-muted)] text-center">
+                          {p.senderInvoiceNo}
+                        </TD>
+                      ) : null}
                       {canAdmin ? (
                         <TD align="center" className="py-1.5">
                           <div className="flex items-center justify-center gap-1.5">
@@ -700,55 +729,5 @@ export function PaymentsView({
         </Modal>
       ) : null}
     </div>
-  );
-}
-
-function Stat({
-  label,
-  value,
-  hint,
-  tone,
-  active,
-  onClick,
-}: {
-  label: string;
-  value: string;
-  hint: string;
-  tone: Tone;
-  active?: boolean;
-  onClick?: () => void;
-}) {
-  return (
-    <Card
-      role={onClick ? 'button' : undefined}
-      tabIndex={onClick ? 0 : undefined}
-      onClick={onClick}
-      onKeyDown={
-        onClick
-          ? (e) => {
-              if (e.key === 'Enter' || e.key === ' ') {
-                e.preventDefault();
-                onClick();
-              }
-            }
-          : undefined
-      }
-      className={`min-w-0 max-w-full overflow-hidden p-3.5 sm:p-4 text-left transition-all ${
-        onClick ? 'cursor-pointer hover:border-[var(--color-border-strong)]' : ''
-      } ${active ? 'ring-2 ring-[var(--color-brand)] border-transparent bg-[var(--color-bg-subtle)]' : ''}`}
-    >
-      <div className="flex items-center justify-between gap-1.5 min-w-0">
-        <span className="inline-flex items-center gap-1.5 min-w-0">
-          <Dot tone={tone} pulse={tone === 'warn'} />
-          <p className="text-xs font-semibold text-[var(--color-fg-muted)] truncate">{label}</p>
-        </span>
-      </div>
-      <p className="mt-1.5 truncate text-xl sm:text-2xl font-bold tabular-nums tracking-tight text-[var(--color-fg)]">
-        {value}
-      </p>
-      <p className="mt-0.5 truncate text-[11px] text-[var(--color-fg-subtle)]" title={hint}>
-        {hint}
-      </p>
-    </Card>
   );
 }

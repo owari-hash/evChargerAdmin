@@ -27,6 +27,10 @@ import { ConfirmModal } from '@/components/ui/modal';
 import { StationName } from '@/components/station-name';
 import { cn } from '@/lib/cn';
 
+function clampPct(n: number): number {
+  return Math.min(100, Math.max(0, n));
+}
+
 function toStartOfDayIso(dateStr: string): string {
   if (!dateStr) return '';
   if (dateStr.includes('T')) return new Date(dateStr).toISOString();
@@ -337,14 +341,29 @@ export function TransactionsView({
                             )}
 
                             {tx.lastSocPercent != null ? (
-                              <div className="flex items-center gap-1.5" title={`Батарейн цэнэг: ${tx.lastSocPercent}%`}>
-                                <div className="h-1.5 w-14 overflow-hidden rounded-full bg-[var(--color-surface-2)] border border-[var(--color-border)]">
+                              <div
+                                className="flex items-center gap-1.5"
+                                title={
+                                  tx.startSocPercent != null
+                                    ? `Батарейн цэнэг: ${tx.startSocPercent}% → ${tx.lastSocPercent}%`
+                                    : `Батарейн цэнэг: ${tx.lastSocPercent}%`
+                                }
+                              >
+                                <div className="relative h-1.5 w-14 overflow-hidden rounded-full bg-[var(--color-surface-2)] border border-[var(--color-border)]">
+                                  {/* Dim part = what the car already had; bright part = added this session */}
                                   <div
-                                    className="h-full bg-emerald-500 transition-all duration-500"
-                                    style={{ width: `${Math.min(100, Math.max(0, tx.lastSocPercent))}%` }}
+                                    className="absolute inset-y-0 left-0 bg-emerald-500 transition-all duration-500"
+                                    style={{ width: `${clampPct(tx.lastSocPercent)}%` }}
                                   />
+                                  {tx.startSocPercent != null ? (
+                                    <div
+                                      className="absolute inset-y-0 left-0 bg-emerald-900/70"
+                                      style={{ width: `${clampPct(Math.min(tx.startSocPercent, tx.lastSocPercent))}%` }}
+                                    />
+                                  ) : null}
                                 </div>
-                                <span className="font-mono text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                                <span className="font-mono text-[10px] font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                                  {tx.startSocPercent != null ? `${tx.startSocPercent}% → ` : ''}
                                   {tx.lastSocPercent}%
                                 </span>
                               </div>
@@ -356,8 +375,12 @@ export function TransactionsView({
                               {tx.lastPowerW ? formatPower(tx.lastPowerW) : '—'}
                             </span>
                             {tx.lastSocPercent != null ? (
-                              <span className="font-mono text-[10px] text-[var(--color-fg-subtle)]">
-                                SoC: {tx.lastSocPercent}%
+                              <span
+                                className="font-mono text-[10px] text-[var(--color-fg-subtle)] whitespace-nowrap"
+                                title="Эхэлсэн → Дууссан батарейн цэнэг"
+                              >
+                                SoC: {tx.startSocPercent != null ? `${tx.startSocPercent}% → ` : ''}
+                                {tx.lastSocPercent}%
                               </span>
                             ) : null}
                           </div>

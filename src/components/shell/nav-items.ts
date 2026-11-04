@@ -5,7 +5,6 @@ import {
   BatteryCharging,
   Building2,
   Calculator,
-  CalendarClock,
   CreditCard,
   Wallet,
   Cpu,
@@ -91,7 +90,6 @@ export const NAV_SECTIONS: NavSection[] = [
     title: 'Хандалт',
     items: [
       { href: '/drivers', label: 'Жолооч', icon: Users, prefix: true },
-      { href: '/reservations', label: 'Захиалга', icon: CalendarClock },
     ],
   },
   {
@@ -141,7 +139,6 @@ export const MANAGEABLE_MENUS: ManageableMenu[] = [
   { href: '/simulator', label: 'OCPP Симулятор', section: 'Үйл ажиллагаа' },
   // Хандалт
   { href: '/drivers', label: 'Жолооч', section: 'Хандалт' },
-  { href: '/reservations', label: 'Захиалга', section: 'Хандалт' },
 ];
 
 export function visibleSections(role: UserRole, allowedMenus?: string[]): NavSection[] {

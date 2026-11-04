@@ -2,6 +2,7 @@
 
 import * as React from 'react';
 import useSWR from 'swr';
+import { REFRESH } from '@/lib/live-query';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import {
@@ -17,7 +18,6 @@ import {
   Pencil,
   Phone,
   Plus,
-  RefreshCw,
   ShieldCheck,
   Trash2,
   User,
@@ -47,10 +47,10 @@ export function DriverDetailView({
   initialData: DriverDetailResponse;
 }) {
   const router = useRouter();
-  const { data, mutate, isValidating } = useSWR<DriverDetailResponse>(
+  const { data, mutate } = useSWR<DriverDetailResponse>(
     apiUrl(`drivers/${driverId}`),
     fetcher,
-    { fallbackData: initialData, revalidateOnFocus: true },
+    { fallbackData: initialData, revalidateOnFocus: true, refreshInterval: REFRESH.live },
   );
 
   const detail = data ?? initialData;
@@ -78,7 +78,7 @@ export function DriverDetailView({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Back button & Action Header */}
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-3">
@@ -112,16 +112,6 @@ export function DriverDetailView({
 
         {/* Action buttons */}
         <div className="flex flex-wrap items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={() => mutate()}
-            disabled={isValidating}
-            title="Шинэчлэх"
-          >
-            <RefreshCw className={`h-3.5 w-3.5 ${isValidating ? 'animate-spin' : ''}`} />
-          </Button>
-
           {canEdit ? (
             <>
               <Button

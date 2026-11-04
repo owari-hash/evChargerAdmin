@@ -122,7 +122,7 @@ export function EbarimtMerchantsView({
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-4">
       {/* Primary List Table */}
       <Card>
         {canEdit ? (
@@ -399,7 +399,7 @@ export function EbarimtMerchantsView({
               <FileCode2 className="h-4 w-4" />
               eBarimt REST Service Raw Response Log:
             </div>
-            <pre className="text-[11px] leading-relaxed text-slate-300">
+            <pre className="h-80 overflow-auto scroll-thin text-[11px] leading-relaxed text-slate-300">
               {JSON.stringify(
                 lastCheckLog.lastCheckResult?.rawResponse || {
                   timestamp: new Date().toISOString(),

@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { Check, Copy, Printer, QrCode } from 'lucide-react';
 import { formatDateTime, formatMoney } from '@/lib/format';
+import { withBasePath } from '@/lib/base-path';
 import { Modal } from '@/components/ui/modal';
 import { Badge, Button } from '@/components/ui/primitives';
 import type { EbarimtReceiptRow } from './return-confirm-modal';
@@ -20,7 +21,7 @@ export function ReceiptModal({
 
   const isB2B = receipt.type === 'B2B_RECEIPT';
   const qrUrl = receipt.qrData
-    ? `/console-api/qr?data=${encodeURIComponent(receipt.qrData)}&size=300`
+    ? withBasePath(`/console-api/qr?data=${encodeURIComponent(receipt.qrData)}&size=300`)
     : null;
 
   async function copyDdtd() {

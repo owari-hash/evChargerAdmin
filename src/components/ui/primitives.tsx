@@ -9,7 +9,11 @@ export function Card({ className, ...props }: React.ComponentProps<'div'>) {
   return (
     <div
       className={cn(
-        'rounded-xl border border-[var(--color-border)] bg-[var(--color-surface)] shadow-sm min-w-0 max-w-full overflow-hidden',
+        // Same frosted glass as the stat cards (tokens in globals.css), so
+        // charts, tables and KPI tiles read as one surface.
+        'glass-card glass-flow rounded-[1.375rem] border border-[var(--glass-edge-dim)] [border-top-color:var(--glass-edge)]',
+        'bg-[linear-gradient(160deg,var(--glass-from),var(--glass-to))] backdrop-blur-2xl backdrop-saturate-150',
+        'shadow-[var(--glass-shadow),inset_0_1px_0_var(--glass-highlight)] min-w-0 max-w-full overflow-hidden',
         className,
       )}
       {...props}

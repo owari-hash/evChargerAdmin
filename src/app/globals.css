@@ -387,3 +387,18 @@
     }
   }
 }
+
+/* Phones and tablets: the drifting light layer under every card and the
+   card's backdrop blur are what made scrolling lag. Cards keep their
+   gradient fill, so the look barely changes. */
+@media (pointer: coarse), (max-width: 1023px) {
+  .glass-flow::before {
+    animation: none;
+    will-change: auto;
+  }
+  .glass-card,
+  .glass-flow {
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}

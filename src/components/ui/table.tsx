@@ -127,7 +127,9 @@ export function THead({ className, ...props }: React.ComponentProps<'thead'>) {
         // Sticky inside TableWrap. Borders on sticky rows vanish with
         // border-collapse, so the divider is an inset shadow on the cells.
         'sticky top-0 z-[1]',
-        '[&_th]:bg-[color-mix(in_srgb,var(--color-surface)_80%,transparent)] [&_th]:backdrop-blur-xl [&_th]:shadow-[inset_0_-1px_0_var(--color-border)]',
+        // Solid enough to read over rows without a per-cell blur, which made
+        // scrolling wide tables stutter.
+        '[&_th]:bg-[color-mix(in_srgb,var(--color-surface)_96%,transparent)] [&_th]:shadow-[inset_0_-1px_0_var(--color-border)]',
         'group-data-[scrolled]/table:[&_th]:shadow-[inset_0_-1px_0_var(--color-border),0_6px_10px_-8px_rgba(0,0,0,0.35)]',
         className,
       )}

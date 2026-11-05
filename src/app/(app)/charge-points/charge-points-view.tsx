@@ -25,7 +25,7 @@ import { ConfirmModal } from '@/components/ui/modal';
 import { CreateChargePointModal } from './create-charge-point-modal';
 import { EditChargePointModal } from './edit-charge-point-modal';
 
-/** «Онлайн мэт» is offered only on this client's stations; the API enforces the same. */
+/** «Онлайн мэт» is offered only on this client's stations. */
 const FORCE_AVAILABLE_CLIENT_REGISTER = '6688845';
 
 const CHARGE_POINTS_GUIDE_STEPS = [

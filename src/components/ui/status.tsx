@@ -45,20 +45,21 @@ export function ConnectorStatusBadge({ status }: { status?: ConnectorStatus | st
  * what the kiosk and app show is fake.
  */
 export function OnlineBadge({ online, forceAvailable }: { online: boolean; forceAvailable?: boolean }) {
-  const badge = (
+  if (!online && forceAvailable) {
+    return (
+      <span title="Станц офлайн байгаа ч Kiosk болон аппад онлайн, сул гэж харагдаж байна (хуурамч)">
+        <Badge tone="warn">
+          <Dot tone="warn" />
+          Онлайн
+        </Badge>
+      </span>
+    );
+  }
+  return (
     <Badge tone={online ? 'ok' : 'idle'}>
       <Dot tone={online ? 'ok' : 'idle'} pulse={online} />
       {online ? 'Онлайн' : 'Офлайн'}
     </Badge>
-  );
-  if (online || !forceAvailable) return badge;
-  return (
-    <span className="inline-flex flex-wrap items-center justify-center gap-1">
-      {badge}
-      <span title="Станц офлайн байгаа ч Kiosk болон аппад онлайн, сул гэж харагдаж байна (хуурамч мэдээлэл)">
-        <Badge tone="warn">⚠ Хуурамч: сул гэж харагдана</Badge>
-      </span>
-    </span>
   );
 }
 

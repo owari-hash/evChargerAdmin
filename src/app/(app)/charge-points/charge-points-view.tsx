@@ -25,6 +25,9 @@ import { ConfirmModal } from '@/components/ui/modal';
 import { CreateChargePointModal } from './create-charge-point-modal';
 import { EditChargePointModal } from './edit-charge-point-modal';
 
+/** «Онлайн мэт» is offered only on this client's stations; the API enforces the same. */
+const FORCE_AVAILABLE_CLIENT_REGISTER = '6688845';
+
 const CHARGE_POINTS_GUIDE_STEPS = [
   {
     title: 'Станц бүртгэх',
@@ -351,6 +354,9 @@ export function ChargePointsView({
 
                     {/* Онлайн мэт */}
                     <TD align="center">
+                      {cp.client?.businessRegister?.trim() !== FORCE_AVAILABLE_CLIENT_REGISTER ? (
+                        <span className="text-xs text-[var(--color-fg-subtle)]">—</span>
+                      ) : (
                       <KioskToggle
                         on={cp.forceAvailable === true}
                         disabled={!canEdit || togglingId === cp.id}
@@ -359,6 +365,7 @@ export function ChargePointsView({
                         labelOn="Офлайн үед ч Kiosk, аппад онлайн, сул гэж харагдана"
                         labelOff="Бодит төлөв харагдана"
                       />
+                      )}
                     </TD>
 
                     {/* Үйлдэл */}

@@ -39,12 +39,26 @@ export function ConnectorStatusBadge({ status }: { status?: ConnectorStatus | st
   );
 }
 
-export function OnlineBadge({ online }: { online: boolean }) {
-  return (
+/**
+ * `forceAvailable` is the «Онлайн мэт харуулах» switch: an offline station that
+ * has it on is shown to drivers as online and free, so it gets a warning that
+ * what the kiosk and app show is fake.
+ */
+export function OnlineBadge({ online, forceAvailable }: { online: boolean; forceAvailable?: boolean }) {
+  const badge = (
     <Badge tone={online ? 'ok' : 'idle'}>
       <Dot tone={online ? 'ok' : 'idle'} pulse={online} />
       {online ? 'Онлайн' : 'Офлайн'}
     </Badge>
+  );
+  if (online || !forceAvailable) return badge;
+  return (
+    <span className="inline-flex flex-wrap items-center justify-center gap-1">
+      {badge}
+      <span title="Станц офлайн байгаа ч Kiosk болон аппад онлайн, сул гэж харагдаж байна (хуурамч мэдээлэл)">
+        <Badge tone="warn">⚠ Хуурамч: сул гэж харагдана</Badge>
+      </span>
+    </span>
   );
 }
 

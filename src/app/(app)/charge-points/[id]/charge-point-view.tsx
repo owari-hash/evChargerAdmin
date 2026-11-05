@@ -170,7 +170,7 @@ export function ChargePointView({
               {detail.name?.trim() ? (
                 <span className="font-mono text-xs text-[var(--color-fg-subtle)]">{detail.cpId}</span>
               ) : null}
-              <OnlineBadge online={detail.isOnline} />
+              <OnlineBadge online={detail.isOnline} forceAvailable={detail.forceAvailable} />
               <RegistrationBadge status={detail.registrationStatus} />
               <Badge tone="idle">{detail.securityProfile}-р профайл</Badge>
               {detail.address ? (
@@ -447,7 +447,7 @@ function OverviewTab({ detail }: { detail: ChargePointDetail }) {
             <CardHeader title="Холболт" />
             <dl className="divide-y divide-[var(--color-border)] px-5 py-2">
               <DataRow label="Төлөв">
-                <OnlineBadge online={detail.isOnline} />
+                <OnlineBadge online={detail.isOnline} forceAvailable={detail.forceAvailable} />
               </DataRow>
               <DataRow label="Протокол" mono>
                 {detail.ocppProtocol ?? 'ocpp1.6'}

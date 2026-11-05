@@ -224,7 +224,7 @@ export function ClientDetailView({
                           ) : null}
                         </TD>
                         <TD>
-                          <OnlineBadge online={cp.isOnline} />
+                          <OnlineBadge online={cp.isOnline} forceAvailable={cp.forceAvailable} />
                         </TD>
                         <TD>
                           <div className="flex flex-wrap justify-center gap-1">

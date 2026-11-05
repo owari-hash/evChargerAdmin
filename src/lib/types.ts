@@ -182,6 +182,8 @@ export interface ChargePoint {
   cpId: string;
   /** Listed on the kiosk and app; absent counts as true. */
   showOnKiosk?: boolean;
+  /** Shown to drivers as online and available even while offline. */
+  forceAvailable?: boolean;
   name?: string;
   description?: string;
   chargePointVendor?: string;

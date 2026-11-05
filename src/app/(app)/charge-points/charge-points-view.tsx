@@ -125,7 +125,7 @@ export function ChargePointsView({
   });
 
   const rows = data?.data ?? [];
-  const columns = 12;
+  const columns = 13;
   const [togglingId, setTogglingId] = React.useState<string | null>(null);
 
   /** «Kiosk-д харуулах»: off hides the station from the kiosk and app lists. */
@@ -134,6 +134,24 @@ export function ChargePointsView({
     try {
       await api.patch(`charge-points/${cp.id}`, { showOnKiosk: next });
       toast.success(next ? 'Kiosk-д харагдана' : 'Kiosk-оос нууглаа');
+      await mutate();
+    } catch (err) {
+      toast.error(errorMessage(err));
+    } finally {
+      setTogglingId(null);
+    }
+  }
+
+  /** «Онлайн мэт харуулах»: on shows the station as online and free to drivers even while offline. */
+  async function toggleForceAvailable(cp: ChargePoint, next: boolean) {
+    setTogglingId(cp.id);
+    try {
+      await api.patch(`charge-points/${cp.id}`, { forceAvailable: next });
+      toast.success(
+        next
+          ? 'Офлайн үед ч Kiosk, аппад онлайн гэж харагдана'
+          : 'Kiosk, аппад бодит төлөв харагдана',
+      );
       await mutate();
     } catch (err) {
       toast.error(errorMessage(err));
@@ -211,6 +229,7 @@ export function ChargePointsView({
                 <TH>Бүртгэл</TH>
                 <TH>Сүүлд холбогдсон</TH>
                 <TH title="Kiosk вэб болон аппын станцын жагсаалт, газрын зурагт харуулах эсэх">Төлөв</TH>
+                <TH title="Офлайн байсан ч Kiosk болон аппад онлайн, сул гэж харуулах">Онлайн мэт</TH>
                 <TH>Үйлдэл</TH>
               </tr>
             </THead>
@@ -268,7 +287,7 @@ export function ChargePointsView({
 
                     {/* Холболт */}
                     <TD align="center">
-                      <OnlineBadge online={cp.isOnline} />
+                      <OnlineBadge online={cp.isOnline} forceAvailable={cp.forceAvailable} />
                     </TD>
 
                     {/* Холбогч */}
@@ -327,6 +346,18 @@ export function ChargePointsView({
                         on={cp.showOnKiosk !== false}
                         disabled={!canEdit || togglingId === cp.id}
                         onChange={(next) => void toggleKiosk(cp, next)}
+                      />
+                    </TD>
+
+                    {/* Онлайн мэт */}
+                    <TD align="center">
+                      <KioskToggle
+                        on={cp.forceAvailable === true}
+                        disabled={!canEdit || togglingId === cp.id}
+                        onChange={(next) => void toggleForceAvailable(cp, next)}
+                        tone="warn"
+                        labelOn="Офлайн үед ч Kiosk, аппад онлайн, сул гэж харагдана"
+                        labelOff="Бодит төлөв харагдана"
                       />
                     </TD>
 
@@ -467,28 +498,34 @@ export function ChargePointsView({
   );
 }
 
-/** A small on/off switch for the «Kiosk-д» column. */
+/** A small on/off switch for the «Төлөв» and «Онлайн мэт» columns. */
 function KioskToggle({
   on,
   disabled,
   onChange,
+  tone = 'brand',
+  labelOn = 'Kiosk-д харагдаж байна',
+  labelOff = 'Kiosk-д харагдахгүй',
 }: {
   on: boolean;
   disabled?: boolean;
   onChange: (next: boolean) => void;
+  tone?: 'brand' | 'warn';
+  labelOn?: string;
+  labelOff?: string;
 }) {
   return (
     <button
       type="button"
       role="switch"
       aria-checked={on}
-      aria-label={on ? 'Kiosk-д харагдаж байна' : 'Kiosk-д харагдахгүй'}
-      title={on ? 'Kiosk-д харагдаж байна' : 'Kiosk-д харагдахгүй'}
+      aria-label={on ? labelOn : labelOff}
+      title={on ? labelOn : labelOff}
       disabled={disabled}
       onClick={() => onChange(!on)}
       className={cn(
         'relative inline-flex h-5 w-9 shrink-0 items-center rounded-full transition disabled:opacity-50',
-        on ? 'bg-[var(--color-brand)]' : 'bg-[var(--color-border)]',
+        on ? (tone === 'warn' ? 'bg-amber-500' : 'bg-[var(--color-brand)]') : 'bg-[var(--color-border)]',
       )}
     >
       <span

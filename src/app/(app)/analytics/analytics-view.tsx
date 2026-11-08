@@ -450,13 +450,15 @@ export function AnalyticsView({ initialData }: { initialData: AnalyticsOverview 
               </TR>
             </THead>
             <TBody>
-              {stats.recentVisits.map((item) => {
+              {(stats.recentVisits || []).map((item) => {
                 const date = new Date(item.timestamp);
-                const timeStr = date.toLocaleTimeString('mn-MN', {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                  second: '2-digit',
-                });
+                const timeStr = !isNaN(date.getTime())
+                  ? date.toLocaleTimeString('mn-MN', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      second: '2-digit',
+                    })
+                  : '--:--';
 
                 return (
                   <TR key={item.id}>

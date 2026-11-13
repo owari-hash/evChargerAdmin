@@ -83,13 +83,6 @@ interface BulkStatements {
 
 const sum = <T,>(items: T[], f: (x: T) => number) => Math.round(items.reduce((a, x) => a + f(x), 0) * 100) / 100;
 
-function reconLabel(w: WalletSummary): string {
-  if (w.ledgerMismatches) return `Зөрүүтэй (${w.ledgerMismatches} гүйлгээ)`;
-  if (!w.balanced) return 'Зөрүүтэй';
-  if (w.currentMatchesLedger === false) return 'Одоогийн үлдэгдэл таарахгүй';
-  return 'Таарч байна';
-}
-
 /** "Бүх жолоочийн хуулга" — many drivers' statements in one Excel workbook. */
 export function DriversStatementsExport() {
   const [open, setOpen] = React.useState(false);
@@ -128,13 +121,13 @@ export function DriversStatementsExport() {
           '№', 'Жолооч', 'Утас', 'Машин', 'Карт', 'Цэнэглэлт', 'Станцын тоо', 'Станцууд', 'Эрчим хүч (кВтц)',
           'Дүн (₮)', 'Хэтэвчээс (₮)', 'Шууд төлсөн (₮)', 'Эхний үлдэгдэл (₮)', 'Данс цэнэглэсэн (₮)',
           'Урамшуулал (₮)', 'Буцаалт (₮)', 'Засвар (₮)', 'Зарцуулсан (₮)', 'Эцсийн үлдэгдэл (₮)',
-          'Одоогийн үлдэгдэл (₮)', 'Тулгалт',
+          'Одоогийн үлдэгдэл (₮)',
         ],
         ...D.map((d, i) => [
           i + 1, d.name, d.phone, d.vehicle, d.cards.join(', '), d.sessions, d.stations.length,
           d.stations.map((s) => s.stationName).join(', '), d.energyKwh, d.cost, d.paidFromWallet, d.paidDirect,
           d.wallet.openingBalance, d.wallet.topups, d.wallet.bonuses, d.wallet.refunds, d.wallet.adjustmentsNet,
-          d.wallet.charges, d.wallet.closingBalance, d.wallet.currentBalance, reconLabel(d.wallet),
+          d.wallet.charges, d.wallet.closingBalance, d.wallet.currentBalance,
         ]),
         [],
         [
@@ -143,7 +136,6 @@ export function DriversStatementsExport() {
           sum(D, (d) => d.wallet.openingBalance), sum(D, (d) => d.wallet.topups), sum(D, (d) => d.wallet.bonuses),
           sum(D, (d) => d.wallet.refunds), sum(D, (d) => d.wallet.adjustmentsNet), sum(D, (d) => d.wallet.charges),
           sum(D, (d) => d.wallet.closingBalance), sum(D, (d) => d.wallet.currentBalance),
-          `${D.filter((d) => reconLabel(d.wallet) !== 'Таарч байна').length} зөрүүтэй`,
         ],
         [],
         ['Хугацаа', periodLabel],
@@ -183,11 +175,11 @@ export function DriversStatementsExport() {
       // 4. Every wallet movement
       const L = data.ledger;
       appendSheet(wb, 'Хэтэвчний хуулга', [
-        ['№', 'Огноо', 'Жолооч', 'Утас', 'Төрөл', 'Орлого (₮)', 'Зарлага (₮)', 'Үлдэгдэл (₮)', 'Сеанс #', 'Станц', 'Төлбөрийн хэрэгсэл', 'Тайлбар', 'Тулгалт'],
+        ['№', 'Огноо', 'Жолооч', 'Утас', 'Төрөл', 'Орлого (₮)', 'Зарлага (₮)', 'Үлдэгдэл (₮)', 'Сеанс #', 'Станц', 'Төлбөрийн хэрэгсэл', 'Тайлбар'],
         ...L.map((e, i) => [
           i + 1, formatDateTime(e.at), e.driverName, e.driverPhone, WALLET_ENTRY_LABEL[e.type] ?? e.type,
           e.delta > 0 ? e.delta : '', e.delta < 0 ? -e.delta : '', e.balanceAfter, e.transactionId, e.stationName,
-          e.provider, e.description, e.consistent ? '' : 'Зөрүүтэй',
+          e.provider, e.description,
         ]),
         [],
         ['НИЙТ', '', '', '', `${L.length} гүйлгээ`, sum(L, (e) => Math.max(e.delta, 0)), sum(L, (e) => Math.max(-e.delta, 0))],
@@ -213,7 +205,7 @@ export function DriversStatementsExport() {
         open={open}
         onClose={() => setOpen(false)}
         title="Жолооч нарын хуулга (Excel)"
-        description="Олон жолоочийн цэнэглэлт, станц, хэтэвчний орлого/зарлага, үлдэгдлийн тулгалтыг нэг файлд."
+        description="Олон жолоочийн цэнэглэлт, станц, хэтэвчний орлого, зарлага, үлдэгдлийг нэг файлд."
         footer={
           <div className="flex justify-end gap-2">
             <Button variant="secondary" size="sm" onClick={() => setOpen(false)} disabled={busy}>

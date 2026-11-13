@@ -4,11 +4,11 @@ import * as React from 'react';
 import useSWR from 'swr';
 import * as XLSX from 'xlsx';
 import { toast } from 'sonner';
-import { CheckCircle2, AlertTriangle, FileSpreadsheet, MapPin, Wallet } from 'lucide-react';
+import { FileSpreadsheet, MapPin, Wallet } from 'lucide-react';
 import { apiUrl, fetcher } from '@/lib/client';
 import { buildSheet, localDayEnd, localDayStart, WALLET_ENTRY_LABEL, type ExcelCell } from '@/lib/excel';
 import { formatAmount, formatDateTime, formatNumber } from '@/lib/format';
-import { Badge, Button, Card } from '@/components/ui/primitives';
+import { Button, Card } from '@/components/ui/primitives';
 import { DateRangePicker, type DateRange } from '@/components/ui/date-picker';
 import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty } from '@/components/ui/table';
 
@@ -116,17 +116,15 @@ export function DriverStatement({ driverId }: { driverId: string }) {
       if (w) {
         summary.push(
           [],
-          ['ХЭТЭВЧНИЙ ТУЛГАЛТ', ''],
+          ['ХЭТЭВЧ', ''],
           ['Эхний үлдэгдэл (₮)', w.openingBalance],
           ['+ Данс цэнэглэсэн (₮)', w.topups],
           ['+ Урамшуулал (₮)', w.bonuses],
           ['+ Буцаалт (₮)', w.refunds],
           ['± Засвар (₮)', w.adjustmentsNet],
           ['− Цэнэглэлтэд зарцуулсан (₮)', w.charges],
-          ['= Тооцоолсон эцсийн үлдэгдэл (₮)', w.expectedClosing],
-          ['Бүртгэлийн эцсийн үлдэгдэл (₮)', w.closingBalance],
+          ['= Эцсийн үлдэгдэл (₮)', w.closingBalance],
           ['Одоогийн үлдэгдэл (₮)', w.currentBalance],
-          ['Тулгалт', w.balanced ? 'Таарч байна' : `Зөрүүтэй (${w.ledgerMismatches} мөр)`],
         );
       }
       XLSX.utils.book_append_sheet(wb, buildSheet(summary), 'Хураангуй');
@@ -164,11 +162,11 @@ export function DriverStatement({ driverId }: { driverId: string }) {
         XLSX.utils.book_append_sheet(
           wb,
           buildSheet([
-            ['№', 'Огноо', 'Төрөл', 'Орлого (₮)', 'Зарлага (₮)', 'Үлдэгдэл (₮)', 'Сеанс #', 'Станц', 'Төлбөрийн хэрэгсэл', 'Тайлбар', 'Тулгалт'],
+            ['№', 'Огноо', 'Төрөл', 'Орлого (₮)', 'Зарлага (₮)', 'Үлдэгдэл (₮)', 'Сеанс #', 'Станц', 'Төлбөрийн хэрэгсэл', 'Тайлбар'],
             ['', '', 'Эхний үлдэгдэл', '', '', w.openingBalance],
             ...data.ledger.map((e, i) => [
               i + 1, formatDateTime(e.at), ENTRY_LABEL[e.type] ?? e.type, e.delta > 0 ? e.delta : '', e.delta < 0 ? -e.delta : '',
-              e.balanceAfter, e.transactionId, e.stationName, e.provider, e.description, e.consistent ? '' : 'Зөрүүтэй',
+              e.balanceAfter, e.transactionId, e.stationName, e.provider, e.description,
             ]),
             [],
             ['НИЙТ', '', `${data.ledger.length} гүйлгээ`,
@@ -193,7 +191,7 @@ export function DriverStatement({ driverId }: { driverId: string }) {
         <div>
           <h3 className="text-sm font-semibold text-[var(--color-fg)] flex items-center gap-2">
             <MapPin className="h-4 w-4 text-[var(--color-brand)]" />
-            Хуулга: станцаар ба хэтэвчний тулгалт
+            Хуулга: станцаар ба хэтэвч
           </h3>
           <p className="text-xs text-[var(--color-fg-muted)]">{periodLabel}</p>
         </div>
@@ -226,7 +224,7 @@ export function DriverStatement({ driverId }: { driverId: string }) {
             {w.adjustmentsNet ? <Row label="± Засвар" value={w.adjustmentsNet} /> : null}
             <Row label="− Цэнэглэлтэд зарцуулсан" value={-w.charges} />
             <div className="border-t border-[var(--color-border)] pt-1">
-              <Row label="= Эцсийн үлдэгдэл" value={w.expectedClosing} bold />
+              <Row label="= Эцсийн үлдэгдэл" value={w.closingBalance} bold />
             </div>
           </div>
           <div className="space-y-2 text-xs">
@@ -235,20 +233,6 @@ export function DriverStatement({ driverId }: { driverId: string }) {
               <span>Одоогийн хэтэвч:</span>
               <span className="font-mono font-semibold">{formatAmount(w.currentBalance)}</span>
             </div>
-            {w.balanced && w.currentMatchesLedger !== false ? (
-              <Badge tone="ok" className="gap-1">
-                <CheckCircle2 className="h-3.5 w-3.5" /> Тулгалт таарч байна
-              </Badge>
-            ) : (
-              <Badge tone="danger" className="gap-1">
-                <AlertTriangle className="h-3.5 w-3.5" />
-                {w.ledgerMismatches
-                  ? `Хэтэвчний ${w.ledgerMismatches} гүйлгээ зөрүүтэй`
-                  : w.currentMatchesLedger === false
-                    ? 'Одоогийн үлдэгдэл хуулгатай таарахгүй'
-                    : 'Тулгалт зөрүүтэй'}
-              </Badge>
-            )}
             {data && data.totals.unknownPayment > 0 ? (
               <p className="text-[var(--color-fg-muted)]">
                 {data.totals.unknownPayment} цэнэглэлтийн төлбөрийн бүртгэл олдсонгүй

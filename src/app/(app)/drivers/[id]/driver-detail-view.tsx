@@ -370,7 +370,7 @@ export function DriverDetailView({
             )}
           </Card>
 
-          {/* Statement: per-station breakdown + wallet reconciliation + Excel */}
+          {/* Statement: per-station breakdown + wallet + Excel */}
           <DriverStatement driverId={driverId} />
 
           {/* Recent Charging Sessions Card */}

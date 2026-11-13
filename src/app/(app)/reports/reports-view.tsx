@@ -11,6 +11,7 @@ import {
   Zap,
   CreditCard,
   Download,
+  FileSpreadsheet,
   Search,
   Calendar,
   ChevronDown,
@@ -44,6 +45,7 @@ import {
   THead,
   TR,
 } from '@/components/ui/table';
+import * as XLSX from 'xlsx';
 import { PageToolbar } from '@/components/ui/page-toolbar';
 import { StatCard, StatGrid } from '@/components/stat-card';
 import { cn } from '@/lib/cn';
@@ -175,10 +177,21 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
     return '20.0';
   }, [totals?.gross, totals?.fee]);
 
-  // Export CSV
-  function exportCsv() {
-    if (!rawStations.length) return;
-    const header = [
+  // Helper to auto-fit columns in Excel worksheet
+  function autoFitColumns(rows: (string | number)[][]) {
+    if (!rows.length) return [];
+    return rows[0].map((_, colIdx) => {
+      const maxLen = rows.reduce((max, row) => {
+        const cellVal = row[colIdx] != null ? String(row[colIdx]) : '';
+        return Math.max(max, cellVal.length);
+      }, 10);
+      return { wch: Math.min(Math.max(maxLen + 2, 10), 60) };
+    });
+  }
+
+  // Get structured export data per tab
+  function getStationsExportData() {
+    const headers = [
       '№',
       'Станц ID',
       'Станцын нэр',
@@ -190,27 +203,210 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
       'Шимтгэл (₮)',
       'Шимтгэл %',
       'Цэвэр орлого (₮)',
-      'Тооцооллын томьёо',
+      'Тооцооллын тайлбар',
     ];
-
     const rows = rawStations.map((s, idx) => [
       idx + 1,
-      `"${s.cpId}"`,
-      `"${s.name.replace(/"/g, '""')}"`,
-      `"${(s.address ?? '').replace(/"/g, '""')}"`,
+      s.cpId,
+      s.name,
+      s.address ?? '',
       s.sessionsCount,
       s.energyKwh,
-      s.tariffPerKwh,
+      s.tariffPerKwh ?? 0,
       s.gross,
       s.feeAmount,
       s.feePercent,
       s.clientNet,
-      `"${s.formula?.summaryDisplay ? s.formula.summaryDisplay.replace(/"/g, '""') : ''}"`,
+      s.formula?.summaryDisplay ?? '',
     ]);
+    return { headers, rows };
+  }
+
+  function getDailyExportData() {
+    const headers = [
+      '№',
+      'Огноо',
+      'Сеанс тоо',
+      'Эрчим хүч (кВтц)',
+      'Борлуулалт (₮)',
+      'Шимтгэл (₮)',
+      'Цэвэр орлого (₮)',
+    ];
+    const rows = daily.map((d, idx) => [
+      idx + 1,
+      formatDate(d.date),
+      d.sessionsCount,
+      d.energyKwh,
+      d.gross,
+      d.fee,
+      d.net,
+    ]);
+    return { headers, rows };
+  }
+
+  function getConnectorsExportData() {
+    const headers = [
+      '№',
+      'Станцын нэр',
+      'Станц ID',
+      'Холбогч',
+      'Цэнэглэлтийн тоо',
+      'Эрчим хүч (кВтц)',
+      'Борлуулалт (₮)',
+      'Шимтгэл (₮)',
+      'Цэвэр орлого (₮)',
+    ];
+    const rows = connectors.map((c, idx) => [
+      idx + 1,
+      c.stationName,
+      c.cpId,
+      `Буу ${connectorLetter(c.connectorId)}`,
+      c.sessionsCount,
+      c.energyKwh,
+      c.gross,
+      c.fee,
+      c.net,
+    ]);
+    return { headers, rows };
+  }
+
+  function getSessionsExportData() {
+    const headers = [
+      '№',
+      'Сеанс #',
+      'Станцын нэр',
+      'Станц ID',
+      'Холбогч',
+      'Карт / ID Tag',
+      'Тээврийн хэрэгсэл',
+      'Эхэлсэн хугацаа',
+      'Дууссан хугацаа',
+      'Хэрэглээ (кВтц)',
+      'Тариф (₮/кВтц)',
+      'Борлуулалт (₮)',
+      'Шимтгэл (₮)',
+      'Шимтгэл %',
+      'Цэвэр орлого (₮)',
+    ];
+    const rows = sessions.map((tx, idx) => [
+      idx + 1,
+      `#${tx.id}`,
+      tx.stationName,
+      tx.cpId,
+      `Буу ${connectorLetter(tx.connectorId)}`,
+      tx.idTag || '',
+      tx.vehicleModel || '',
+      formatDateTime(tx.startTimestamp),
+      formatDateTime(tx.stopTimestamp),
+      tx.energyKwh,
+      tx.tariffPerKwh || 0,
+      tx.cost,
+      tx.feeAmount,
+      tx.feePercent,
+      tx.clientNet,
+    ]);
+    return { headers, rows };
+  }
+
+  // Export current active tab as Excel (.xlsx)
+  function exportActiveTabExcel() {
+    let sheetName = 'Станцын тайлан';
+    let data = getStationsExportData();
+    let prefix = 'station-report';
+
+    if (activeTab === 'daily') {
+      sheetName = 'Өдрийн хөдөлгөөн';
+      data = getDailyExportData();
+      prefix = 'daily-report';
+    } else if (activeTab === 'connectors') {
+      sheetName = 'Холбогч бүрээр';
+      data = getConnectorsExportData();
+      prefix = 'connectors-report';
+    } else if (activeTab === 'sessions') {
+      sheetName = 'Цэнэглэлтийн лог';
+      data = getSessionsExportData();
+      prefix = 'charging-sessions';
+    }
+
+    if (!data.rows.length) return;
+
+    const wb = XLSX.utils.book_new();
+    const allRows = [data.headers, ...data.rows];
+    const ws = XLSX.utils.aoa_to_sheet(allRows);
+    ws['!cols'] = autoFitColumns(allRows);
+    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    XLSX.writeFile(wb, `${prefix}-${range.from}-to-${range.to}.xlsx`);
+  }
+
+  // Export All-in-One Excel with 4 worksheets
+  function exportAllInOneExcel() {
+    const wb = XLSX.utils.book_new();
+
+    const sData = getStationsExportData();
+    if (sData.rows.length) {
+      const allRows = [sData.headers, ...sData.rows];
+      const ws1 = XLSX.utils.aoa_to_sheet(allRows);
+      ws1['!cols'] = autoFitColumns(allRows);
+      XLSX.utils.book_append_sheet(wb, ws1, 'Станцын тайлан');
+    }
+
+    const dData = getDailyExportData();
+    if (dData.rows.length) {
+      const allRows = [dData.headers, ...dData.rows];
+      const ws2 = XLSX.utils.aoa_to_sheet(allRows);
+      ws2['!cols'] = autoFitColumns(allRows);
+      XLSX.utils.book_append_sheet(wb, ws2, 'Өдрийн хөдөлгөөн');
+    }
+
+    const cData = getConnectorsExportData();
+    if (cData.rows.length) {
+      const allRows = [cData.headers, ...cData.rows];
+      const ws3 = XLSX.utils.aoa_to_sheet(allRows);
+      ws3['!cols'] = autoFitColumns(allRows);
+      XLSX.utils.book_append_sheet(wb, ws3, 'Холбогч бүрээр');
+    }
+
+    const sessData = getSessionsExportData();
+    if (sessData.rows.length) {
+      const allRows = [sessData.headers, ...sessData.rows];
+      const ws4 = XLSX.utils.aoa_to_sheet(allRows);
+      ws4['!cols'] = autoFitColumns(allRows);
+      XLSX.utils.book_append_sheet(wb, ws4, 'Цэнэглэлтийн лог');
+    }
+
+    XLSX.writeFile(wb, `eplug-report-all-in-one-${range.from}-to-${range.to}.xlsx`);
+  }
+
+  // Export CSV for active tab
+  function exportCsv() {
+    let data = getStationsExportData();
+    let prefix = 'station-report';
+
+    if (activeTab === 'daily') {
+      data = getDailyExportData();
+      prefix = 'daily-report';
+    } else if (activeTab === 'connectors') {
+      data = getConnectorsExportData();
+      prefix = 'connectors-report';
+    } else if (activeTab === 'sessions') {
+      data = getSessionsExportData();
+      prefix = 'charging-sessions';
+    }
+
+    if (!data.rows.length) return;
 
     const csvContent =
       '\uFEFF' +
-      [header.join(','), ...rows.map((r) => r.join(','))].join('\r\n');
+      [
+        data.headers.join(','),
+        ...data.rows.map((r) =>
+          r
+            .map((val) =>
+              typeof val === 'string' ? `"${val.replace(/"/g, '""')}"` : val,
+            )
+            .join(','),
+        ),
+      ].join('\r\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -218,7 +414,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
     link.setAttribute('href', url);
     link.setAttribute(
       'download',
-      `station-report-${range.from}-to-${range.to}.csv`,
+      `${prefix}-${range.from}-to-${range.to}.csv`,
     );
     document.body.appendChild(link);
     link.click();
@@ -414,17 +610,70 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
             </div>
           </div>
 
-          {/* Export Button */}
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={exportCsv}
-            disabled={!rawStations.length}
-            className="text-xs h-8 ml-auto font-medium"
-          >
-            <Download className="h-3.5 w-3.5 mr-1" />
-            CSV татах
-          </Button>
+          {/* Export Action Buttons */}
+          <div className="flex flex-wrap items-center gap-1.5 ml-auto">
+            {/* Active Tab Excel Export */}
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={exportActiveTabExcel}
+              disabled={
+                activeTab === 'stations'
+                  ? !rawStations.length
+                  : activeTab === 'daily'
+                    ? !daily.length
+                    : activeTab === 'connectors'
+                      ? !connectors.length
+                      : !sessions.length
+              }
+              className="text-xs h-8 font-medium gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+              title={`${
+                activeTab === 'stations'
+                  ? 'Станцын тайлан'
+                  : activeTab === 'daily'
+                    ? 'Өдрийн хөдөлгөөн'
+                    : activeTab === 'connectors'
+                      ? 'Холбогч бүрээр'
+                      : 'Цэнэглэлтийн лог'
+              }-г Excel (.xlsx) татах`}
+            >
+              <FileSpreadsheet className="h-3.5 w-3.5" />
+              Excel татах
+            </Button>
+
+            {/* All in one multi-sheet Excel */}
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={exportAllInOneExcel}
+              disabled={!rawStations.length && !sessions.length}
+              className="text-xs h-8 font-medium gap-1"
+              title="Станцын тайлан, Өдөр, Холбогч, Цэнэглэлтийн логийг бүгдийг 1 Excel файлын олон хуудас болгон татах"
+            >
+              <Download className="h-3.5 w-3.5" />
+              Бүгдийг 1 Excel-д
+            </Button>
+
+            {/* CSV export of current tab */}
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={exportCsv}
+              disabled={
+                activeTab === 'stations'
+                  ? !rawStations.length
+                  : activeTab === 'daily'
+                    ? !daily.length
+                    : activeTab === 'connectors'
+                      ? !connectors.length
+                      : !sessions.length
+              }
+              className="text-xs h-8 font-medium text-[var(--color-fg-muted)]"
+              title="Идэвхтэй хүснэгтийг CSV форматаар татах"
+            >
+              CSV
+            </Button>
+          </div>
         </div>
 
         {/* TAB 1: Станцын тайлан Table with № and inline drilldown */}
@@ -906,8 +1155,26 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                       </TD>
                       <TD align="left">
                         <div className="font-medium text-xs text-[var(--color-fg)]">{tx.stationName}</div>
-                        <div className="text-[10px] text-[var(--color-fg-subtle)] font-mono">
-                          Буу {connectorLetter(tx.connectorId)} {tx.vehicleModel ? `· ${tx.vehicleModel}` : ''}
+                        <div className="flex flex-wrap items-center gap-1 text-[10px] text-[var(--color-fg-subtle)] font-mono mt-0.5">
+                          <span>Буу {connectorLetter(tx.connectorId)}</span>
+                          {tx.idTag ? (
+                            <>
+                              <span>·</span>
+                              <Link
+                                href={`/id-tags?search=${encodeURIComponent(tx.idTag)}`}
+                                className="rounded bg-[var(--color-surface-2)] px-1 text-[var(--color-fg-muted)] border border-[var(--color-border)] hover:text-[var(--color-brand)] transition"
+                                title="Карт / хэрэглэгч харах"
+                              >
+                                {tx.idTag}
+                              </Link>
+                            </>
+                          ) : null}
+                          {tx.vehicleModel ? (
+                            <>
+                              <span>·</span>
+                              <span>{tx.vehicleModel}</span>
+                            </>
+                          ) : null}
                         </div>
                       </TD>
                       <TD align="left" className="text-xs">

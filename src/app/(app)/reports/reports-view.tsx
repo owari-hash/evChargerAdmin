@@ -46,6 +46,7 @@ import {
   TR,
 } from '@/components/ui/table';
 import * as XLSX from 'xlsx';
+import { toast } from 'sonner';
 import { PageToolbar } from '@/components/ui/page-toolbar';
 import { StatCard, StatGrid } from '@/components/stat-card';
 import { cn } from '@/lib/cn';
@@ -102,6 +103,59 @@ function lastMonthRange(): DateRange {
 }
 
 type TabKey = 'stations' | 'daily' | 'connectors' | 'sessions';
+
+/** Response of GET /reports/sessions-export. */
+interface StationSessionsExport {
+  station: {
+    id: string;
+    cpId: string;
+    name: string;
+    address: string;
+    vendor: string;
+    model: string;
+    serialNumber: string;
+    tariffPerKwh: number | null;
+    tariffZones: { name?: string; startMinute?: number; endMinute?: number; tariffPerKwh?: number }[];
+  };
+  contactsMasked: boolean;
+  totals: { sessionsCount: number; driversCount: number; energyKwh: number; gross: number; fee: number; net: number };
+  sessions: {
+    id: number;
+    connectorId: number;
+    idTag: string;
+    driverName: string;
+    driverPhone: string;
+    driverEmail: string;
+    driverType: string;
+    vehicle: string;
+    vehicleVin: string;
+    vehicleBatteryKwh: number | null;
+    startTimestamp: string;
+    stopTimestamp: string | null;
+    durationMin: number | null;
+    meterStartWh: number;
+    meterStopWh: number | null;
+    energyKwh: number;
+    avgPowerKw: number | null;
+    startSocPercent: number | null;
+    endSocPercent: number | null;
+    tariffPerKwh: number | null;
+    energyCost: number;
+    feePercent: number;
+    feeAmount: number;
+    cost: number;
+    clientNet: number;
+    stopReason: string;
+    startedRemotely: boolean;
+    paymentProvider: string;
+    paymentStatus: string;
+    paidAmount: number | null;
+    ebarimtStatus: string;
+    ebarimtReceiptId: string;
+    refundAmount: number | null;
+    stationError: string;
+  }[];
+}
 
 export function ReportsView({ user }: { user: SessionUser | null }) {
   const isClient = user?.role === 'CLIENT';
@@ -377,48 +431,157 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
     XLSX.writeFile(wb, `eplug-report-all-in-one-${range.from}-to-${range.to}.xlsx`);
   }
 
-  // Export CSV for active tab
-  function exportCsv() {
-    let data = getStationsExportData();
-    let prefix = 'station-report';
+  // Full per-station Excel: every session (no 500-row cap) with driver, payment and e-barimt info.
+  const [stationExporting, setStationExporting] = React.useState(false);
 
-    if (activeTab === 'daily') {
-      data = getDailyExportData();
-      prefix = 'daily-report';
-    } else if (activeTab === 'connectors') {
-      data = getConnectorsExportData();
-      prefix = 'connectors-report';
-    } else if (activeTab === 'sessions') {
-      data = getSessionsExportData();
-      prefix = 'charging-sessions';
+  async function exportStationDetailExcel() {
+    if (selectedStation === 'all') return;
+    setStationExporting(true);
+    try {
+      const rep = await fetcher<StationSessionsExport>(
+        apiUrl('reports/sessions-export', {
+          chargePointId: selectedStation,
+          from: rangeStart(range.from),
+          to: rangeEnd(range.to),
+        }),
+      );
+      if (!rep.sessions.length) {
+        toast.info('Сонгосон хугацаанд цэнэглэлт алга');
+        return;
+      }
+
+      const wb = XLSX.utils.book_new();
+      const addSheet = (name: string, rows: (string | number | null)[][]) => {
+        const clean = rows.map((r) => r.map((v) => (v == null ? '' : v)));
+        const ws = XLSX.utils.aoa_to_sheet(clean);
+        // Thousands separators with 2 decimals (123,123.00), keeping cells numeric so Excel can still
+        // sum them. ID-like columns stay plain.
+        const header = clean[0] ?? [];
+        clean.forEach((row, r) =>
+          row.forEach((v, c) => {
+            if (typeof v !== 'number' || header[c] === '№' || header[c] === 'Сеанс #') return;
+            const cell = ws[XLSX.utils.encode_cell({ r, c })];
+            if (cell) cell.z = '#,##0.00';
+          }),
+        );
+        ws['!cols'] = autoFitColumns(clean);
+        XLSX.utils.book_append_sheet(wb, ws, name);
+      };
+      const st = rep.station;
+      const t = rep.totals;
+      const s = rep.sessions;
+      const r2 = (n: number) => Math.round(n * 100) / 100;
+      const sum = (f: (x: (typeof s)[number]) => number | null | undefined) =>
+        r2(s.reduce((a, x) => a + (f(x) ?? 0), 0));
+      const minuteLabel = (m?: number) =>
+        m == null ? '' : `${String(Math.floor(m / 60)).padStart(2, '0')}:${String(m % 60).padStart(2, '0')}`;
+
+      // 1. Summary
+      addSheet('Хураангуй', [
+        ['Станцын нэр', st.name],
+        ['Станц ID', st.cpId],
+        ['Хаяг', st.address],
+        ['Үйлдвэрлэгч / Загвар', [st.vendor, st.model].filter(Boolean).join(' ')],
+        ['Серийн дугаар', st.serialNumber],
+        ['Хугацаа', `${range.from} — ${range.to}`],
+        ['Татсан огноо', formatDateTime(new Date())],
+        [],
+        ['Цэнэглэлтийн тоо', t.sessionsCount],
+        ['Жолоочийн тоо', t.driversCount],
+        ['Нийт эрчим хүч (кВтц)', t.energyKwh],
+        ['Нийт дүн (₮)', t.gross],
+        ['Нийт цэнэглэсэн хугацаа (мин)', s.reduce((a, x) => a + (x.durationMin ?? 0), 0)],
+        ['Дундаж эрчим хүч / цэнэглэлт (кВтц)', r2(t.energyKwh / t.sessionsCount)],
+        ['Дундаж дүн / цэнэглэлт (₮)', r2(t.gross / t.sessionsCount)],
+        [],
+        ['Үндсэн тариф (₮/кВтц)', st.tariffPerKwh],
+        ...st.tariffZones.map((z) => [
+          `${z.name ?? 'Бүс'} (${minuteLabel(z.startMinute)}–${minuteLabel(z.endMinute)})`,
+          z.tariffPerKwh ?? '',
+        ]),
+        ...(rep.contactsMasked ? [[], ['Тайлбар', 'Жолоочийн холбоо барих мэдээллийг нууцалсан']] : []),
+      ]);
+
+      // 2. Every session, with a footer total row
+      addSheet('Цэнэглэлтүүд', [
+        [
+          '№', 'Сеанс #', 'Буу', 'Эхэлсэн', 'Дууссан', 'Хугацаа (мин)',
+          'Жолооч', 'Утас', 'И-мэйл', 'Төрөл', 'Карт / ID Tag', 'Машин', 'VIN', 'Батерей (кВтц)',
+          'Тоолуур эхлэл (Втц)', 'Тоолуур төгсгөл (Втц)', 'Эрчим хүч (кВтц)', 'Дундаж чадал (кВт)',
+          'SoC эхлэл %', 'SoC төгсгөл %', 'Тариф (₮/кВтц)', 'Дүн (₮)',
+          'Төлбөрийн хэрэгсэл', 'Төлбөрийн төлөв', 'Төлсөн (₮)', 'Буцаалт (₮)',
+          'И-баримт', 'И-баримт ID', 'Зогсоосон шалтгаан', 'Алсаас эхлүүлсэн', 'Станцын алдаа',
+        ],
+        ...s.map((x, i) => [
+          i + 1, x.id, `Буу ${connectorLetter(x.connectorId)}`, formatDateTime(x.startTimestamp),
+          formatDateTime(x.stopTimestamp), x.durationMin, x.driverName, x.driverPhone, x.driverEmail,
+          x.driverType, x.idTag, x.vehicle, x.vehicleVin, x.vehicleBatteryKwh, x.meterStartWh,
+          x.meterStopWh, x.energyKwh, x.avgPowerKw, x.startSocPercent, x.endSocPercent, x.tariffPerKwh,
+          x.cost, x.paymentProvider, x.paymentStatus, x.paidAmount,
+          x.refundAmount, x.ebarimtStatus, x.ebarimtReceiptId, x.stopReason, x.startedRemotely ? 'Тийм' : 'Үгүй',
+          x.stationError,
+        ]),
+        [],
+        [
+          'НИЙТ', `${t.sessionsCount} цэнэглэлт`, '', '', '', sum((x) => x.durationMin), `${t.driversCount} жолооч`,
+          '', '', '', '', '', '', '', '', '', t.energyKwh, '', '', '', '', t.gross,
+          '', '', sum((x) => x.paidAmount), sum((x) => x.refundAmount),
+        ],
+      ]);
+
+      // 3. Per driver
+      const byDriver = new Map<string, { name: string; phone: string; type: string; vehicle: string; n: number; kwh: number; gross: number; first: string; last: string }>();
+      for (const x of s) {
+        const d = byDriver.get(x.idTag) ?? {
+          name: x.driverName, phone: x.driverPhone, type: x.driverType, vehicle: x.vehicle,
+          n: 0, kwh: 0, gross: 0, first: x.startTimestamp, last: x.startTimestamp,
+        };
+        d.n += 1;
+        d.kwh += x.energyKwh;
+        d.gross += x.cost;
+        if (x.vehicle && !d.vehicle) d.vehicle = x.vehicle;
+        if (x.startTimestamp < d.first) d.first = x.startTimestamp;
+        if (x.startTimestamp > d.last) d.last = x.startTimestamp;
+        byDriver.set(x.idTag, d);
+      }
+      addSheet('Жолоочоор', [
+        ['№', 'Карт / ID Tag', 'Жолооч', 'Утас', 'Төрөл', 'Машин', 'Цэнэглэлт', 'Эрчим хүч (кВтц)', 'Дүн (₮)', 'Анхны', 'Сүүлийн'],
+        ...[...byDriver.entries()]
+          .sort((a, b) => b[1].kwh - a[1].kwh)
+          .map(([tag, d], i) => [
+            i + 1, tag, d.name, d.phone, d.type, d.vehicle, d.n, r2(d.kwh), r2(d.gross),
+            formatDateTime(d.first), formatDateTime(d.last),
+          ]),
+        [],
+        ['НИЙТ', `${byDriver.size} жолооч`, '', '', '', '', t.sessionsCount, t.energyKwh, t.gross],
+      ]);
+
+      // 4. Per day (local time)
+      const byDay = new Map<string, { n: number; kwh: number; gross: number }>();
+      for (const x of s) {
+        const day = formatDateTime(x.stopTimestamp ?? x.startTimestamp).slice(0, 10);
+        const d = byDay.get(day) ?? { n: 0, kwh: 0, gross: 0 };
+        d.n += 1;
+        d.kwh += x.energyKwh;
+        d.gross += x.cost;
+        byDay.set(day, d);
+      }
+      addSheet('Өдрөөр', [
+        ['Огноо', 'Цэнэглэлт', 'Эрчим хүч (кВтц)', 'Дүн (₮)'],
+        ...[...byDay.entries()]
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([day, d]) => [day, d.n, r2(d.kwh), r2(d.gross)]),
+        [],
+        ['НИЙТ', t.sessionsCount, t.energyKwh, t.gross],
+      ]);
+
+      const safeName = (st.cpId || 'station').replace(/[^\w-]+/g, '_');
+      XLSX.writeFile(wb, `eplug-${safeName}-${range.from}-to-${range.to}.xlsx`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Тайлан татахад алдаа гарлаа');
+    } finally {
+      setStationExporting(false);
     }
-
-    if (!data.rows.length) return;
-
-    const csvContent =
-      '\uFEFF' +
-      [
-        data.headers.join(','),
-        ...data.rows.map((r) =>
-          r
-            .map((val) =>
-              typeof val === 'string' ? `"${val.replace(/"/g, '""')}"` : val,
-            )
-            .join(','),
-        ),
-      ].join('\r\n');
-
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute(
-      'download',
-      `${prefix}-${range.from}-to-${range.to}.csv`,
-    );
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
   }
 
   return (
@@ -553,7 +716,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
           </button>
         </div>
 
-        {/* Sub-toolbar: Search, Date quick chips, and CSV Export */}
+        {/* Sub-toolbar: Search, Date quick chips, and Excel export */}
         <div className="p-2.5 sm:p-3 border-b border-[var(--color-border)] flex flex-wrap items-center justify-between gap-2.5">
           <div className="flex flex-wrap items-center gap-2 flex-1 min-w-[16rem]">
             {/* Search Box */}
@@ -641,6 +804,23 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
               Excel татах
             </Button>
 
+            {/* Full per-station export with drivers */}
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={exportStationDetailExcel}
+              disabled={selectedStation === 'all' || stationExporting}
+              className="text-xs h-8 font-medium gap-1"
+              title={
+                selectedStation === 'all'
+                  ? 'Эхлээд станц сонгоно уу'
+                  : 'Сонгосон станцын бүх цэнэглэлт, жолоочийн мэдээлэл, төлбөрийг Excel-ээр татах'
+              }
+            >
+              <FileSpreadsheet className="h-3.5 w-3.5" />
+              {stationExporting ? 'Бэлдэж байна…' : 'Станцын дэлгэрэнгүй Excel'}
+            </Button>
+
             {/* All in one multi-sheet Excel */}
             <Button
               variant="secondary"
@@ -652,26 +832,6 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
             >
               <Download className="h-3.5 w-3.5" />
               Бүгдийг 1 Excel-д
-            </Button>
-
-            {/* CSV export of current tab */}
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={exportCsv}
-              disabled={
-                activeTab === 'stations'
-                  ? !rawStations.length
-                  : activeTab === 'daily'
-                    ? !daily.length
-                    : activeTab === 'connectors'
-                      ? !connectors.length
-                      : !sessions.length
-              }
-              className="text-xs h-8 font-medium text-[var(--color-fg-muted)]"
-              title="Идэвхтэй хүснэгтийг CSV форматаар татах"
-            >
-              CSV
             </Button>
           </div>
         </div>

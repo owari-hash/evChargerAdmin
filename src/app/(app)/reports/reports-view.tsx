@@ -243,22 +243,44 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
     });
   }
 
+  type ExportCell = string | number | null | undefined;
+  interface ExportData {
+    headers: string[];
+    rows: ExportCell[][];
+    /** Footer (хөл дүн) row, appended after a blank line. */
+    total: ExportCell[];
+  }
+
+  const round2 = (n: number) => Math.round(n * 100) / 100;
+  const sumOf = <T,>(items: T[], f: (x: T) => number | null | undefined) =>
+    round2(items.reduce((a, x) => a + (f(x) ?? 0), 0));
+
+  /**
+   * Builds a worksheet: auto-fit columns, numbers shown as 123,123.00 (cells stay numeric so
+   * Excel can still sum them). ID-like columns (№, Сеанс #) stay plain.
+   */
+  function buildSheet(rows: ExportCell[][]): XLSX.WorkSheet {
+    const clean = rows.map((r) => r.map((v) => (v == null ? '' : v)));
+    const ws = XLSX.utils.aoa_to_sheet(clean);
+    const header = clean[0] ?? [];
+    clean.forEach((row, r) =>
+      row.forEach((v, c) => {
+        if (typeof v !== 'number' || header[c] === '№' || header[c] === 'Сеанс #') return;
+        const cell = ws[XLSX.utils.encode_cell({ r, c })];
+        if (cell) cell.z = '#,##0.00';
+      }),
+    );
+    ws['!cols'] = autoFitColumns(clean);
+    return ws;
+  }
+
+  function appendExportSheet(wb: XLSX.WorkBook, name: string, data: ExportData) {
+    XLSX.utils.book_append_sheet(wb, buildSheet([data.headers, ...data.rows, [], data.total]), name);
+  }
+
   // Get structured export data per tab
-  function getStationsExportData() {
-    const headers = [
-      '№',
-      'Станц ID',
-      'Станцын нэр',
-      'Хаяг',
-      'Сеанс тоо',
-      'Эрчим хүч (кВтц)',
-      'Үндсэн тариф (₮)',
-      'Борлуулалт (₮)',
-      'Шимтгэл (₮)',
-      'Шимтгэл %',
-      'Цэвэр орлого (₮)',
-      'Тооцооллын тайлбар',
-    ];
+  function getStationsExportData(): ExportData {
+    const headers = ['№', 'Станц ID', 'Станцын нэр', 'Хаяг', 'Сеанс тоо', 'Эрчим хүч (кВтц)', 'Үндсэн тариф (₮)', 'Дүн (₮)'];
     const rows = rawStations.map((s, idx) => [
       idx + 1,
       s.cpId,
@@ -268,48 +290,31 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
       s.energyKwh,
       s.tariffPerKwh ?? 0,
       s.gross,
-      s.feeAmount,
-      s.feePercent,
-      s.clientNet,
-      s.formula?.summaryDisplay ?? '',
     ]);
-    return { headers, rows };
+    const total = [
+      'НИЙТ', `${rawStations.length} станц`, '', '',
+      sumOf(rawStations, (s) => s.sessionsCount),
+      sumOf(rawStations, (s) => s.energyKwh),
+      '',
+      sumOf(rawStations, (s) => s.gross),
+    ];
+    return { headers, rows, total };
   }
 
-  function getDailyExportData() {
-    const headers = [
-      '№',
-      'Огноо',
-      'Сеанс тоо',
-      'Эрчим хүч (кВтц)',
-      'Борлуулалт (₮)',
-      'Шимтгэл (₮)',
-      'Цэвэр орлого (₮)',
+  function getDailyExportData(): ExportData {
+    const headers = ['№', 'Огноо', 'Сеанс тоо', 'Эрчим хүч (кВтц)', 'Дүн (₮)'];
+    const rows = daily.map((d, idx) => [idx + 1, formatDate(d.date), d.sessionsCount, d.energyKwh, d.gross]);
+    const total = [
+      'НИЙТ', `${daily.length} өдөр`,
+      sumOf(daily, (d) => d.sessionsCount),
+      sumOf(daily, (d) => d.energyKwh),
+      sumOf(daily, (d) => d.gross),
     ];
-    const rows = daily.map((d, idx) => [
-      idx + 1,
-      formatDate(d.date),
-      d.sessionsCount,
-      d.energyKwh,
-      d.gross,
-      d.fee,
-      d.net,
-    ]);
-    return { headers, rows };
+    return { headers, rows, total };
   }
 
-  function getConnectorsExportData() {
-    const headers = [
-      '№',
-      'Станцын нэр',
-      'Станц ID',
-      'Холбогч',
-      'Цэнэглэлтийн тоо',
-      'Эрчим хүч (кВтц)',
-      'Борлуулалт (₮)',
-      'Шимтгэл (₮)',
-      'Цэвэр орлого (₮)',
-    ];
+  function getConnectorsExportData(): ExportData {
+    const headers = ['№', 'Станцын нэр', 'Станц ID', 'Холбогч', 'Цэнэглэлтийн тоо', 'Эрчим хүч (кВтц)', 'Дүн (₮)'];
     const rows = connectors.map((c, idx) => [
       idx + 1,
       c.stationName,
@@ -318,29 +323,20 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
       c.sessionsCount,
       c.energyKwh,
       c.gross,
-      c.fee,
-      c.net,
     ]);
-    return { headers, rows };
+    const total = [
+      'НИЙТ', '', '', `${connectors.length} буу`,
+      sumOf(connectors, (c) => c.sessionsCount),
+      sumOf(connectors, (c) => c.energyKwh),
+      sumOf(connectors, (c) => c.gross),
+    ];
+    return { headers, rows, total };
   }
 
-  function getSessionsExportData() {
+  function getSessionsExportData(): ExportData {
     const headers = [
-      '№',
-      'Сеанс #',
-      'Станцын нэр',
-      'Станц ID',
-      'Холбогч',
-      'Карт / ID Tag',
-      'Тээврийн хэрэгсэл',
-      'Эхэлсэн хугацаа',
-      'Дууссан хугацаа',
-      'Хэрэглээ (кВтц)',
-      'Тариф (₮/кВтц)',
-      'Борлуулалт (₮)',
-      'Шимтгэл (₮)',
-      'Шимтгэл %',
-      'Цэвэр орлого (₮)',
+      '№', 'Сеанс #', 'Станцын нэр', 'Станц ID', 'Холбогч', 'Карт / ID Tag', 'Тээврийн хэрэгсэл',
+      'Эхэлсэн хугацаа', 'Дууссан хугацаа', 'Хэрэглээ (кВтц)', 'Тариф (₮/кВтц)', 'Дүн (₮)',
     ];
     const rows = sessions.map((tx, idx) => [
       idx + 1,
@@ -353,13 +349,17 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
       formatDateTime(tx.startTimestamp),
       formatDateTime(tx.stopTimestamp),
       tx.energyKwh,
-      tx.tariffPerKwh || 0,
+      round2(tx.tariffPerKwh || 0),
       tx.cost,
-      tx.feeAmount,
-      tx.feePercent,
-      tx.clientNet,
     ]);
-    return { headers, rows };
+    const total = [
+      'НИЙТ', `${sessions.length} цэнэглэлт`, '', '', '',
+      `${new Set(sessions.map((tx) => tx.idTag)).size} карт`, '', '', '',
+      sumOf(sessions, (tx) => tx.energyKwh),
+      '',
+      sumOf(sessions, (tx) => tx.cost),
+    ];
+    return { headers, rows, total };
   }
 
   // Export current active tab as Excel (.xlsx)
@@ -385,49 +385,23 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
     if (!data.rows.length) return;
 
     const wb = XLSX.utils.book_new();
-    const allRows = [data.headers, ...data.rows];
-    const ws = XLSX.utils.aoa_to_sheet(allRows);
-    ws['!cols'] = autoFitColumns(allRows);
-    XLSX.utils.book_append_sheet(wb, ws, sheetName);
+    appendExportSheet(wb, sheetName, data);
     XLSX.writeFile(wb, `${prefix}-${range.from}-to-${range.to}.xlsx`);
   }
 
   // Export All-in-One Excel with 4 worksheets
   function exportAllInOneExcel() {
     const wb = XLSX.utils.book_new();
-
-    const sData = getStationsExportData();
-    if (sData.rows.length) {
-      const allRows = [sData.headers, ...sData.rows];
-      const ws1 = XLSX.utils.aoa_to_sheet(allRows);
-      ws1['!cols'] = autoFitColumns(allRows);
-      XLSX.utils.book_append_sheet(wb, ws1, 'Станцын тайлан');
+    const parts: [string, ExportData][] = [
+      ['Станцын тайлан', getStationsExportData()],
+      ['Өдрийн хөдөлгөөн', getDailyExportData()],
+      ['Холбогч бүрээр', getConnectorsExportData()],
+      ['Цэнэглэлтийн лог', getSessionsExportData()],
+    ];
+    for (const [name, data] of parts) {
+      if (data.rows.length) appendExportSheet(wb, name, data);
     }
-
-    const dData = getDailyExportData();
-    if (dData.rows.length) {
-      const allRows = [dData.headers, ...dData.rows];
-      const ws2 = XLSX.utils.aoa_to_sheet(allRows);
-      ws2['!cols'] = autoFitColumns(allRows);
-      XLSX.utils.book_append_sheet(wb, ws2, 'Өдрийн хөдөлгөөн');
-    }
-
-    const cData = getConnectorsExportData();
-    if (cData.rows.length) {
-      const allRows = [cData.headers, ...cData.rows];
-      const ws3 = XLSX.utils.aoa_to_sheet(allRows);
-      ws3['!cols'] = autoFitColumns(allRows);
-      XLSX.utils.book_append_sheet(wb, ws3, 'Холбогч бүрээр');
-    }
-
-    const sessData = getSessionsExportData();
-    if (sessData.rows.length) {
-      const allRows = [sessData.headers, ...sessData.rows];
-      const ws4 = XLSX.utils.aoa_to_sheet(allRows);
-      ws4['!cols'] = autoFitColumns(allRows);
-      XLSX.utils.book_append_sheet(wb, ws4, 'Цэнэглэлтийн лог');
-    }
-
+    if (!wb.SheetNames.length) return;
     XLSX.writeFile(wb, `eplug-report-all-in-one-${range.from}-to-${range.to}.xlsx`);
   }
 
@@ -451,26 +425,12 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
       }
 
       const wb = XLSX.utils.book_new();
-      const addSheet = (name: string, rows: (string | number | null)[][]) => {
-        const clean = rows.map((r) => r.map((v) => (v == null ? '' : v)));
-        const ws = XLSX.utils.aoa_to_sheet(clean);
-        // Thousands separators with 2 decimals (123,123.00), keeping cells numeric so Excel can still
-        // sum them. ID-like columns stay plain.
-        const header = clean[0] ?? [];
-        clean.forEach((row, r) =>
-          row.forEach((v, c) => {
-            if (typeof v !== 'number' || header[c] === '№' || header[c] === 'Сеанс #') return;
-            const cell = ws[XLSX.utils.encode_cell({ r, c })];
-            if (cell) cell.z = '#,##0.00';
-          }),
-        );
-        ws['!cols'] = autoFitColumns(clean);
-        XLSX.utils.book_append_sheet(wb, ws, name);
-      };
+      const addSheet = (name: string, rows: ExportCell[][]) =>
+        XLSX.utils.book_append_sheet(wb, buildSheet(rows), name);
       const st = rep.station;
       const t = rep.totals;
       const s = rep.sessions;
-      const r2 = (n: number) => Math.round(n * 100) / 100;
+      const r2 = round2;
       const sum = (f: (x: (typeof s)[number]) => number | null | undefined) =>
         r2(s.reduce((a, x) => a + (f(x) ?? 0), 0));
       const minuteLabel = (m?: number) =>

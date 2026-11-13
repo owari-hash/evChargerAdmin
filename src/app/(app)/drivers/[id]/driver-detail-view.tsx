@@ -36,6 +36,7 @@ import { ConfirmModal } from '@/components/ui/modal';
 import { DriverModal } from '../driver-modal';
 import { WalletAdjustModal } from '../wallet-adjust-modal';
 import { BindTagModal } from '../bind-tag-modal';
+import { DriverStatement } from './driver-statement';
 
 export function DriverDetailView({
   driverId,
@@ -368,6 +369,9 @@ export function DriverDetailView({
               </div>
             )}
           </Card>
+
+          {/* Statement: per-station breakdown + wallet reconciliation + Excel */}
+          <DriverStatement driverId={driverId} />
 
           {/* Recent Charging Sessions Card */}
           <Card className="overflow-hidden">

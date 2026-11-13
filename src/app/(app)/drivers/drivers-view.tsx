@@ -29,6 +29,7 @@ import { StatCard, StatGrid } from '@/components/stat-card';
 import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty, TableLoading } from '@/components/ui/table';
 import { IdTagsView } from '../id-tags/id-tags-view';
 import { DriverModal } from './driver-modal';
+import { DriversStatementsExport } from './drivers-statements-export';
 
 function formatPhone(phone?: string | null): string {
   if (!phone) return '—';
@@ -215,15 +216,18 @@ export function DriversView({
               </div>
 
               {canEdit ? (
-                <Button
-                  variant="primary"
-                  size="sm"
-                  onClick={() => setCreatingDriver(true)}
-                  className="shrink-0 gap-1.5"
-                >
-                  <Plus className="h-4 w-4" />
-                  Шинэ жолооч бүртгэх
-                </Button>
+                <div className="flex flex-wrap items-center gap-2">
+                  <DriversStatementsExport />
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => setCreatingDriver(true)}
+                    className="shrink-0 gap-1.5"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Шинэ жолооч бүртгэх
+                  </Button>
+                </div>
               ) : null}
             </div>
           </Card>

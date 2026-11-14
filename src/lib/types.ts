@@ -1112,3 +1112,92 @@ export interface Feedback {
   createdAt: string;
   updatedAt?: string;
 }
+
+// ---------------------------------------------------------------------------
+// Хамтрагч мерчант / Partner Merchants (API Users)
+// ---------------------------------------------------------------------------
+
+export interface PartnerMerchant {
+  id: string;
+  name: string;
+  code: string;
+  username: string;
+  client?: {
+    id: string;
+    name: string;
+    businessRegister?: string;
+  } | null;
+  allowedStations: string[];
+  allowedScopes: string[];
+  isActive: boolean;
+  ipWhitelist: string[];
+  rateLimitPerMin: number;
+  contactName?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  description?: string;
+  lastLoginAt?: string;
+  lastActiveAt?: string;
+  totalApiCalls: number;
+  todayApiCalls?: number;
+  createdAt: string;
+}
+
+export interface PartnerMerchantInput {
+  name: string;
+  code: string;
+  username: string;
+  password?: string;
+  clientId?: string | null;
+  allowedStations?: string[];
+  allowedScopes?: string[];
+  isActive?: boolean;
+  ipWhitelist?: string[];
+  contactName?: string;
+  contactPhone?: string;
+  contactEmail?: string;
+  description?: string;
+}
+
+export interface PartnerApiLogItem {
+  id: string;
+  merchantId: string;
+  merchantName: string;
+  merchantUsername: string;
+  method: string;
+  endpoint: string;
+  statusCode: number;
+  durationMs: number;
+  ip?: string;
+  userAgent?: string;
+  requestQuery?: Record<string, unknown>;
+  requestBody?: Record<string, unknown>;
+  errorMessage?: string;
+  createdAt: string;
+}
+
+export interface PartnerMerchantStats {
+  totalMerchants: number;
+  activeMerchants: number;
+  inactiveMerchants: number;
+  todayApiCalls: number;
+  successRate: number;
+}
+
+export interface PartnerMerchantListResponse {
+  items: PartnerMerchant[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+export interface PartnerApiLogListResponse {
+  items: PartnerApiLogItem[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
+
+

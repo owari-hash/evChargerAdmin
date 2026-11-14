@@ -22,6 +22,7 @@ import {
   ShieldCheck,
   SlidersHorizontal,
   Store,
+  KeyRound,
   Users,
   Zap,
 } from 'lucide-react';
@@ -66,6 +67,7 @@ export const CLIENT_NAV_SECTIONS: NavSection[] = [
     title: 'Хандалт',
     items: [
       { href: '/drivers', label: 'Жолооч', icon: Users, prefix: true },
+      { href: '/partner-merchants', label: 'Мерчант', icon: KeyRound, minRole: 'OPERATOR', prefix: true },
     ],
   },
 ];
@@ -90,6 +92,7 @@ export const NAV_SECTIONS: NavSection[] = [
     title: 'Хандалт',
     items: [
       { href: '/drivers', label: 'Жолооч', icon: Users, prefix: true },
+      { href: '/partner-merchants', label: 'Мерчант', icon: KeyRound, minRole: 'OPERATOR', prefix: true },
     ],
   },
   {
@@ -139,6 +142,7 @@ export const MANAGEABLE_MENUS: ManageableMenu[] = [
   { href: '/simulator', label: 'OCPP Симулятор', section: 'Үйл ажиллагаа' },
   // Хандалт
   { href: '/drivers', label: 'Жолооч', section: 'Хандалт' },
+  { href: '/partner-merchants', label: 'Мерчант', section: 'Хандалт' },
 ];
 
 export function visibleSections(role: UserRole, allowedMenus?: string[]): NavSection[] {

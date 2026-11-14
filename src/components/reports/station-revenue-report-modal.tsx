@@ -9,6 +9,7 @@ import { Button, Field, Input } from '@/components/ui/primitives';
 import { formatMoney, formatNumber } from '@/lib/format';
 import {
   buildStationRevenueWorkbook,
+  downloadWorkbook,
   type RevenueReportClient,
   type RevenueReportParams,
   type RevenueReportSessionItem,
@@ -124,7 +125,7 @@ export function StationRevenueReportModal({
 
   const [downloading, setDownloading] = React.useState(false);
 
-  function handleDownload() {
+  async function handleDownload() {
     try {
       setDownloading(true);
       const params: RevenueReportParams = {
@@ -148,9 +149,9 @@ export function StationRevenueReportModal({
         notes: notes.trim() || undefined,
       };
 
-      const wb = buildStationRevenueWorkbook(params, sessions);
+      const wb = await buildStationRevenueWorkbook(params, sessions);
       const safeName = (station.cpId || 'station').replace(/[^\w-]+/g, '_');
-      XLSX.writeFile(wb, `EV-орлого-хуваарилалт-${safeName}-${from}-to-${to}.xlsx`);
+      await downloadWorkbook(wb, `EV-орлого-хуваарилалт-${safeName}-${from}-to-${to}.xlsx`);
       toast.success('Орлого хуваарилалтын Excel тайлан амжилттай татагдлаа');
       onClose();
     } catch (err) {

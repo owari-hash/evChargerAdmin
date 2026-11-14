@@ -50,9 +50,9 @@ import { toast } from 'sonner';
 import { PageToolbar } from '@/components/ui/page-toolbar';
 import { StatCard, StatGrid } from '@/components/stat-card';
 import { cn } from '@/lib/cn';
-import { StationRevenueReportModal } from '@/components/reports/station-revenue-report-modal';
 import {
   buildStationRevenueWorkbook,
+  downloadWorkbook,
   type RevenueReportParams,
 } from '@/lib/revenue-report-excel';
 
@@ -401,11 +401,9 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
   }
 
   // Per-station Revenue Allocation Report («EV ЦЭНЭГЛЭХ СТАНЦЫН ОРЛОГО ХУВААРИЛАЛТЫН ТАЙЛАН»)
-  const [revenueReportModalOpen, setRevenueReportModalOpen] = React.useState(false);
   const [revenueReportLoading, setRevenueReportLoading] = React.useState(false);
-  const [revenueReportData, setRevenueReportData] = React.useState<StationSessionsExport | null>(null);
 
-  async function handleOpenRevenueReport(e?: React.MouseEvent) {
+  async function handleDownloadRevenueReport() {
     if (selectedStation === 'all') return;
     setRevenueReportLoading(true);
     try {
@@ -416,7 +414,6 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
           to: rangeEnd(range.to),
         }),
       );
-      setRevenueReportData(rep);
 
       const st = rep.station;
       const matchedCp = stationOptions.find((s) => s.id === selectedStation || s.cpId === selectedStation);
@@ -425,26 +422,23 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
         matchedCp?.client ||
         (matchedCp?.clientId ? clientOptions.find((c) => c.id === matchedCp.clientId) : null);
 
-      if (e?.shiftKey || e?.altKey) {
-        // Direct download with default formulas
-        const params: RevenueReportParams = {
-          station: st,
-          client: matchedClient
-            ? { id: matchedClient.id, name: matchedClient.name, feePercent: (matchedClient as any).feePercent }
-            : null,
-          from: range.from,
-          to: range.to,
-          sessionsCount: rep.totals.sessionsCount,
-          platformKwh: rep.totals.energyKwh,
-          grossRevenue: rep.totals.gross,
-        };
-        const wb = buildStationRevenueWorkbook(params, rep.sessions);
-        const safeName = (st.cpId || 'station').replace(/[^\w-]+/g, '_');
-        XLSX.writeFile(wb, `EV-орлого-хуваарилалт-${safeName}-${range.from}-to-${range.to}.xlsx`);
-        toast.success('Орлого хуваарилалтын Excel тайлан амжилттай татагдлаа');
-      } else {
-        setRevenueReportModalOpen(true);
-      }
+      const params: RevenueReportParams = {
+        station: st,
+        client: matchedClient
+          ? { id: matchedClient.id, name: matchedClient.name, feePercent: (matchedClient as any).feePercent }
+          : null,
+        from: range.from,
+        to: range.to,
+        sessionsCount: rep.totals.sessionsCount,
+        platformKwh: rep.totals.energyKwh,
+        grossRevenue: rep.totals.gross,
+        // meterKwh, electricityCost, meterDate intentionally left undefined so cells are exported blank
+      };
+
+      const wb = await buildStationRevenueWorkbook(params, rep.sessions);
+      const safeName = (st.cpId || 'station').replace(/[^\w-]+/g, '_');
+      await downloadWorkbook(wb, `EV-орлого-хуваарилалт-${safeName}-${range.from}-to-${range.to}.xlsx`);
+      toast.success('Орлого хуваарилалтын Excel тайлан амжилттай татагдлаа');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Тайлан татахад алдаа гарлаа');
     } finally {
@@ -832,7 +826,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
             <Button
               variant="secondary"
               size="sm"
-              onClick={handleOpenRevenueReport}
+              onClick={handleDownloadRevenueReport}
               disabled={selectedStation === 'all' || revenueReportLoading}
               className={cn(
                 'text-xs h-8 font-medium gap-1 transition-all',
@@ -843,7 +837,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
               title={
                 selectedStation === 'all'
                   ? 'Эхлээд станц сонгоно уу'
-                  : 'EV цэнэглэх станцын орлого хуваарилалтын тайлан татах (Shift+Click: шууд татах)'
+                  : 'EV цэнэглэх станцын орлого хуваарилалтын тайлан татах (.xlsx)'
               }
             >
               <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-500" />
@@ -1383,52 +1377,6 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
           </TableWrap>
         )}
       </Card>
-
-      {/* Station Revenue Allocation Report Modal */}
-      {selectedStation !== 'all' && (
-        <StationRevenueReportModal
-          open={revenueReportModalOpen}
-          onClose={() => setRevenueReportModalOpen(false)}
-          station={
-            revenueReportData?.station ||
-            (() => {
-              const cp = stationOptions.find((s) => s.id === selectedStation || s.cpId === selectedStation);
-              return {
-                id: cp?.id || selectedStation,
-                cpId: cp?.cpId || selectedStation,
-                name: cp?.name || cp?.cpId || selectedStation,
-                address: cp?.address || '',
-                vendor: cp?.chargePointVendor || '',
-                model: cp?.chargePointModel || '',
-                serialNumber: cp?.chargePointSerialNumber || '',
-                tariffPerKwh: cp?.tariffPerKwh || null,
-              };
-            })()
-          }
-          client={
-            revenueReportData?.client ||
-            (() => {
-              const cp = stationOptions.find((s) => s.id === selectedStation || s.cpId === selectedStation);
-              if (cp?.client) return cp.client;
-              if (cp?.clientId) return clientOptions.find((c) => c.id === cp.clientId) || null;
-              return null;
-            })()
-          }
-          from={range.from}
-          to={range.to}
-          sessions={revenueReportData?.sessions || []}
-          totals={
-            revenueReportData?.totals || {
-              sessionsCount: 0,
-              energyKwh: 0,
-              gross: 0,
-              fee: 0,
-              net: 0,
-            }
-          }
-          isLoading={revenueReportLoading}
-        />
-      )}
     </div>
   );
 }

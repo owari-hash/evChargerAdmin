@@ -50,6 +50,11 @@ import { toast } from 'sonner';
 import { PageToolbar } from '@/components/ui/page-toolbar';
 import { StatCard, StatGrid } from '@/components/stat-card';
 import { cn } from '@/lib/cn';
+import { StationRevenueReportModal } from '@/components/reports/station-revenue-report-modal';
+import {
+  buildStationRevenueWorkbook,
+  type RevenueReportParams,
+} from '@/lib/revenue-report-excel';
 
 function localDate(iso: string): Date | null {
   const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(iso);
@@ -117,6 +122,12 @@ interface StationSessionsExport {
     tariffPerKwh: number | null;
     tariffZones: { name?: string; startMinute?: number; endMinute?: number; tariffPerKwh?: number }[];
   };
+  client?: {
+    id: string;
+    name: string;
+    businessRegister?: string;
+    feePercent?: number | null;
+  } | null;
   contactsMasked: boolean;
   totals: { sessionsCount: number; driversCount: number; energyKwh: number; gross: number; fee: number; net: number };
   sessions: {
@@ -389,20 +400,56 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
     XLSX.writeFile(wb, `${prefix}-${range.from}-to-${range.to}.xlsx`);
   }
 
-  // Export All-in-One Excel with 4 worksheets
-  function exportAllInOneExcel() {
-    const wb = XLSX.utils.book_new();
-    const parts: [string, ExportData][] = [
-      ['Станцын тайлан', getStationsExportData()],
-      ['Өдрийн хөдөлгөөн', getDailyExportData()],
-      ['Холбогч бүрээр', getConnectorsExportData()],
-      ['Цэнэглэлтийн лог', getSessionsExportData()],
-    ];
-    for (const [name, data] of parts) {
-      if (data.rows.length) appendExportSheet(wb, name, data);
+  // Per-station Revenue Allocation Report («EV ЦЭНЭГЛЭХ СТАНЦЫН ОРЛОГО ХУВААРИЛАЛТЫН ТАЙЛАН»)
+  const [revenueReportModalOpen, setRevenueReportModalOpen] = React.useState(false);
+  const [revenueReportLoading, setRevenueReportLoading] = React.useState(false);
+  const [revenueReportData, setRevenueReportData] = React.useState<StationSessionsExport | null>(null);
+
+  async function handleOpenRevenueReport(e?: React.MouseEvent) {
+    if (selectedStation === 'all') return;
+    setRevenueReportLoading(true);
+    try {
+      const rep = await fetcher<StationSessionsExport>(
+        apiUrl('reports/sessions-export', {
+          chargePointId: selectedStation,
+          from: rangeStart(range.from),
+          to: rangeEnd(range.to),
+        }),
+      );
+      setRevenueReportData(rep);
+
+      const st = rep.station;
+      const matchedCp = stationOptions.find((s) => s.id === selectedStation || s.cpId === selectedStation);
+      const matchedClient =
+        rep.client ||
+        matchedCp?.client ||
+        (matchedCp?.clientId ? clientOptions.find((c) => c.id === matchedCp.clientId) : null);
+
+      if (e?.shiftKey || e?.altKey) {
+        // Direct download with default formulas
+        const params: RevenueReportParams = {
+          station: st,
+          client: matchedClient
+            ? { id: matchedClient.id, name: matchedClient.name, feePercent: (matchedClient as any).feePercent }
+            : null,
+          from: range.from,
+          to: range.to,
+          sessionsCount: rep.totals.sessionsCount,
+          platformKwh: rep.totals.energyKwh,
+          grossRevenue: rep.totals.gross,
+        };
+        const wb = buildStationRevenueWorkbook(params, rep.sessions);
+        const safeName = (st.cpId || 'station').replace(/[^\w-]+/g, '_');
+        XLSX.writeFile(wb, `EV-орлого-хуваарилалт-${safeName}-${range.from}-to-${range.to}.xlsx`);
+        toast.success('Орлого хуваарилалтын Excel тайлан амжилттай татагдлаа');
+      } else {
+        setRevenueReportModalOpen(true);
+      }
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Тайлан татахад алдаа гарлаа');
+    } finally {
+      setRevenueReportLoading(false);
     }
-    if (!wb.SheetNames.length) return;
-    XLSX.writeFile(wb, `eplug-report-all-in-one-${range.from}-to-${range.to}.xlsx`);
   }
 
   // Full per-station Excel: every session (no 500-row cap) with driver, payment and e-barimt info.
@@ -781,17 +828,26 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
               {stationExporting ? 'Бэлдэж байна…' : 'Станцын дэлгэрэнгүй Excel'}
             </Button>
 
-            {/* All in one multi-sheet Excel */}
+            {/* Station Revenue Allocation Report */}
             <Button
               variant="secondary"
               size="sm"
-              onClick={exportAllInOneExcel}
-              disabled={!rawStations.length && !sessions.length}
-              className="text-xs h-8 font-medium gap-1"
-              title="Станцын тайлан, Өдөр, Холбогч, Цэнэглэлтийн логийг бүгдийг 1 Excel файлын олон хуудас болгон татах"
+              onClick={handleOpenRevenueReport}
+              disabled={selectedStation === 'all' || revenueReportLoading}
+              className={cn(
+                'text-xs h-8 font-medium gap-1 transition-all',
+                selectedStation !== 'all'
+                  ? 'border-emerald-500/50 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 font-semibold shadow-xs'
+                  : '',
+              )}
+              title={
+                selectedStation === 'all'
+                  ? 'Эхлээд станц сонгоно уу'
+                  : 'EV цэнэглэх станцын орлого хуваарилалтын тайлан татах (Shift+Click: шууд татах)'
+              }
             >
-              <Download className="h-3.5 w-3.5" />
-              Бүгдийг 1 Excel-д
+              <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-500" />
+              {revenueReportLoading ? 'Бэлдэж байна…' : 'Тайлан'}
             </Button>
           </div>
         </div>
@@ -1327,6 +1383,52 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
           </TableWrap>
         )}
       </Card>
+
+      {/* Station Revenue Allocation Report Modal */}
+      {selectedStation !== 'all' && (
+        <StationRevenueReportModal
+          open={revenueReportModalOpen}
+          onClose={() => setRevenueReportModalOpen(false)}
+          station={
+            revenueReportData?.station ||
+            (() => {
+              const cp = stationOptions.find((s) => s.id === selectedStation || s.cpId === selectedStation);
+              return {
+                id: cp?.id || selectedStation,
+                cpId: cp?.cpId || selectedStation,
+                name: cp?.name || cp?.cpId || selectedStation,
+                address: cp?.address || '',
+                vendor: cp?.chargePointVendor || '',
+                model: cp?.chargePointModel || '',
+                serialNumber: cp?.chargePointSerialNumber || '',
+                tariffPerKwh: cp?.tariffPerKwh || null,
+              };
+            })()
+          }
+          client={
+            revenueReportData?.client ||
+            (() => {
+              const cp = stationOptions.find((s) => s.id === selectedStation || s.cpId === selectedStation);
+              if (cp?.client) return cp.client;
+              if (cp?.clientId) return clientOptions.find((c) => c.id === cp.clientId) || null;
+              return null;
+            })()
+          }
+          from={range.from}
+          to={range.to}
+          sessions={revenueReportData?.sessions || []}
+          totals={
+            revenueReportData?.totals || {
+              sessionsCount: 0,
+              energyKwh: 0,
+              gross: 0,
+              fee: 0,
+              net: 0,
+            }
+          }
+          isLoading={revenueReportLoading}
+        />
+      )}
     </div>
   );
 }

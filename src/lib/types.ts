@@ -751,9 +751,6 @@ export interface SessionDriverFields {
   driverName?: string;
   /** Masked to the last 4 digits for station-owner (CLIENT) accounts. */
   driverPhone?: string;
-  /** RFID card used, or the driver's linked card(s) when started from the app. */
-  rfid?: string;
-  startedBy?: 'APP' | 'CARD' | 'UNKNOWN';
 }
 
 /** How a session was paid (backend: services/session-payment.service.ts). */

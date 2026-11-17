@@ -155,37 +155,27 @@ function PaymentMethodBadge({ session }: { session: SessionPaymentFields }) {
   );
 }
 
-/** RFID text for a session: the card used, or the driver's cards when started from the app. */
-function rfidText(s: SessionDriverFields): string {
-  if (s.rfid) return s.rfid;
-  return s.startedBy === 'APP' ? 'Апп (карт холбоогүй)' : '';
+/** Зарцуулсан хугацаа — charging duration, e.g. "1 ц 23 мин". */
+function durationMinutes(start?: string | null, stop?: string | null): number | null {
+  if (!start || !stop) return null;
+  const ms = new Date(stop).getTime() - new Date(start).getTime();
+  return Number.isFinite(ms) && ms >= 0 ? Math.round(ms / 60000) : null;
 }
 
-/** Утас / RFID — phone on top, RFID card (or "Апп") below. */
-function DriverCell({ session }: { session: SessionDriverFields & { idTag?: string } }) {
-  const rfid = rfidText(session);
-  return (
-    <div className="leading-tight">
-      <div className="font-mono text-[11px] text-[var(--color-fg)]">
-        {session.driverPhone || <span className="text-[var(--color-fg-subtle)]">Утасгүй</span>}
-      </div>
-      <div className="flex items-center gap-1 text-[10px] text-[var(--color-fg-subtle)]">
-        {session.startedBy === 'APP' && (
-          <span className="rounded bg-[var(--color-surface-2)] px-1 border border-[var(--color-border)]">Апп</span>
-        )}
-        {session.rfid ? (
-          <Link
-            href={`/id-tags?search=${encodeURIComponent(session.rfid.split(',')[0].trim())}`}
-            className="font-mono hover:text-[var(--color-brand)]"
-            title="RFID карт харах"
-          >
-            RFID: {session.rfid}
-          </Link>
-        ) : (
-          <span className="font-mono">{rfid || '—'}</span>
-        )}
-      </div>
-    </div>
+function durationText(start?: string | null, stop?: string | null): string {
+  const min = durationMinutes(start, stop);
+  if (min == null) return '—';
+  const h = Math.floor(min / 60);
+  const m = min % 60;
+  return h > 0 ? `${h} ц ${m} мин` : `${m} мин`;
+}
+
+/** Утас — the driver's phone number. */
+function DriverCell({ session }: { session: SessionDriverFields }) {
+  return session.driverPhone ? (
+    <span className="font-mono text-[11px] text-[var(--color-fg)] whitespace-nowrap">{session.driverPhone}</span>
+  ) : (
+    <span className="text-[11px] text-[var(--color-fg-subtle)]">—</span>
   );
 }
 
@@ -250,8 +240,6 @@ interface StationSessionsExport {
     ebarimtReceiptId: string;
     refundAmount: number | null;
     stationError: string;
-    rfid?: string;
-    startedBy?: SessionDriverFields['startedBy'];
   } & SessionPaymentFields)[];
 }
 
@@ -435,8 +423,8 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
 
   function getSessionsExportData(): ExportData {
     const headers = [
-      '№', 'Цэнэглэлтийн дугаар', 'Станцын нэр', 'Станц ID', 'Холбогч', 'Утас', 'RFID', 'Тээврийн хэрэгсэл',
-      'Эхэлсэн хугацаа', 'Дууссан хугацаа', 'Хэрэглээ (кВтц)', 'Тариф (₮/кВтц)', 'Дүн (₮)',
+      '№', 'Цэнэглэлтийн дугаар', 'Станцын нэр', 'Станц ID', 'Холбогч', 'Утас', 'Тээврийн хэрэгсэл',
+      'Эхэлсэн хугацаа', 'Дууссан хугацаа', 'Зарцуулсан хугацаа (мин)', 'Хэрэглээ (кВтц)', 'Тариф (₮/кВтц)', 'Дүн (₮)',
       'Төлбөрийн хэлбэр', 'Хэтэвчээс (₮)', 'Шууд төлсөн (₮)', 'Үлдэгдэл (₮)',
     ];
     const rows = sessions.map((tx, idx) => [
@@ -446,10 +434,10 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
       tx.cpId,
       `Буу ${connectorLetter(tx.connectorId)}`,
       tx.driverPhone || '',
-      rfidText(tx),
       tx.vehicleModel || '',
       formatDateTime(tx.startTimestamp),
       formatDateTime(tx.stopTimestamp),
+      durationMinutes(tx.startTimestamp, tx.stopTimestamp) ?? '',
       tx.energyKwh,
       round2(tx.tariffPerKwh || 0),
       tx.cost,
@@ -460,7 +448,8 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
     ]);
     const total = [
       'НИЙТ', `${sessions.length} цэнэглэлт`, '', '', '',
-      `${new Set(sessions.map((tx) => tx.idTag)).size} хэрэглэгч`, '', '', '', '',
+      `${new Set(sessions.map((tx) => tx.idTag)).size} хэрэглэгч`, '', '', '',
+      sumOf(sessions, (tx) => durationMinutes(tx.startTimestamp, tx.stopTimestamp)),
       sumOf(sessions, (tx) => tx.energyKwh),
       '',
       sumOf(sessions, (tx) => tx.cost),
@@ -605,8 +594,8 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
       // 2. Every session, with a footer total row
       addSheet('Цэнэглэлтүүд', [
         [
-          '№', 'Цэнэглэлтийн дугаар', 'Буу', 'Эхэлсэн', 'Дууссан', 'Хугацаа (мин)',
-          'Жолооч', 'Утас', 'И-мэйл', 'Төрөл', 'Карт / ID Tag', 'RFID', 'Машин', 'VIN', 'Батерей (кВтц)',
+          '№', 'Цэнэглэлтийн дугаар', 'Буу', 'Эхэлсэн', 'Дууссан', 'Зарцуулсан хугацаа (мин)',
+          'Жолооч', 'Утас', 'И-мэйл', 'Төрөл', 'Карт / ID Tag', 'Машин', 'VIN', 'Батерей (кВтц)',
           'Тоолуур эхлэл (Втц)', 'Тоолуур төгсгөл (Втц)', 'Эрчим хүч (кВтц)', 'Дундаж чадал (кВт)',
           'SoC эхлэл %', 'SoC төгсгөл %', 'Тариф (₮/кВтц)', 'Дүн (₮)',
           'Төлбөрийн хэлбэр', 'Хэтэвчээс (₮)', 'Үлдэгдэл (₮)',
@@ -616,7 +605,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
         ...s.map((x, i) => [
           i + 1, x.id, `Буу ${connectorLetter(x.connectorId)}`, formatDateTime(x.startTimestamp),
           formatDateTime(x.stopTimestamp), x.durationMin, x.driverName, x.driverPhone, x.driverEmail,
-          x.driverType, x.idTag, rfidText(x), x.vehicle, x.vehicleVin, x.vehicleBatteryKwh, x.meterStartWh,
+          x.driverType, x.idTag, x.vehicle, x.vehicleVin, x.vehicleBatteryKwh, x.meterStartWh,
           x.meterStopWh, x.energyKwh, x.avgPowerKw, x.startSocPercent, x.endSocPercent, x.tariffPerKwh,
           x.cost, paymentMethodLabel(x), x.walletPaid ?? 0, x.balanceAfter ?? '',
           x.paymentProvider, x.paymentStatus, x.paidAmount,
@@ -626,7 +615,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
         [],
         [
           'НИЙТ', `${t.sessionsCount} цэнэглэлт`, '', '', '', sum((x) => x.durationMin), `${t.driversCount} жолооч`,
-          '', '', '', '', '', '', '', '', '', '', t.energyKwh, '', '', '', '', t.gross,
+          '', '', '', '', '', '', '', '', '', t.energyKwh, '', '', '', '', t.gross,
           '', sum((x) => x.walletPaid), '',
           '', '', sum((x) => x.paidAmount), sum((x) => x.refundAmount),
         ],
@@ -1142,8 +1131,10 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                                               <th className="py-1.5 px-2.5 w-10 text-center border-r border-[var(--color-border)]">№</th>
                                               <th className="text-center py-1.5 px-2.5 border-r border-[var(--color-border)]">Цэнэглэлтийн дугаар</th>
                                               <th className="text-center py-1.5 px-2.5 border-r border-[var(--color-border)]">Холбогч</th>
-                                              <th className="text-center py-1.5 px-2.5 border-r border-[var(--color-border)]">Утас / RFID</th>
+                                              <th className="text-center py-1.5 px-2.5 border-r border-[var(--color-border)]">Утас</th>
                                               <th className="text-center py-1.5 px-2.5 border-r border-[var(--color-border)]">Эхэлсэн хугацаа</th>
+                                              <th className="text-center py-1.5 px-2.5 border-r border-[var(--color-border)]">Дууссан хугацаа</th>
+                                              <th className="text-center py-1.5 px-2.5 border-r border-[var(--color-border)]">Зарцуулсан хугацаа</th>
                                               <th className="text-center py-1.5 px-2.5 border-r border-[var(--color-border)]">Эрчим хүч</th>
                                               <th className="text-center py-1.5 px-2.5 border-r border-[var(--color-border)]">Тариф</th>
                                               <th className="text-center py-1.5 px-2.5 font-semibold border-r border-[var(--color-border)]">Борлуулалт</th>
@@ -1176,8 +1167,14 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                                                 <td className="py-1.5 px-2.5 text-[11px] text-[var(--color-fg-muted)] border-r border-[var(--color-border)]">
                                                   <DriverCell session={tx} />
                                                 </td>
-                                                <td className="py-1.5 px-2.5 text-[11px] text-[var(--color-fg-muted)] border-r border-[var(--color-border)]">
+                                                <td className="py-1.5 px-2.5 text-[11px] text-[var(--color-fg-muted)] border-r border-[var(--color-border)] whitespace-nowrap">
                                                   {formatDateTime(tx.startTimestamp)}
+                                                </td>
+                                                <td className="py-1.5 px-2.5 text-[11px] text-[var(--color-fg-muted)] border-r border-[var(--color-border)] whitespace-nowrap">
+                                                  {formatDateTime(tx.stopTimestamp)}
+                                                </td>
+                                                <td className="py-1.5 px-2.5 text-center text-[11px] font-medium text-[var(--color-fg)] border-r border-[var(--color-border)] whitespace-nowrap">
+                                                  {durationText(tx.startTimestamp, tx.stopTimestamp)}
                                                 </td>
                                                 <td className="py-1.5 px-2.5 text-right font-mono text-xs border-r border-[var(--color-border)]">
                                                   {formatNumber(tx.energyKwh, 2)} кВтц
@@ -1464,7 +1461,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                   <TH className="w-10 text-center">№</TH>
                   <TH className="w-28 text-center whitespace-nowrap">Цэнэглэлтийн дугаар</TH>
                   <TH>Станц / Холбогч</TH>
-                  <TH>Утас / RFID</TH>
+                  <TH>Утас</TH>
                   <TH>Хугацаа</TH>
                   <TH className="text-right">Хэрэглээ</TH>
                   <TH className="text-right">Тариф</TH>
@@ -1510,6 +1507,9 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                         <div>{formatDateTime(tx.startTimestamp)}</div>
                         <div className="text-[10px] text-[var(--color-fg-subtle)]">
                           {formatDateTime(tx.stopTimestamp)}
+                        </div>
+                        <div className="text-[10px] font-medium text-[var(--color-fg-muted)]">
+                          {durationText(tx.startTimestamp, tx.stopTimestamp)}
                         </div>
                       </TD>
                       <TD className="text-right font-mono text-xs">{formatNumber(tx.energyKwh, 2)} кВтц</TD>

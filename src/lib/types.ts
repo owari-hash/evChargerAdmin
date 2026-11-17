@@ -728,19 +728,64 @@ export interface StationReportRow {
     netFormula: string;
     summaryDisplay: string;
   };
-  sessions?: Array<{
-    id: number;
-    connectorId: number;
-    idTag?: string;
-    vehicleModel?: string;
-    startTimestamp: string;
-    stopTimestamp?: string;
-    energyKwh: number;
-    tariffPerKwh?: number;
-    cost: number;
-    feeAmount: number;
-    clientNet: number;
-  }>;
+  sessions?: Array<
+    {
+      id: number;
+      connectorId: number;
+      idTag?: string;
+      vehicleModel?: string;
+      startTimestamp: string;
+      stopTimestamp?: string;
+      energyKwh: number;
+      tariffPerKwh?: number;
+      cost: number;
+      feeAmount: number;
+      clientNet: number;
+    } & SessionPaymentFields &
+      SessionDriverFields
+  >;
+}
+
+/** Who charged a session (backend: services/session-driver.service.ts). */
+export interface SessionDriverFields {
+  driverName?: string;
+  /** Masked to the last 4 digits for station-owner (CLIENT) accounts. */
+  driverPhone?: string;
+  /** RFID card used, or the driver's linked card(s) when started from the app. */
+  rfid?: string;
+  startedBy?: 'APP' | 'CARD' | 'UNKNOWN';
+}
+
+/** How a session was paid (backend: services/session-payment.service.ts). */
+export type SessionPaymentMethod =
+  | 'WALLET'
+  | 'QPAY'
+  | 'QPAY_QUICKQR'
+  | 'GOLOMT'
+  | 'SOCIALPAY'
+  | 'TOKI'
+  | 'INTERNAL'
+  | 'FREE'
+  | 'UNPAID';
+
+export interface SessionPaymentFields {
+  paymentMethod?: SessionPaymentMethod;
+  /** Net amount taken from a wallet for the session. */
+  walletPaid?: number;
+  /** Amount settled by a direct invoice (QPay, Golomt, Toki…). */
+  directPaid?: number;
+  /** Wallet balance (үлдэгдэл) right after the session was billed; null if no wallet was used. */
+  balanceAfter?: number | null;
+  walletOwnerType?: 'USER' | 'IDTAG' | 'CLIENT' | null;
+}
+
+export interface PaymentMethodReportRow {
+  method: SessionPaymentMethod;
+  sessionsCount: number;
+  energyKwh: number;
+  gross: number;
+  walletPaid: number;
+  directPaid: number;
 }
 
 export interface DailyReportRow {
@@ -765,7 +810,7 @@ export interface ConnectorReportRow {
   net: number;
 }
 
-export interface RecentSessionReportRow {
+export interface RecentSessionReportRow extends SessionPaymentFields, SessionDriverFields {
   id: number;
   chargePointId: string;
   cpId: string;
@@ -822,6 +867,9 @@ export interface ReportSummary {
   daily: DailyReportRow[];
   connectors: ConnectorReportRow[];
   recentSessions: RecentSessionReportRow[];
+  byPaymentMethod?: PaymentMethodReportRow[];
+  /** More sessions exist in the period than were returned per-session. */
+  sessionsTruncated?: boolean;
 }
 
 // ---------------------------------------------------------------------------

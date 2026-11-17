@@ -18,6 +18,7 @@ import {
   ChevronRight,
   Plug,
   TrendingUp,
+  Wallet,
   X,
 } from 'lucide-react';
 import { apiUrl, fetcher } from '@/lib/client';
@@ -31,8 +32,17 @@ import {
   formatPercent,
   formatWh,
 } from '@/lib/format';
-import type { ChargePoint, Client, Paginated, ReportSummary, StationReportRow, SessionUser } from '@/lib/types';
-import { Badge, Button, Card, Input, Select } from '@/components/ui/primitives';
+import type {
+  ChargePoint,
+  Client,
+  Paginated,
+  ReportSummary,
+  SessionDriverFields,
+  SessionPaymentFields,
+  SessionPaymentMethod,
+  SessionUser,
+} from '@/lib/types';
+import { Badge, Button, Card, Input, Select, type Tone } from '@/components/ui/primitives';
 import { DateRangePicker, toIsoDate, type DateRange } from '@/components/ui/date-picker';
 import {
   Table,
@@ -109,6 +119,81 @@ function lastMonthRange(): DateRange {
 
 type TabKey = 'stations' | 'daily' | 'connectors' | 'sessions';
 
+/** Төлбөрийн хэлбэр — labels for how a session was paid. */
+const PAYMENT_METHOD_META: Record<SessionPaymentMethod, { label: string; tone: Tone }> = {
+  WALLET: { label: 'Хэтэвч', tone: 'brand' },
+  QPAY: { label: 'QPay', tone: 'info' },
+  QPAY_QUICKQR: { label: 'QPay QR', tone: 'info' },
+  GOLOMT: { label: 'Карт · Голомт', tone: 'info' },
+  SOCIALPAY: { label: 'SocialPay', tone: 'info' },
+  TOKI: { label: 'Toki Pay', tone: 'info' },
+  INTERNAL: { label: 'Байгууллага', tone: 'idle' },
+  FREE: { label: 'Төлбөргүй', tone: 'idle' },
+  UNPAID: { label: 'Төлөгдөөгүй', tone: 'danger' },
+};
+
+const WALLET_OWNER_LABEL: Record<string, string> = {
+  USER: 'апп',
+  IDTAG: 'карт',
+  CLIENT: 'байгууллага',
+};
+
+function paymentMethodLabel(p: SessionPaymentFields): string {
+  if (!p.paymentMethod) return '—';
+  const base = PAYMENT_METHOD_META[p.paymentMethod]?.label ?? p.paymentMethod;
+  const owner = p.paymentMethod === 'WALLET' && p.walletOwnerType ? WALLET_OWNER_LABEL[p.walletOwnerType] : '';
+  return owner ? `${base} (${owner})` : base;
+}
+
+function PaymentMethodBadge({ session }: { session: SessionPaymentFields }) {
+  if (!session.paymentMethod) return <span className="text-[var(--color-fg-subtle)]">—</span>;
+  const meta = PAYMENT_METHOD_META[session.paymentMethod];
+  return (
+    <Badge tone={meta?.tone ?? 'idle'} className="text-[10px] py-0 px-1.5 whitespace-nowrap">
+      {paymentMethodLabel(session)}
+    </Badge>
+  );
+}
+
+/** RFID text for a session: the card used, or the driver's cards when started from the app. */
+function rfidText(s: SessionDriverFields): string {
+  if (s.rfid) return s.rfid;
+  return s.startedBy === 'APP' ? 'Апп (карт холбоогүй)' : '';
+}
+
+/** Утас / RFID — phone on top, RFID card (or "Апп") below. */
+function DriverCell({ session }: { session: SessionDriverFields & { idTag?: string } }) {
+  const rfid = rfidText(session);
+  return (
+    <div className="leading-tight">
+      <div className="font-mono text-[11px] text-[var(--color-fg)]">
+        {session.driverPhone || <span className="text-[var(--color-fg-subtle)]">Утасгүй</span>}
+      </div>
+      <div className="flex items-center gap-1 text-[10px] text-[var(--color-fg-subtle)]">
+        {session.startedBy === 'APP' && (
+          <span className="rounded bg-[var(--color-surface-2)] px-1 border border-[var(--color-border)]">Апп</span>
+        )}
+        {session.rfid ? (
+          <Link
+            href={`/id-tags?search=${encodeURIComponent(session.rfid.split(',')[0].trim())}`}
+            className="font-mono hover:text-[var(--color-brand)]"
+            title="RFID карт харах"
+          >
+            RFID: {session.rfid}
+          </Link>
+        ) : (
+          <span className="font-mono">{rfid || '—'}</span>
+        )}
+      </div>
+    </div>
+  );
+}
+
+/** Wallet balance left after the session (үлдэгдэл); dash when no wallet was charged. */
+function balanceText(p: SessionPaymentFields): string {
+  return p.balanceAfter == null ? '—' : formatMoney(p.balanceAfter);
+}
+
 /** Response of GET /reports/sessions-export. */
 interface StationSessionsExport {
   station: {
@@ -130,7 +215,7 @@ interface StationSessionsExport {
   } | null;
   contactsMasked: boolean;
   totals: { sessionsCount: number; driversCount: number; energyKwh: number; gross: number; fee: number; net: number };
-  sessions: {
+  sessions: ({
     id: number;
     connectorId: number;
     idTag: string;
@@ -165,7 +250,9 @@ interface StationSessionsExport {
     ebarimtReceiptId: string;
     refundAmount: number | null;
     stationError: string;
-  }[];
+    rfid?: string;
+    startedBy?: SessionDriverFields['startedBy'];
+  } & SessionPaymentFields)[];
 }
 
 export function ReportsView({ user }: { user: SessionUser | null }) {
@@ -221,6 +308,8 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
   const daily = data?.daily ?? [];
   const connectors = data?.connectors ?? [];
   const sessions = data?.recentSessions ?? [];
+  const byPaymentMethod = data?.byPaymentMethod ?? [];
+  const sessionsTruncated = !!data?.sessionsTruncated;
 
   // Filter stations based on search query (name, cpId, address)
   const stations = React.useMemo(() => {
@@ -268,7 +357,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
 
   /**
    * Builds a worksheet: auto-fit columns, numbers shown as 123,123.00 (cells stay numeric so
-   * Excel can still sum them). ID-like columns (№, Сеанс #) stay plain.
+   * Excel can still sum them). ID-like columns (№, Цэнэглэлтийн дугаар) stay plain.
    */
   function buildSheet(rows: ExportCell[][]): XLSX.WorkSheet {
     const clean = rows.map((r) => r.map((v) => (v == null ? '' : v)));
@@ -276,7 +365,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
     const header = clean[0] ?? [];
     clean.forEach((row, r) =>
       row.forEach((v, c) => {
-        if (typeof v !== 'number' || header[c] === '№' || header[c] === 'Сеанс #') return;
+        if (typeof v !== 'number' || header[c] === '№' || header[c] === 'Цэнэглэлтийн дугаар') return;
         const cell = ws[XLSX.utils.encode_cell({ r, c })];
         if (cell) cell.z = '#,##0.00';
       }),
@@ -291,7 +380,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
 
   // Get structured export data per tab
   function getStationsExportData(): ExportData {
-    const headers = ['№', 'Станц ID', 'Станцын нэр', 'Хаяг', 'Сеанс тоо', 'Эрчим хүч (кВтц)', 'Үндсэн тариф (₮)', 'Дүн (₮)'];
+    const headers = ['№', 'Станц ID', 'Станцын нэр', 'Хаяг', 'Цэнэглэлтийн тоо', 'Эрчим хүч (кВтц)', 'Үндсэн тариф (₮)', 'Дүн (₮)'];
     const rows = rawStations.map((s, idx) => [
       idx + 1,
       s.cpId,
@@ -313,7 +402,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
   }
 
   function getDailyExportData(): ExportData {
-    const headers = ['№', 'Огноо', 'Сеанс тоо', 'Эрчим хүч (кВтц)', 'Дүн (₮)'];
+    const headers = ['№', 'Огноо', 'Цэнэглэлтийн тоо', 'Эрчим хүч (кВтц)', 'Дүн (₮)'];
     const rows = daily.map((d, idx) => [idx + 1, formatDate(d.date), d.sessionsCount, d.energyKwh, d.gross]);
     const total = [
       'НИЙТ', `${daily.length} өдөр`,
@@ -346,8 +435,9 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
 
   function getSessionsExportData(): ExportData {
     const headers = [
-      '№', 'Сеанс #', 'Станцын нэр', 'Станц ID', 'Холбогч', 'Карт / ID Tag', 'Тээврийн хэрэгсэл',
+      '№', 'Цэнэглэлтийн дугаар', 'Станцын нэр', 'Станц ID', 'Холбогч', 'Утас', 'RFID', 'Тээврийн хэрэгсэл',
       'Эхэлсэн хугацаа', 'Дууссан хугацаа', 'Хэрэглээ (кВтц)', 'Тариф (₮/кВтц)', 'Дүн (₮)',
+      'Төлбөрийн хэлбэр', 'Хэтэвчээс (₮)', 'Шууд төлсөн (₮)', 'Үлдэгдэл (₮)',
     ];
     const rows = sessions.map((tx, idx) => [
       idx + 1,
@@ -355,20 +445,29 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
       tx.stationName,
       tx.cpId,
       `Буу ${connectorLetter(tx.connectorId)}`,
-      tx.idTag || '',
+      tx.driverPhone || '',
+      rfidText(tx),
       tx.vehicleModel || '',
       formatDateTime(tx.startTimestamp),
       formatDateTime(tx.stopTimestamp),
       tx.energyKwh,
       round2(tx.tariffPerKwh || 0),
       tx.cost,
+      paymentMethodLabel(tx),
+      tx.walletPaid ?? 0,
+      tx.directPaid ?? 0,
+      tx.balanceAfter ?? '',
     ]);
     const total = [
       'НИЙТ', `${sessions.length} цэнэглэлт`, '', '', '',
-      `${new Set(sessions.map((tx) => tx.idTag)).size} карт`, '', '', '',
+      `${new Set(sessions.map((tx) => tx.idTag)).size} хэрэглэгч`, '', '', '', '',
       sumOf(sessions, (tx) => tx.energyKwh),
       '',
       sumOf(sessions, (tx) => tx.cost),
+      '',
+      sumOf(sessions, (tx) => tx.walletPaid),
+      sumOf(sessions, (tx) => tx.directPaid),
+      '',
     ];
     return { headers, rows, total };
   }
@@ -506,28 +605,50 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
       // 2. Every session, with a footer total row
       addSheet('Цэнэглэлтүүд', [
         [
-          '№', 'Сеанс #', 'Буу', 'Эхэлсэн', 'Дууссан', 'Хугацаа (мин)',
-          'Жолооч', 'Утас', 'И-мэйл', 'Төрөл', 'Карт / ID Tag', 'Машин', 'VIN', 'Батерей (кВтц)',
+          '№', 'Цэнэглэлтийн дугаар', 'Буу', 'Эхэлсэн', 'Дууссан', 'Хугацаа (мин)',
+          'Жолооч', 'Утас', 'И-мэйл', 'Төрөл', 'Карт / ID Tag', 'RFID', 'Машин', 'VIN', 'Батерей (кВтц)',
           'Тоолуур эхлэл (Втц)', 'Тоолуур төгсгөл (Втц)', 'Эрчим хүч (кВтц)', 'Дундаж чадал (кВт)',
           'SoC эхлэл %', 'SoC төгсгөл %', 'Тариф (₮/кВтц)', 'Дүн (₮)',
+          'Төлбөрийн хэлбэр', 'Хэтэвчээс (₮)', 'Үлдэгдэл (₮)',
           'Төлбөрийн хэрэгсэл', 'Төлбөрийн төлөв', 'Төлсөн (₮)', 'Буцаалт (₮)',
           'И-баримт', 'И-баримт ID', 'Зогсоосон шалтгаан', 'Алсаас эхлүүлсэн', 'Станцын алдаа',
         ],
         ...s.map((x, i) => [
           i + 1, x.id, `Буу ${connectorLetter(x.connectorId)}`, formatDateTime(x.startTimestamp),
           formatDateTime(x.stopTimestamp), x.durationMin, x.driverName, x.driverPhone, x.driverEmail,
-          x.driverType, x.idTag, x.vehicle, x.vehicleVin, x.vehicleBatteryKwh, x.meterStartWh,
+          x.driverType, x.idTag, rfidText(x), x.vehicle, x.vehicleVin, x.vehicleBatteryKwh, x.meterStartWh,
           x.meterStopWh, x.energyKwh, x.avgPowerKw, x.startSocPercent, x.endSocPercent, x.tariffPerKwh,
-          x.cost, x.paymentProvider, x.paymentStatus, x.paidAmount,
+          x.cost, paymentMethodLabel(x), x.walletPaid ?? 0, x.balanceAfter ?? '',
+          x.paymentProvider, x.paymentStatus, x.paidAmount,
           x.refundAmount, x.ebarimtStatus, x.ebarimtReceiptId, x.stopReason, x.startedRemotely ? 'Тийм' : 'Үгүй',
           x.stationError,
         ]),
         [],
         [
           'НИЙТ', `${t.sessionsCount} цэнэглэлт`, '', '', '', sum((x) => x.durationMin), `${t.driversCount} жолооч`,
-          '', '', '', '', '', '', '', '', '', t.energyKwh, '', '', '', '', t.gross,
+          '', '', '', '', '', '', '', '', '', '', t.energyKwh, '', '', '', '', t.gross,
+          '', sum((x) => x.walletPaid), '',
           '', '', sum((x) => x.paidAmount), sum((x) => x.refundAmount),
         ],
+      ]);
+
+      // Payment method breakdown
+      const byMethod = new Map<string, { n: number; kwh: number; gross: number }>();
+      for (const x of s) {
+        const key = paymentMethodLabel(x);
+        const d = byMethod.get(key) ?? { n: 0, kwh: 0, gross: 0 };
+        d.n += 1;
+        d.kwh += x.energyKwh;
+        d.gross += x.cost;
+        byMethod.set(key, d);
+      }
+      addSheet('Төлбөрийн хэлбэр', [
+        ['Төлбөрийн хэлбэр', 'Цэнэглэлт', 'Эрчим хүч (кВтц)', 'Дүн (₮)'],
+        ...[...byMethod.entries()]
+          .sort((a, b) => b[1].gross - a[1].gross)
+          .map(([k, d]) => [k, d.n, r2(d.kwh), r2(d.gross)]),
+        [],
+        ['НИЙТ', t.sessionsCount, t.energyKwh, t.gross],
       ]);
 
       // 3. Per driver
@@ -613,6 +734,27 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
           tone="idle"
         />
       </StatGrid>
+
+      {byPaymentMethod.length > 0 && (
+        <Card className="p-3">
+          <div className="flex items-center gap-2 mb-2">
+            <Wallet className="h-3.5 w-3.5 text-[var(--color-fg-muted)]" />
+            <span className="text-xs font-semibold text-[var(--color-fg)]">Төлбөрийн хэлбэрээр</span>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {byPaymentMethod.map((m) => (
+              <div
+                key={m.method}
+                className="flex items-center gap-2 rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)]/40 px-2.5 py-1.5"
+              >
+                <PaymentMethodBadge session={{ paymentMethod: m.method }} />
+                <span className="text-[11px] text-[var(--color-fg-muted)]">{formatNumber(m.sessionsCount)} удаа</span>
+                <span className="font-mono text-xs font-semibold text-[var(--color-fg)]">{formatMoney(m.gross)}</span>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
 
       <PageToolbar>
           <DateRangePicker
@@ -716,6 +858,13 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
             Цэнэглэлтийн лог ({sessions.length})
           </button>
         </div>
+
+        {sessionsTruncated && (
+          <div className="mx-3 mt-3 rounded-lg border border-[var(--color-warn)]/40 bg-[var(--color-warn-soft)] px-3 py-2 text-[11px] text-[var(--color-warn)]">
+            Хугацаанд {formatNumber(totals?.sessionsCount)} цэнэглэлт байгаа тул сүүлийн {formatNumber(sessions.length)}-г
+            харууллаа. Бүтэн түүхийг станц сонгоод &quot;Станцын дэлгэрэнгүй Excel&quot;-ээр татна уу.
+          </div>
+        )}
 
         {/* Sub-toolbar: Search, Date quick chips, and Excel export */}
         <div className="p-2.5 sm:p-3 border-b border-[var(--color-border)] flex flex-wrap items-center justify-between gap-2.5">
@@ -857,7 +1006,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                     <tr>
                       <TH className="w-10 text-center">№</TH>
                       <TH>Станц / Байршил</TH>
-                      <TH className="text-right">Сеанс</TH>
+                      <TH className="text-center">Цэнэглэлт</TH>
                       <TH className="text-right">Эрчим хүч (кВтц)</TH>
                       <TH className="text-right">Тариф (₮/кВтц)</TH>
                       <TH className="text-right">Борлуулалт (₮)</TH>
@@ -902,7 +1051,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                                   <button
                                     type="button"
                                     className="p-0.5 rounded text-[var(--color-fg-subtle)] hover:text-[var(--color-fg)] shrink-0"
-                                    aria-label="Сеансуудыг дэлгэрүүлэх"
+                                    aria-label="Цэнэглэлтүүдийг дэлгэрүүлэх"
                                   >
                                     {isExpanded ? (
                                       <ChevronDown className="h-3.5 w-3.5 text-emerald-500" />
@@ -920,7 +1069,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                               </TD>
 
                               {/* Sessions Count */}
-                              <TD className="text-right font-medium">
+                              <TD align="center" className="text-center font-medium">
                                 <span className="inline-flex items-center justify-center rounded-full bg-[var(--color-surface-2)] px-2 py-0.5 text-xs font-semibold text-[var(--color-fg)]">
                                   {formatNumber(s.sessionsCount)}
                                 </span>
@@ -973,7 +1122,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                                           <TrendingUp className="h-3.5 w-3.5" />
                                         </div>
                                         <span className="text-xs font-bold text-[var(--color-fg)]">
-                                          &quot;{s.name}&quot; станцын цэнэглэлтийн сеансууд ({stationSessions.length})
+                                          &quot;{s.name}&quot; станцын цэнэглэлтүүд ({stationSessions.length})
                                         </span>
                                       </div>
                                       <span className="text-[11px] text-[var(--color-fg-muted)]">
@@ -983,23 +1132,25 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
 
                                     {stationSessions.length === 0 ? (
                                       <div className="py-6 text-center text-xs text-[var(--color-fg-subtle)]">
-                                        Энэ хугацаанд цэнэглэлтийн сеанс бүртгэгдээгүй байна.
+                                        Энэ хугацаанд цэнэглэлт бүртгэгдээгүй байна.
                                       </div>
                                     ) : (
-                                      <div className="overflow-x-auto">
+                                      <div className="overflow-auto max-h-[28rem] overscroll-contain rounded-lg border border-[var(--color-border)]">
                                         <table className="w-full text-left text-xs border-collapse">
                                           <thead>
-                                            <tr className="border-b border-[var(--color-border)] text-[11px] text-[var(--color-fg-subtle)] font-medium">
+                                            <tr className="sticky top-0 z-10 border-b border-[var(--color-border)] text-[11px] text-[var(--color-fg-subtle)] font-medium bg-[var(--color-surface)] shadow-[0_1px_0_var(--color-border)]">
                                               <th className="py-1.5 px-2.5 w-10 text-center border-r border-[var(--color-border)]">№</th>
-                                              <th className="text-center py-1.5 px-2.5 border-r border-[var(--color-border)]">Сеанс ID</th>
+                                              <th className="text-center py-1.5 px-2.5 border-r border-[var(--color-border)]">Цэнэглэлтийн дугаар</th>
                                               <th className="text-center py-1.5 px-2.5 border-r border-[var(--color-border)]">Холбогч</th>
-                                              <th className="text-center py-1.5 px-2.5 border-r border-[var(--color-border)]">Машин / Карт</th>
+                                              <th className="text-center py-1.5 px-2.5 border-r border-[var(--color-border)]">Утас / RFID</th>
                                               <th className="text-center py-1.5 px-2.5 border-r border-[var(--color-border)]">Эхэлсэн хугацаа</th>
                                               <th className="text-center py-1.5 px-2.5 border-r border-[var(--color-border)]">Эрчим хүч</th>
                                               <th className="text-center py-1.5 px-2.5 border-r border-[var(--color-border)]">Тариф</th>
                                               <th className="text-center py-1.5 px-2.5 font-semibold border-r border-[var(--color-border)]">Борлуулалт</th>
                                               <th className="text-center py-1.5 px-2.5 text-blue-500 border-r border-[var(--color-border)]">Шимтгэл</th>
-                                              <th className="text-center py-1.5 px-2.5 font-bold text-emerald-600 dark:text-emerald-400">Цэвэр орлого</th>
+                                              <th className="text-center py-1.5 px-2.5 font-bold text-emerald-600 dark:text-emerald-400 border-r border-[var(--color-border)]">Цэвэр орлого</th>
+                                              <th className="text-center py-1.5 px-2.5 border-r border-[var(--color-border)]">Төлбөрийн хэлбэр</th>
+                                              <th className="text-center py-1.5 px-2.5">Үлдэгдэл</th>
                                             </tr>
                                           </thead>
                                           <tbody className="divide-y divide-[var(--color-border)]">
@@ -1023,7 +1174,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                                                   </span>
                                                 </td>
                                                 <td className="py-1.5 px-2.5 text-[11px] text-[var(--color-fg-muted)] border-r border-[var(--color-border)]">
-                                                  {tx.vehicleModel || tx.idTag || '—'}
+                                                  <DriverCell session={tx} />
                                                 </td>
                                                 <td className="py-1.5 px-2.5 text-[11px] text-[var(--color-fg-muted)] border-r border-[var(--color-border)]">
                                                   {formatDateTime(tx.startTimestamp)}
@@ -1040,8 +1191,14 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                                                 <td className="py-1.5 px-2.5 text-right font-mono text-xs text-blue-500 border-r border-[var(--color-border)]">
                                                   {formatMoney(tx.feeAmount)}
                                                 </td>
-                                                <td className="py-1.5 px-2.5 text-right font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
+                                                <td className="py-1.5 px-2.5 text-right font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400 border-r border-[var(--color-border)]">
                                                   {formatMoney(tx.clientNet)}
+                                                </td>
+                                                <td className="py-1.5 px-2.5 border-r border-[var(--color-border)]">
+                                                  <PaymentMethodBadge session={tx} />
+                                                </td>
+                                                <td className="py-1.5 px-2.5 text-right font-mono text-xs">
+                                                  {balanceText(tx)}
                                                 </td>
                                               </tr>
                                             ))}
@@ -1095,7 +1252,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                       {/* 3-column stats */}
                       <div className="grid grid-cols-3 gap-2 border-y border-[var(--color-border)] py-2 text-center">
                         <div>
-                          <div className="text-[10px] text-[var(--color-fg-subtle)] uppercase">Сеанс</div>
+                          <div className="text-[10px] text-[var(--color-fg-subtle)] uppercase">Цэнэглэлт</div>
                           <div className="font-bold text-xs text-[var(--color-fg)] font-mono">
                             {formatNumber(s.sessionsCount)}
                           </div>
@@ -1146,12 +1303,12 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                         {isExpanded ? (
                           <>
                             <ChevronDown className="h-3.5 w-3.5 text-emerald-500" />
-                            Сеансууд нуух ({stationSessions.length})
+                            Цэнэглэлтүүдийг нуух ({stationSessions.length})
                           </>
                         ) : (
                           <>
                             <ChevronRight className="h-3.5 w-3.5" />
-                            Сеансууд харах ({stationSessions.length})
+                            Цэнэглэлтүүдийг харах ({stationSessions.length})
                           </>
                         )}
                       </Button>
@@ -1180,9 +1337,17 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                                     Буу {connectorLetter(tx.connectorId)}
                                   </span>
                                 </div>
-                                <div className="text-[11px] text-[var(--color-fg-subtle)]">
-                                  {formatDateTime(tx.startTimestamp)}
+                                <div className="flex items-center justify-between gap-2 text-[11px] text-[var(--color-fg-subtle)]">
+                                  <span>{formatDateTime(tx.startTimestamp)}</span>
+                                  <PaymentMethodBadge session={tx} />
                                 </div>
+                                <DriverCell session={tx} />
+                                {tx.balanceAfter != null && (
+                                  <div className="flex justify-between text-[11px] text-[var(--color-fg-muted)]">
+                                    <span>Үлдэгдэл:</span>
+                                    <span className="font-mono">{balanceText(tx)}</span>
+                                  </div>
+                                )}
                                 <div className="flex justify-between items-center text-[11px]">
                                   <span>{formatNumber(tx.energyKwh, 2)} кВтц</span>
                                   <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">
@@ -1297,21 +1462,24 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
               <THead>
                 <tr>
                   <TH className="w-10 text-center">№</TH>
-                  <TH className="w-20 text-center">Сеанс #</TH>
+                  <TH className="w-28 text-center whitespace-nowrap">Цэнэглэлтийн дугаар</TH>
                   <TH>Станц / Холбогч</TH>
+                  <TH>Утас / RFID</TH>
                   <TH>Хугацаа</TH>
                   <TH className="text-right">Хэрэглээ</TH>
                   <TH className="text-right">Тариф</TH>
                   <TH className="text-right font-semibold">Борлуулалт</TH>
                   <TH className="text-right text-blue-500">Шимтгэл</TH>
                   <TH className="text-right font-bold text-emerald-600 dark:text-emerald-400">Цэвэр орлого</TH>
+                  <TH>Төлбөрийн хэлбэр</TH>
+                  <TH className="text-right">Үлдэгдэл</TH>
                 </tr>
               </THead>
               <TBody>
                 {isLoading && !data ? (
-                  <TableLoading colSpan={9} />
+                  <TableLoading colSpan={12} />
                 ) : sessions.length === 0 ? (
-                  <TableEmpty colSpan={9}>Цэнэглэлтийн лог олдсонгүй.</TableEmpty>
+                  <TableEmpty colSpan={12}>Цэнэглэлтийн лог олдсонгүй.</TableEmpty>
                 ) : (
                   sessions.map((tx, idx) => (
                     <TR key={tx.id}>
@@ -1327,18 +1495,6 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                         <div className="font-medium text-xs text-[var(--color-fg)]">{tx.stationName}</div>
                         <div className="flex flex-wrap items-center gap-1 text-[10px] text-[var(--color-fg-subtle)] font-mono mt-0.5">
                           <span>Буу {connectorLetter(tx.connectorId)}</span>
-                          {tx.idTag ? (
-                            <>
-                              <span>·</span>
-                              <Link
-                                href={`/id-tags?search=${encodeURIComponent(tx.idTag)}`}
-                                className="rounded bg-[var(--color-surface-2)] px-1 text-[var(--color-fg-muted)] border border-[var(--color-border)] hover:text-[var(--color-brand)] transition"
-                                title="Карт / хэрэглэгч харах"
-                              >
-                                {tx.idTag}
-                              </Link>
-                            </>
-                          ) : null}
                           {tx.vehicleModel ? (
                             <>
                               <span>·</span>
@@ -1346,6 +1502,9 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                             </>
                           ) : null}
                         </div>
+                      </TD>
+                      <TD align="left">
+                        <DriverCell session={tx} />
                       </TD>
                       <TD align="left" className="text-xs">
                         <div>{formatDateTime(tx.startTimestamp)}</div>
@@ -1369,6 +1528,10 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                       <TD className="text-right font-mono text-xs font-bold text-emerald-600 dark:text-emerald-400">
                         {formatMoney(tx.clientNet)}
                       </TD>
+                      <TD align="left">
+                        <PaymentMethodBadge session={tx} />
+                      </TD>
+                      <TD className="text-right font-mono text-xs">{balanceText(tx)}</TD>
                     </TR>
                   ))
                 )}

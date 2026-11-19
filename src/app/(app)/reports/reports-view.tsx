@@ -63,6 +63,7 @@ import { cn } from '@/lib/cn';
 import {
   buildStationRevenueWorkbook,
   downloadWorkbook,
+  revenueReportFileName,
   type RevenueReportParams,
 } from '@/lib/revenue-report-excel';
 
@@ -510,22 +511,31 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
         matchedCp?.client ||
         (matchedCp?.clientId ? clientOptions.find((c) => c.id === matchedCp.clientId) : null);
 
+      // Bank account for the client's share (Орлого хуваарилалт section).
+      const fullClient = matchedClient ? clientOptions.find((c) => c.id === matchedClient.id) : undefined;
+      const payoutAccount =
+        fullClient?.payoutAccount ?? (data?.client?.id === matchedClient?.id ? data?.client?.payoutAccount : null);
+
       const params: RevenueReportParams = {
         station: st,
         client: matchedClient
-          ? { id: matchedClient.id, name: matchedClient.name, feePercent: (matchedClient as any).feePercent }
+          ? {
+              id: matchedClient.id,
+              name: matchedClient.name,
+              feePercent: (matchedClient as any).feePercent,
+              payoutAccount,
+            }
           : null,
         from: range.from,
         to: range.to,
         sessionsCount: rep.totals.sessionsCount,
         platformKwh: rep.totals.energyKwh,
         grossRevenue: rep.totals.gross,
-        // meterKwh, electricityCost, meterDate intentionally left undefined so cells are exported blank
+        // Meter readings are left blank for staff to fill in; the bill recalculates from them.
       };
 
       const wb = await buildStationRevenueWorkbook(params, rep.sessions);
-      const safeName = (st.cpId || 'station').replace(/[^\w-]+/g, '_');
-      await downloadWorkbook(wb, `EV-орлого-хуваарилалт-${safeName}-${range.from}-to-${range.to}.xlsx`);
+      await downloadWorkbook(wb, revenueReportFileName(params));
       toast.success('Орлого хуваарилалтын Excel тайлан амжилттай татагдлаа');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Тайлан татахад алдаа гарлаа');

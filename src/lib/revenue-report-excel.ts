@@ -1,5 +1,19 @@
+/**
+ * «EV ЦЭНЭГЛЭХ СТАНЦЫН ТАЙЛАН» — per-station revenue report workbook.
+ *
+ * Mirrors the operator's hand-built template (e.g. "МЕТА ТАЙЛАН_2026-10-23 - 2026-11-12"):
+ *
+ *   1. Хураангуй             — report info, electricity bill from meter readings, platform
+ *                               figures, costs, revenue split per recipient, reconciliation.
+ *   2. Шинжилгээ             — by connector, by tariff, operating KPIs, by day.
+ *   3. Цэнэглэлт_дэлгэрэнгүй — one row per completed charge.
+ *
+ * Every derived number is a live Excel formula pointing back at the session sheet or at
+ * the input cells (meter readings, tariffs, shares), so staff only type the meter
+ * readings and Excel recalculates the rest.
+ */
 import ExcelJS from 'exceljs';
-import { connectorLetter, formatDateTime } from './format';
+import { connectorLetter } from './format';
 
 export interface RevenueReportStation {
   id: string;
@@ -17,6 +31,8 @@ export interface RevenueReportClient {
   name?: string;
   businessRegister?: string | null;
   feePercent?: number | null;
+  /** Where the client's share is paid (Банк / Төлбөр хүлээн авах данс). */
+  payoutAccount?: { bankName?: string; accountNumber?: string } | null;
 }
 
 export interface RevenueReportSessionItem {
@@ -57,1003 +73,757 @@ export interface RevenueReportParams {
   station: RevenueReportStation;
   client?: RevenueReportClient | null;
   from: string; // "YYYY-MM-DD"
-  to: string;   // "YYYY-MM-DD"
+  to: string; // "YYYY-MM-DD"
   sessionsCount: number;
   platformKwh: number;
   grossRevenue: number;
-  /** Optional custom or override values */
+  /** Meter readings (Эхний / Эцсийн заалт). Left blank when omitted, for manual entry. */
+  meterStartReading?: number;
+  meterEndReading?: number;
+  /** Not used by this layout (the bill is computed from meter readings); kept for callers. */
   meterKwh?: number;
   electricityCost?: number;
   meterDate?: string;
-  clientShare?: number; // e.g. 0.8 (80%)
-  qpayRate?: number;    // e.g. 0.01 (1%)
+  /** Client's share of distributable revenue, e.g. 0.8. Defaults to 1 − feePercent. */
+  clientShare?: number;
+  /** Payment-provider fee as a fraction of revenue, e.g. 0.01. */
+  qpayRate?: number;
   otherDirectCosts?: number;
   reportNumber?: string;
   operatorName?: string;
   platformName?: string;
   notes?: string;
+  /** When the report is generated; defaults to now. */
+  generatedAt?: Date;
+}
+
+// ---------------------------------------------------------------------------
+// Defaults taken from the operator's template. Every one lands in an editable cell.
+// ---------------------------------------------------------------------------
+
+const DEFAULTS = {
+  operatorName: 'Монголын Цэвэр Тээвэр Суурь Бүтцийн Хөгжлийн Холбоо ТББ',
+  platformName: 'Eplug.mn',
+  ctCoefficientLabel: '300A/5 гүйдлийн транс-ын Коэффициент',
+  ctCoefficient: 60,
+  basePricePerKwh: 278,
+  cosPhiLoss: 0.15,
+  capacityChargeFormula: '16275*1.1',
+  renewablePerKwh: 23.79,
+  qpayRate: 0.01,
+  otherDirectCost: 5000,
+  otherDirectCostLabel: 'Дата сим тогтмол зардал',
+  note: 'Хуваарилагдах орлого* Ногдох хувь. Гэрээний дагуу батлав.',
+};
+
+/** Eplug's side of the split; they share whatever the client does not get, by weight. */
+const PLATFORM_RECIPIENTS = [
+  { name: 'ЖИРКТО ХХК /IT платформ/', bank: 'Голомт', account: '88001500 2255103877', weight: 0.5 },
+  { name: 'СЕКУОИА ИНДАСТРИАЛ ХХК /Засвар үйлчилгээ/', bank: 'Хаан', account: '5111748965', weight: 0.5 },
+];
+
+// ---------------------------------------------------------------------------
+// Styling
+// ---------------------------------------------------------------------------
+
+const GREEN = 'FF1F6B52';
+const GREEN_DARK = 'FF0F6351';
+const TEXT = 'FF1F2A28';
+const MUTED = 'FF6B7A77';
+const TOTAL_BG = 'FFEEF3F1';
+const WHITE = 'FFFFFFFF';
+const FONT = 'Arial';
+
+const FMT = {
+  money: '#,##0.00 ₮;-#,##0.00 ₮;-',
+  moneyInt: '#,##0 ₮;-#,##0 ₮;-',
+  num2: '#,##0.00;-#,##0.00;-',
+  int: '0',
+  intSep: '#,##0',
+  pct: '0%',
+  pct1: '0.0%',
+  pct1Signed: '0.0%;-0.0%;-',
+  dateTime: 'yyyy-mm-dd hh:mm',
+  date: 'yyyy-mm-dd',
+  time: 'h:mm',
+  perKwh: '#,##0.0 ₮',
+};
+
+type Align = ExcelJS.Alignment['horizontal'];
+
+interface CellOpts {
+  bold?: boolean;
+  size?: number;
+  color?: string;
+  bg?: string;
+  fmt?: string;
+  align?: Align;
+  wrap?: boolean;
+  indent?: number;
+  border?: boolean;
+  italic?: boolean;
+}
+
+const thin = { style: 'thin' as const, color: { argb: 'FF000000' } };
+const hair = { style: 'hair' as const, color: { argb: 'FF000000' } };
+
+function put(ws: ExcelJS.Worksheet, addr: string, value: ExcelJS.CellValue, o: CellOpts = {}) {
+  const c = ws.getCell(addr);
+  if (value !== undefined) c.value = value;
+  c.font = { name: FONT, size: o.size ?? 10, bold: o.bold, italic: o.italic, color: { argb: o.color ?? TEXT } };
+  if (o.bg) c.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: o.bg } };
+  if (o.fmt) c.numFmt = o.fmt;
+  c.alignment = { vertical: 'middle', horizontal: o.align, wrapText: o.wrap, indent: o.indent };
+  if (o.border) c.border = { left: thin, right: thin, top: hair, bottom: hair };
+  return c;
+}
+
+/** Merge a range and style every cell in it (so borders/fills cover the whole block). */
+function putMerged(ws: ExcelJS.Worksheet, range: string, value: ExcelJS.CellValue, o: CellOpts = {}) {
+  ws.mergeCells(range);
+  const [a, b] = range.split(':');
+  const s = ws.getCell(a);
+  const e = ws.getCell(b);
+  for (let r = Number(s.row); r <= Number(e.row); r++) {
+    for (let col = Number(s.col); col <= Number(e.col); col++) {
+      put(ws, ws.getCell(r, col).address, undefined, o);
+    }
+  }
+  ws.getCell(a).value = value;
+}
+
+const header = (o: CellOpts = {}): CellOpts => ({
+  bold: true,
+  color: WHITE,
+  bg: GREEN,
+  align: 'center',
+  wrap: true,
+  border: true,
+  ...o,
+});
+const label = (o: CellOpts = {}): CellOpts => ({ align: 'left', border: true, indent: 1, ...o });
+const val = (o: CellOpts = {}): CellOpts => ({ align: 'right', border: true, ...o });
+const total = (o: CellOpts = {}): CellOpts => ({ bold: true, bg: TOTAL_BG, border: true, ...o });
+
+function sectionTitle(ws: ExcelJS.Worksheet, addr: string, text: string, color = GREEN) {
+  put(ws, addr, text, { bold: true, size: 12, color });
+  ws.getRow(Number(ws.getCell(addr).row)).height = 15.6;
+}
+
+function f(formula: string, result?: ExcelJS.CellFormulaValue['result']): ExcelJS.CellFormulaValue {
+  return { formula, result } as ExcelJS.CellFormulaValue;
+}
+
+// ---------------------------------------------------------------------------
+// Dates: Excel has no time zone, so write the viewer's wall-clock time.
+// ---------------------------------------------------------------------------
+
+function excelLocal(d: Date | string | null | undefined): Date | null {
+  if (!d) return null;
+  const t = new Date(d);
+  if (Number.isNaN(t.getTime())) return null;
+  return new Date(t.getTime() - t.getTimezoneOffset() * 60000);
+}
+
+/** Local calendar day as a whole Excel date (matches =INT(datetime) on the session sheet). */
+function excelDay(d: Date | string): Date {
+  const t = new Date(d);
+  return new Date(Date.UTC(t.getFullYear(), t.getMonth(), t.getDate()));
+}
+
+function parseYmd(s: string): Date {
+  const [y, m, d] = s.split('-').map(Number);
+  return new Date(y, (m || 1) - 1, d || 1);
 }
 
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
-// Colors (8-char ARGB format)
-const C_NAVY = 'FF1E293B';          // Slate-800
-const C_DARK_SLATE = 'FF0F172A';     // Slate-900
-const C_SLATE_HEADER = 'FF334155';   // Slate-700
-const C_SUBHEADER_BG = 'FFF1F5F9';   // Slate-100
-const C_LABEL_BG = 'FFF8FAFC';       // Slate-50
-const C_ZEBRA = 'FFF8FAFC';          // Light row zebra
-const C_WHITE = 'FFFFFFFF';
-const C_BORDER = 'FFCBD5E1';         // Slate-300
-const C_BORDER_LIGHT = 'FFE2E8F0';   // Slate-200
-const C_TEXT_DARK = 'FF0F172A';
-const C_TEXT_MUTED = 'FF64748B';     // Slate-500
-const C_TEXT_LABEL = 'FF475569';     // Slate-600
+// ---------------------------------------------------------------------------
+// Shared derived data
+// ---------------------------------------------------------------------------
 
-// Accent cards
-const C_AMBER_BG = 'FFFEF3C7';
-const C_AMBER_TXT = 'FF92400E';
-const C_AMBER_VAL = 'FFB45309';
-const C_AMBER_BD = 'FFFCD34D';
+export const SESSION_SHEET = 'Цэнэглэлт_дэлгэрэнгүй';
+const REF = `'${SESSION_SHEET}'!`;
 
-const C_BLUE_BG = 'FFE0F2FE';
-const C_BLUE_TXT = 'FF0369A1';
-const C_BLUE_VAL = 'FF0284C7';
-const C_BLUE_BD = 'FFBAE6FD';
-
-const C_EMERALD_BG = 'FFDCFCE7';
-const C_EMERALD_TXT = 'FF14532D';
-const C_EMERALD_VAL = 'FF15803D';
-const C_EMERALD_BD = 'FF86EFAC';
-const C_EMERALD_DEEP_BD = 'FF16A34A';
-
-const C_ROSE_BG = 'FFFEE2E2';
-const C_ROSE_TXT = 'FF991B1B';
-
-function solidFill(argb: string): ExcelJS.Fill {
-  return {
-    type: 'pattern',
-    pattern: 'solid',
-    fgColor: { argb },
-  };
-}
-
-function thinBorder(argb = C_BORDER): Partial<ExcelJS.Borders> {
-  const border: Partial<ExcelJS.Border> = { style: 'thin', color: { argb } };
-  return { top: border, left: border, bottom: border, right: border };
-}
-
-function setCellStyle(
-  ws: ExcelJS.Worksheet,
-  r: number,
-  c: number,
-  opts: {
-    value?: ExcelJS.CellValue;
-    font?: Partial<ExcelJS.Font>;
-    fill?: ExcelJS.Fill;
-    border?: Partial<ExcelJS.Borders>;
-    alignment?: Partial<ExcelJS.Alignment>;
-    numFmt?: string;
-  },
-) {
-  const cell = ws.getCell(r, c);
-  if (opts.value !== undefined) cell.value = opts.value;
-  cell.font = { name: 'Segoe UI', size: 9.5, color: { argb: C_TEXT_DARK }, ...opts.font };
-  if (opts.fill) cell.fill = opts.fill;
-  if (opts.border) cell.border = opts.border;
-  if (opts.alignment) cell.alignment = { vertical: 'middle', ...opts.alignment };
-  if (opts.numFmt) cell.numFmt = opts.numFmt;
-  return cell;
-}
-
-function mergeAndStyle(
-  ws: ExcelJS.Worksheet,
-  startRow: number,
-  startCol: number,
-  endRow: number,
-  endCol: number,
-  opts: {
-    value?: ExcelJS.CellValue;
-    font?: Partial<ExcelJS.Font>;
-    fill?: ExcelJS.Fill;
-    border?: Partial<ExcelJS.Borders>;
-    alignment?: Partial<ExcelJS.Alignment>;
-    numFmt?: string;
-  },
-) {
-  ws.mergeCells(startRow, startCol, endRow, endCol);
-  for (let r = startRow; r <= endRow; r++) {
-    for (let c = startCol; c <= endCol; c++) {
-      const cell = ws.getCell(r, c);
-      cell.font = { name: 'Segoe UI', size: 9.5, color: { argb: C_TEXT_DARK }, ...opts.font };
-      if (opts.fill) cell.fill = opts.fill;
-      if (opts.border) cell.border = opts.border;
-      if (opts.alignment) cell.alignment = { vertical: 'middle', ...opts.alignment };
-      if (opts.numFmt) cell.numFmt = opts.numFmt;
-    }
-  }
-  const master = ws.getCell(startRow, startCol);
-  if (opts.value !== undefined) master.value = opts.value;
-  return master;
-}
-
-/**
- * Build Sheet 1: «Тайлан» with high-fidelity executive styling, borders, and live formulas
- */
-export function buildRevenueReportWorksheet(
-  wb: ExcelJS.Workbook,
-  params: RevenueReportParams,
-): ExcelJS.Worksheet {
-  const ws = wb.addWorksheet('Тайлан', {
-    views: [{ showGridLines: true }],
-    properties: { defaultRowHeight: 20 },
-  });
-
-  // Setup 8 main columns
-  ws.columns = [
-    { key: 'A', width: 28 }, // 1. Үзүүлэлт
-    { key: 'B', width: 18 }, // 2. Дүн, ₮
-    { key: 'C', width: 20 }, // 3. Эх үүсвэр
-    { key: 'D', width: 22 }, // 4. Тайлбар
-    { key: 'E', width: 26 }, // 5. Үзүүлэлт
-    { key: 'F', width: 18 }, // 6. Утга
-    { key: 'G', width: 12 }, // 7. Харьцаа
-    { key: 'H', width: 36 }, // 8. Тайлбар
-  ];
-
-  const st = params.station;
-  const stationName = st.name || st.cpId;
-  const clientName = params.client?.name || 'Станц эзэмшигч';
-  const operatorName = params.operatorName || 'Монголын Цэвэр Тээвэр Суурь Бүтцийн Хөгжлийн Холбоо ТББ';
-  const platformName = params.platformName || 'Eplug.mn';
-
-  // Format report number: Remove "NEV-", use station code + period (e.g. "META 2026-11" or "ZAISAN1 2026-11")
-  const toParts = params.to.split('-');
-  const year = toParts[0] || String(new Date().getFullYear());
-  const month = toParts[1] || '01';
-  const cleanCode = (st.cpId || st.name || 'META')
-    .replace(/^NEV[-_]/i, '')
-    .replace(/[^a-zA-Z0-9\u0400-\u04FF_-]/g, '')
+/** The selected station's name, e.g. "Зайсан Хилл Комплекс Баруун", safe for a file name. */
+function reportCode(st: RevenueReportStation): string {
+  return (st.name || st.cpId || 'Станц')
+    .replace(/[\\/:*?"<>|]+/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
     .toUpperCase();
-  const reportNumber = (params.reportNumber || `${cleanCode} ${year}-${month}`).replace(/^NEV[-_]/i, '');
+}
 
-  // Numbers & Defaults
-  const platformKwh = round2(params.platformKwh);
-  const grossRevenue = round2(params.grossRevenue);
-  const sessionsCount = params.sessionsCount;
+/** File name in the template's style: "META ТАЙЛАН_2026-10-23 - 2026-11-12 (09.58AM).xlsx". */
+export function revenueReportFileName(params: RevenueReportParams): string {
+  const now = params.generatedAt ?? new Date();
+  const h = now.getHours();
+  const time = `${String(h % 12 || 12).padStart(2, '0')}.${String(now.getMinutes()).padStart(2, '0')}${h < 12 ? 'AM' : 'PM'}`;
+  return `${reportCode(params.station)} ТАЙЛАН_${params.from} - ${params.to} (${time}).xlsx`;
+}
 
-  // Meter reading and electricity costs are sent empty (null) by default for manual entry
-  const meterKwh = params.meterKwh != null ? round2(params.meterKwh) : null;
-  const electricityCost = params.electricityCost != null ? round2(params.electricityCost) : null;
-  const qpayRate = params.qpayRate != null ? params.qpayRate : 0.01;
-  const qpayFee = round2(grossRevenue * qpayRate);
-  const otherDirectCosts = params.otherDirectCosts != null ? round2(params.otherDirectCosts) : 0;
-  
-  const initialElecCost = electricityCost != null ? electricityCost : 0;
-  const totalDirectCost = round2(initialElecCost + qpayFee + otherDirectCosts);
-  const distributableNet = round2(grossRevenue - totalDirectCost);
+interface Ctx {
+  params: RevenueReportParams;
+  sessions: RevenueReportSessionItem[];
+  /** First and last data row on the session sheet (empty range when there are no sessions). */
+  first: number;
+  last: number;
+  col: (letter: string) => string;
+  generatedAt: Date;
+  periodEnd: Date;
+  firstStart: Date | null;
+  lastStop: Date | null;
+  totals: { kwh: number; gross: number; minutes: number; refund: number };
+}
 
-  const defaultClientShare =
-    params.client?.feePercent != null ? round2((100 - params.client.feePercent) / 100) : 0.8;
-  const clientShare = params.clientShare != null ? params.clientShare : defaultClientShare;
-  const payoutAmount = round2(distributableNet * clientShare);
-
-  const diffKwh = meterKwh != null ? round2(meterKwh - platformKwh) : null;
-  const lossRatio = meterKwh != null && meterKwh > 0 ? (diffKwh ?? 0) / meterKwh : null;
-
-  const meterDateStr = params.meterDate || '';
-  const endDateShort = toParts.length >= 3 ? `${toParts[1]}/${toParts[2]}` : params.to;
-  const meterDateShort = meterDateStr
-    ? meterDateStr.includes(' ')
-      ? meterDateStr.split(' ')[0].replace(/^\d{4}-/, '').replace('-', '/') + ' ' + meterDateStr.split(' ')[1]
-      : endDateShort
-    : '';
-
-  // -------------------------------------------------------------------------
-  // ROW 1: Empty
-  ws.getRow(1).height = 10;
-
-  // ROW 2: Main Banner Title (A2:H2)
-  ws.getRow(2).height = 32;
-  mergeAndStyle(ws, 2, 1, 2, 8, {
-    value: 'EV ЦЭНЭГЛЭХ СТАНЦЫН ОРЛОГО ХУВААРИЛАЛТЫН ТАЙЛАН',
-    font: { size: 14, bold: true, color: { argb: C_WHITE } },
-    fill: solidFill(C_NAVY),
-    alignment: { horizontal: 'center', vertical: 'middle' },
-    border: thinBorder(C_SLATE_HEADER),
-  });
-
-  // ROW 3: Subtitle Period & Station (A3:H3)
-  ws.getRow(3).height = 20;
-  mergeAndStyle(ws, 3, 1, 3, 8, {
-    value: `${params.from} – ${params.to} | ${stationName}`,
-    font: { size: 10, bold: true, color: { argb: 'FFCBD5E1' } },
-    fill: solidFill(C_SLATE_HEADER),
-    alignment: { horizontal: 'center', vertical: 'middle' },
-    border: thinBorder('FF475569'),
-  });
-
-  // ROW 4: Empty
-  ws.getRow(4).height = 10;
-
-  // ROW 5: Section Header 1 (A5:H5)
-  ws.getRow(5).height = 24;
-  mergeAndStyle(ws, 5, 1, 5, 8, {
-    value: clientName ? `${clientName} — ТАЙЛАНГИЙН МЭДЭЭЛЭЛ` : 'ТАЙЛАНГИЙН МЭДЭЭЛЭЛ',
-    font: { size: 10, bold: true, color: { argb: C_WHITE } },
-    fill: solidFill(C_DARK_SLATE),
-    alignment: { horizontal: 'left', vertical: 'middle', indent: 1 },
-    border: thinBorder(C_NAVY),
-  });
-
-  // ROWS 6 - 10: Metadata Table
-  const infoRows = [
-    {
-      labelL: 'Тайлангийн дугаар',
-      valL: reportNumber,
-      labelR: 'Тайлан хүлээн авагч',
-      valR: clientName,
+function buildCtx(params: RevenueReportParams, sessions: RevenueReportSessionItem[]): Ctx {
+  const sorted = [...sessions].sort((a, b) => a.startTimestamp.localeCompare(b.startTimestamp));
+  const first = 4;
+  const last = 3 + Math.max(sorted.length, 1);
+  const generatedAt = params.generatedAt ?? new Date();
+  const toEnd = parseYmd(params.to);
+  toEnd.setHours(23, 59, 59, 0);
+  const periodEnd = generatedAt < toEnd ? generatedAt : toEnd;
+  const stops = sorted.map((s) => s.stopTimestamp).filter(Boolean) as string[];
+  return {
+    params,
+    sessions: sorted,
+    first,
+    last,
+    col: (l) => `${REF}$${l}$${first}:$${l}$${last}`,
+    generatedAt,
+    periodEnd,
+    firstStart: sorted[0] ? new Date(sorted[0].startTimestamp) : null,
+    lastStop: stops.length ? new Date(stops.sort().at(-1)!) : null,
+    totals: {
+      kwh: round2(sorted.reduce((a, s) => a + (s.energyKwh || 0), 0)),
+      gross: round2(sorted.reduce((a, s) => a + (s.cost || 0), 0)),
+      minutes: sorted.reduce((a, s) => a + (s.durationMin ?? 0), 0),
+      refund: round2(sorted.reduce((a, s) => a + (s.refundAmount ?? 0), 0)),
     },
-    {
-      labelL: 'Тайлант хугацаа',
-      valL: `${params.from}  - ${params.to}`,
-      labelR: 'Үүрэг',
-      valR: 'Станц эзэмшигч',
-    },
-    {
-      labelL: 'Станц',
-      valL: stationName,
-      labelR: 'Оператор',
-      valR: operatorName,
-    },
-    {
-      labelL: 'Байршил',
-      valL: st.address || 'Улаанбаатар',
-      labelR: 'Платформ',
-      valR: platformName,
-    },
-    {
-      labelL: 'Тоолуурын заалтын огноо',
-      valL: meterDateStr,
-      labelR: 'Тайлангийн төлөв',
-      valR: 'Эцсийн',
-    },
-  ];
-
-  infoRows.forEach((item, idx) => {
-    const r = 6 + idx;
-    ws.getRow(r).height = 20;
-
-    // Col A: Label Left
-    setCellStyle(ws, r, 1, {
-      value: item.labelL,
-      font: { bold: true, size: 9, color: { argb: C_TEXT_LABEL } },
-      fill: solidFill(C_LABEL_BG),
-      alignment: { horizontal: 'left', indent: 1 },
-      border: thinBorder(C_BORDER_LIGHT),
-    });
-
-    // Merge B:D: Value Left
-    mergeAndStyle(ws, r, 2, r, 4, {
-      value: item.valL,
-      font: { size: 9.5, color: { argb: C_TEXT_DARK } },
-      fill: solidFill(C_WHITE),
-      alignment: { horizontal: 'left', indent: 1 },
-      border: thinBorder(C_BORDER_LIGHT),
-    });
-
-    // Col E: Label Right
-    setCellStyle(ws, r, 5, {
-      value: item.labelR,
-      font: { bold: true, size: 9, color: { argb: C_TEXT_LABEL } },
-      fill: solidFill(C_LABEL_BG),
-      alignment: { horizontal: 'left', indent: 1 },
-      border: thinBorder(C_BORDER_LIGHT),
-    });
-
-    // Merge F:H: Value Right
-    mergeAndStyle(ws, r, 6, r, 8, {
-      value: item.valR,
-      font: { size: 9.5, color: { argb: C_TEXT_DARK } },
-      fill: solidFill(C_WHITE),
-      alignment: { horizontal: 'left', indent: 1 },
-      border: thinBorder(C_BORDER_LIGHT),
-    });
-  });
-
-  // ROW 11: Empty
-  ws.getRow(11).height = 10;
-
-  // ROW 12: Section Header 2 (A12:H12)
-  ws.getRow(12).height = 24;
-  mergeAndStyle(ws, 12, 1, 12, 8, {
-    value: 'ГОЛ ҮЗҮҮЛЭЛТ',
-    font: { size: 10, bold: true, color: { argb: C_WHITE } },
-    fill: solidFill(C_DARK_SLATE),
-    alignment: { horizontal: 'left', vertical: 'middle', indent: 1 },
-    border: thinBorder(C_NAVY),
-  });
-
-  // ROW 13 & 14: KPI Stat Cards
-  ws.getRow(13).height = 18;
-  ws.getRow(14).height = 30;
-
-  // Card 1: Дууссан сесс (A13:B14)
-  mergeAndStyle(ws, 13, 1, 13, 2, {
-    value: 'Дууссан сесс',
-    font: { bold: true, size: 9, color: { argb: C_TEXT_LABEL } },
-    fill: solidFill(C_SUBHEADER_BG),
-    alignment: { horizontal: 'center' },
-    border: thinBorder(C_BORDER),
-  });
-  mergeAndStyle(ws, 14, 1, 14, 2, {
-    value: sessionsCount,
-    font: { bold: true, size: 16, color: { argb: C_TEXT_DARK } },
-    fill: solidFill(C_WHITE),
-    alignment: { horizontal: 'center' },
-    numFmt: '#,##0',
-    border: thinBorder(C_BORDER),
-  });
-
-  // Card 2: Платформын хэрэглээ (C13:D14)
-  mergeAndStyle(ws, 13, 3, 13, 4, {
-    value: 'Платформын хэрэглээ (DC)',
-    font: { bold: true, size: 9, color: { argb: C_AMBER_TXT } },
-    fill: solidFill(C_AMBER_BG),
-    alignment: { horizontal: 'center' },
-    border: thinBorder(C_AMBER_BD),
-  });
-  mergeAndStyle(ws, 14, 3, 14, 4, {
-    value: { formula: 'F20', result: platformKwh },
-    font: { bold: true, size: 16, color: { argb: C_AMBER_VAL } },
-    fill: solidFill('FFFFFBEB'),
-    alignment: { horizontal: 'center' },
-    numFmt: '#,##0.00 "кВтц"',
-    border: thinBorder(C_AMBER_BD),
-  });
-
-  // Card 3: Тоолуурын хэрэглээ (E13:F14)
-  mergeAndStyle(ws, 13, 5, 13, 6, {
-    value: 'Тоолуурын хэрэглээ (ЭХ)',
-    font: { bold: true, size: 9, color: { argb: C_BLUE_TXT } },
-    fill: solidFill(C_BLUE_BG),
-    alignment: { horizontal: 'center' },
-    border: thinBorder(C_BLUE_BD),
-  });
-  mergeAndStyle(ws, 14, 5, 14, 6, {
-    value: { formula: 'IF(F19="","",F19)', result: meterKwh != null ? meterKwh : '' },
-    font: { bold: true, size: 16, color: { argb: C_BLUE_VAL } },
-    fill: solidFill('FFF0F9FF'),
-    alignment: { horizontal: 'center' },
-    numFmt: '#,##0.00 "кВтц"',
-    border: thinBorder(C_BLUE_BD),
-  });
-
-  // Card 4: Хуваарилах цэвэр орлого (G13:H14)
-  mergeAndStyle(ws, 13, 7, 13, 8, {
-    value: 'Хуваарилах цэвэр орлого',
-    font: { bold: true, size: 9, color: { argb: C_EMERALD_TXT } },
-    fill: solidFill(C_EMERALD_BG),
-    alignment: { horizontal: 'center' },
-    border: thinBorder(C_EMERALD_BD),
-  });
-  mergeAndStyle(ws, 14, 7, 14, 8, {
-    value: { formula: 'B24', result: distributableNet },
-    font: { bold: true, size: 16, color: { argb: C_EMERALD_VAL } },
-    fill: solidFill('FFF0FDF4'),
-    alignment: { horizontal: 'center' },
-    numFmt: '#,##0 "₮"',
-    border: thinBorder(C_EMERALD_BD),
-  });
-
-  // ROWS 15-16: Empty
-  ws.getRow(15).height = 10;
-  ws.getRow(16).height = 10;
-
-  // ROW 17: Table Headers (A17:D17 and E17:H17)
-  ws.getRow(17).height = 24;
-  mergeAndStyle(ws, 17, 1, 17, 4, {
-    value: 'ОРЛОГО, ЗАРДЛЫН ТООЦОО',
-    font: { size: 10, bold: true, color: { argb: C_WHITE } },
-    fill: solidFill(C_NAVY),
-    alignment: { horizontal: 'center', vertical: 'middle' },
-    border: thinBorder(C_SLATE_HEADER),
-  });
-  mergeAndStyle(ws, 17, 5, 17, 8, {
-    value: 'ЭРЧИМ ХҮЧНИЙ ТУЛГАЛТ',
-    font: { size: 10, bold: true, color: { argb: C_WHITE } },
-    fill: solidFill(C_NAVY),
-    alignment: { horizontal: 'center', vertical: 'middle' },
-    border: thinBorder(C_SLATE_HEADER),
-  });
-
-  // ROW 18: Column Subheaders
-  ws.getRow(18).height = 22;
-  const subheaders = [
-    { col: 1, text: 'Үзүүлэлт', align: 'left' },
-    { col: 2, text: 'Дүн, ₮', align: 'right' },
-    { col: 3, text: 'Эх үүсвэр', align: 'center' },
-    { col: 4, text: 'Тайлбар', align: 'left' },
-    { col: 5, text: 'Үзүүлэлт', align: 'left' },
-    { col: 6, text: 'Утга', align: 'right' },
-    { col: 7, text: 'Харьцаа', align: 'center' },
-    { col: 8, text: 'Тайлбар', align: 'left' },
-  ];
-  subheaders.forEach((sh) => {
-    setCellStyle(ws, 18, sh.col, {
-      value: sh.text,
-      font: { bold: true, size: 9, color: { argb: C_TEXT_LABEL } },
-      fill: solidFill(C_SUBHEADER_BG),
-      alignment: { horizontal: sh.align as ExcelJS.Alignment['horizontal'], indent: sh.align === 'left' ? 1 : 0 },
-      border: {
-        top: { style: 'thin', color: { argb: C_BORDER } },
-        bottom: { style: 'medium', color: { argb: 'FF94A3B8' } },
-        left: { style: 'thin', color: { argb: C_BORDER } },
-        right: { style: 'thin', color: { argb: C_BORDER } },
-      },
-    });
-  });
-
-  // Helper for financial data rows
-  const setTableRow = (
-    r: number,
-    left: {
-      name: string;
-      val: ExcelJS.CellValue;
-      source: string;
-      desc: string;
-      bold?: boolean;
-      fillBg?: string;
-      valColor?: string;
-    },
-    right: {
-      name: string;
-      val: ExcelJS.CellValue;
-      ratio?: ExcelJS.CellValue;
-      desc: string;
-      bold?: boolean;
-      fillBg?: string;
-      ratioNumFmt?: string;
-    },
-  ) => {
-    ws.getRow(r).height = 21;
-
-    const bgL = left.fillBg ? solidFill(left.fillBg) : solidFill(r % 2 === 0 ? C_ZEBRA : C_WHITE);
-    const bgR = right.fillBg ? solidFill(right.fillBg) : solidFill(r % 2 === 0 ? C_ZEBRA : C_WHITE);
-    const borderL = thinBorder(C_BORDER_LIGHT);
-    const borderR = thinBorder(C_BORDER_LIGHT);
-
-    // Col A: Name
-    setCellStyle(ws, r, 1, {
-      value: left.name,
-      font: { bold: left.bold || false, size: 9.5, color: { argb: left.valColor || C_TEXT_DARK } },
-      fill: bgL,
-      alignment: { horizontal: 'left', indent: 1 },
-      border: borderL,
-    });
-    // Col B: Amount
-    setCellStyle(ws, r, 2, {
-      value: left.val,
-      font: { bold: left.bold || false, size: 9.5, color: { argb: left.valColor || C_TEXT_DARK } },
-      fill: bgL,
-      alignment: { horizontal: 'right' },
-      numFmt: '#,##0 "₮"',
-      border: borderL,
-    });
-    // Col C: Source
-    setCellStyle(ws, r, 3, {
-      value: left.source,
-      font: { size: 9, color: { argb: C_TEXT_MUTED } },
-      fill: bgL,
-      alignment: { horizontal: 'center' },
-      border: borderL,
-    });
-    // Col D: Desc
-    setCellStyle(ws, r, 4, {
-      value: left.desc,
-      font: { size: 9, color: { argb: C_TEXT_MUTED } },
-      fill: bgL,
-      alignment: { horizontal: 'left', indent: 1 },
-      border: borderL,
-    });
-
-    // Col E: Name
-    setCellStyle(ws, r, 5, {
-      value: right.name,
-      font: { bold: right.bold || false, size: 9.5, color: { argb: C_TEXT_DARK } },
-      fill: bgR,
-      alignment: { horizontal: 'left', indent: 1 },
-      border: borderR,
-    });
-    // Col F: Value
-    setCellStyle(ws, r, 6, {
-      value: right.val,
-      font: { bold: right.bold || false, size: 9.5, color: { argb: C_TEXT_DARK } },
-      fill: bgR,
-      alignment: { horizontal: 'right' },
-      numFmt: '#,##0.00',
-      border: borderR,
-    });
-    // Col G: Ratio
-    setCellStyle(ws, r, 7, {
-      value: right.ratio !== undefined ? right.ratio : '',
-      font: { bold: true, size: 9, color: { argb: C_AMBER_VAL } },
-      fill: bgR,
-      alignment: { horizontal: 'center' },
-      numFmt: right.ratioNumFmt || '0.00%',
-      border: borderR,
-    });
-    // Col H: Desc
-    setCellStyle(ws, r, 8, {
-      value: right.desc,
-      font: { size: 9, color: { argb: C_TEXT_MUTED } },
-      fill: bgR,
-      alignment: { horizontal: 'left', indent: 1 },
-      border: borderR,
-    });
   };
+}
 
-  // ROW 19: Цэнэглэлтийн орлого & Тоолуурын хэрэглээ
-  setTableRow(
-    19,
-    {
-      name: 'Цэнэглэлтийн орлого',
-      val: grossRevenue,
-      source: 'Платформын тайлан',
-      desc: `${endDateShort} хүртэл`,
-      bold: true,
+// ---------------------------------------------------------------------------
+// Sheet 1 — Хураангуй
+// ---------------------------------------------------------------------------
+
+function buildSummarySheet(wb: ExcelJS.Workbook, ctx: Ctx) {
+  const { params, totals } = ctx;
+  const st = params.station;
+  const ws = wb.addWorksheet('Хураангуй', {
+    views: [{ showGridLines: false }],
+    pageSetup: {
+      paperSize: 9,
+      orientation: 'portrait',
+      fitToPage: true,
+      fitToWidth: 1,
+      fitToHeight: 1,
+      margins: { left: 0.25, right: 0.25, top: 0.75, bottom: 0.2, header: 0.3, footer: 0.3 },
     },
-    {
-      name: 'Тоолуурын хэрэглээ',
-      val: meterKwh != null ? meterKwh : (null as any),
-      desc: meterDateShort ? `${meterDateShort} хаалт` : '',
-      bold: true,
-    },
+  });
+  ws.views = [{ showGridLines: false }];
+  ws.columns = [{ width: 35.66 }, { width: 17.55 }, { width: 9.01 }, { width: 32.66 }, { width: 17.55 }];
+
+  const clientName = params.client?.name || 'Станц эзэмшигч';
+  const fromDate = parseYmd(params.from);
+  const reportNumber =
+    params.reportNumber ||
+    `${reportCode(st)} ${fromDate.getFullYear()}-${String(fromDate.getMonth() + 1).padStart(2, '0')}`;
+
+  // Title
+  putMerged(ws, 'A1:E1', 'EV ЦЭНЭГЛЭХ СТАНЦЫН ТАЙЛАН', {
+    bold: true,
+    size: 16,
+    color: WHITE,
+    bg: GREEN,
+    align: 'left',
+    indent: 1,
+    border: true,
+  });
+  ws.getRow(1).height = 26.4;
+  ws.getRow(2).height = 6;
+
+  // 1. Тайлангийн мэдээлэл ---------------------------------------------------
+  sectionTitle(ws, 'A3', '1. Тайлангийн мэдээлэл');
+  put(ws, 'A4', 'Үзүүлэлт', header());
+  putMerged(ws, 'B4:E4', 'Утга', header());
+  ws.getRow(4).height = 22.05;
+
+  put(ws, 'A5', 'Станц', label({ bold: true }));
+  putMerged(ws, 'B5:E5', st.name || st.cpId, label({ bold: true }));
+  put(ws, 'A6', 'Байршил', label({ bold: true }));
+  putMerged(ws, 'B6:E6', st.address || '', label());
+  put(ws, 'A7', 'Тайлангийн дугаар', label({ bold: true }));
+  putMerged(ws, 'B7:E7', reportNumber, label());
+
+  putMerged(ws, 'A8:A9', 'Тайлант хугацаа', label({ bold: true }));
+  putMerged(ws, 'B8:C8', 'Эхлэх огноо цаг', val());
+  putMerged(ws, 'D8:E8', excelLocal(ctx.firstStart ?? fromDate), label({ fmt: FMT.dateTime }));
+  putMerged(ws, 'B9:C9', 'Дуусах огноо цаг', val());
+  putMerged(ws, 'D9:E9', excelLocal(ctx.periodEnd), label({ fmt: FMT.dateTime }));
+
+  putMerged(ws, 'A10:A11', 'Тайлан хүлээн авагч', label({ bold: true }));
+  putMerged(ws, 'B10:C10', 'Станц эзэмшигч', val());
+  putMerged(ws, 'D10:E10', clientName, label());
+  putMerged(ws, 'B11:C11', 'Талбай эзэмшигч', val());
+  putMerged(ws, 'D11:E11', f('D10', clientName), label());
+
+  put(ws, 'A12', 'Оператор', label({ bold: true }));
+  putMerged(ws, 'B12:E12', params.operatorName || DEFAULTS.operatorName, label());
+  put(ws, 'A13', 'Платформ', label({ bold: true }));
+  putMerged(ws, 'B13:E13', params.platformName || DEFAULTS.platformName, label());
+  ws.getRow(14).height = 9;
+
+  // 2. Эрчим хүчний төлбөрийн тооцоолол --------------------------------------
+  sectionTitle(ws, 'A15', '2. Эрчим хүчний төлбөрийн тооцоолол');
+  put(ws, 'A16', 'Үзүүлэлт', header());
+  put(ws, 'B16', 'Утга', header());
+  putMerged(ws, 'C16:D16', 'Тайлбар', header());
+  put(ws, 'E16', 'Утга 1', header());
+  ws.getRow(16).height = 22.05;
+
+  const meterDay = excelDay(ctx.periodEnd);
+  const meterTime = new Date(
+    Date.UTC(1899, 11, 30, ctx.periodEnd.getHours(), ctx.periodEnd.getMinutes()),
   );
+  put(ws, 'A17', 'Тоолуурын заалтын огноо', label());
+  put(ws, 'B17', meterDay, val({ fmt: FMT.date }));
+  putMerged(ws, 'C17:D17', '', label());
+  put(ws, 'E17', null, val());
+  put(ws, 'A18', 'Тоолуурын заалтын цаг, минут', label());
+  put(ws, 'B18', meterTime, val({ fmt: FMT.time }));
+  putMerged(ws, 'C18:D18', '', label());
+  put(ws, 'E18', null, val());
 
-  // ROW 20: Цахилгааны зардал & Платформын хэрэглээ
-  setTableRow(
-    20,
-    {
-      name: 'Цахилгааны зардал',
-      val: electricityCost != null ? electricityCost : (null as any),
-      source: 'Тоолуурын тооцоо',
-      desc: 'Нэхэмжлэлийн дүн',
-    },
-    {
-      name: 'Платформын хэрэглээ',
-      val: platformKwh,
-      desc: 'DC гаралт',
-    },
-  );
+  putMerged(ws, 'A19:A20', 'Тоолуурын заалт', label());
+  put(ws, 'B19', params.meterStartReading ?? null, val({ fmt: FMT.num2, bg: 'FFFFF8E1' }));
+  putMerged(ws, 'C19:D19', 'Эхний заалт', label());
+  put(ws, 'E19', null, val());
+  put(ws, 'B20', params.meterEndReading ?? null, val({ fmt: FMT.num2, bg: 'FFFFF8E1' }));
+  putMerged(ws, 'C20:D20', 'Эцсийн заалт', label());
+  put(ws, 'E20', null, val());
 
-  // ROW 21: QPay шимтгэл & Шууд зөрүү
-  setTableRow(
-    21,
-    {
-      name: 'QPay шимтгэл',
-      val: { formula: 'B19*0.01', result: qpayFee },
-      source: 'Орлогын 1%',
-      desc: 'Автомат',
-    },
-    {
-      name: 'Шууд зөрүү',
-      val: {
-        formula: 'IF(F19="","",F19-F20)',
-        result: diffKwh != null ? diffKwh : '',
-      },
-      desc: 'Тоолуур − платформ',
-    },
-  );
-
-  // ROW 22: Бусад шууд зардал & Зөрүү/тоолуур
-  setTableRow(
-    22,
-    {
-      name: 'Бусад шууд зардал',
-      val: otherDirectCosts,
-      source: 'Баримтаар',
-      desc: 'Одоогоор 0',
-    },
-    {
-      name: 'Зөрүү/тоолуур',
-      val: {
-        formula: 'IF(OR(F19="",F19=0),"",F21/F19)',
-        result: lossRatio != null ? lossRatio : '',
-      },
-      ratio: {
-        formula: 'IF(OR(F19="",F19=0),"",F21/F19)',
-        result: lossRatio != null ? lossRatio : '',
-      },
-      desc: 'Нийт хэрэглээнд эзлэх хувь',
-      ratioNumFmt: '0.00%',
-    },
-  );
-
-  // ROW 23: Нийт шууд зардал (Highlighted expense subtotal) & Тайлбарлагдаагүй үлдэгдэл
-  setTableRow(
-    23,
-    {
-      name: 'Нийт шууд зардал',
-      val: { formula: 'SUM(B20:B22)', result: totalDirectCost },
-      source: 'Автомат',
-      desc: 'Цахилгаан + QPay',
-      bold: true,
-      fillBg: C_ROSE_BG,
-      valColor: C_ROSE_TXT,
-    },
-    {
-      name: 'Тайлбарлагдаагүй үлдэгдэл',
-      val: 0,
-      desc: 'Алдагдал ба туслах хэрэглээг хассаны дараа',
-    },
-  );
-
-  // ROW 24: Хуваарилах цэвэр орлого (Highlighted Net Revenue) & Үлдэгдэл/тоолуур
-  setTableRow(
-    24,
-    {
-      name: 'Хуваарилах цэвэр орлого',
-      val: { formula: 'B19-B23', result: distributableNet },
-      source: 'Автомат',
-      desc: 'Хувь тооцох суурь',
-      bold: true,
-      fillBg: 'FFECFDF5',
-      valColor: 'FF065F46',
-    },
-    {
-      name: 'Үлдэгдэл/тоолуур',
-      val: 0,
-      ratio: 0,
-      desc: 'Хяналтын үзүүлэлт',
-      ratioNumFmt: '0.00%',
-    },
-  );
-
-  // Set double bottom borders on Row 24
-  for (let c = 1; c <= 4; c++) {
-    const cell = ws.getCell(24, c);
-    cell.border = {
-      ...cell.border,
-      bottom: { style: 'double', color: { argb: C_EMERALD_DEEP_BD } },
-    };
+  const elecRows: [number, string, string, string, ExcelJS.CellValue, string][] = [
+    [21, 'Тоолуурын хэрэглээ (кВтц)', '(B20-B19)*E21*1.025', DEFAULTS.ctCoefficientLabel, DEFAULTS.ctCoefficient, FMT.num2],
+    [22, 'Ашигласан цахилгааны үнэ', 'B21*E22', 'Нэгж Квтц-ийн суурь үнэ', DEFAULTS.basePricePerKwh, FMT.num2],
+    [23, 'Cosinus фи-гийн алдагдал', 'B22*E23', `Cosinus фи-гийн алдагдал ${DEFAULTS.cosPhiLoss * 100}%`, DEFAULTS.cosPhiLoss, FMT.pct],
+    [24, 'Чадал', 'B20/365*E24', '365 хоногоор тооцох', f(DEFAULTS.capacityChargeFormula), FMT.num2],
+    [25, 'Сэргээгдэх эрчим хүч', 'B20*E25', '', DEFAULTS.renewablePerKwh, FMT.num2],
+  ];
+  for (const [r, name, formula, desc, input, inputFmt] of elecRows) {
+    put(ws, `A${r}`, name, label());
+    put(ws, `B${r}`, f(formula), val({ fmt: FMT.num2 }));
+    putMerged(ws, `C${r}:D${r}`, desc, label());
+    put(ws, `E${r}`, input, val({ fmt: inputFmt, align: 'center' }));
   }
+  put(ws, 'A26', 'Цахилгааны нийт төлбөр', total({ align: 'left', indent: 1 }));
+  put(ws, 'B26', f('B22+B23+B24+B25'), total({ align: 'right', fmt: FMT.money }));
+  putMerged(ws, 'C26:D26', 'Тоолуурын нэхэмжлэлийн дүн', total({ align: 'left', indent: 1 }));
+  put(ws, 'E26', null, total());
+  ws.getRow(27).height = 7.8;
 
-  // ROW 25: Empty
-  ws.getRow(25).height = 10;
+  // 3. Платформын үзүүлэлт ---------------------------------------------------
+  sectionTitle(ws, 'A28', '3. Платформын үзүүлэлт');
+  put(ws, 'A29', 'Үзүүлэлт', header());
+  put(ws, 'B29', 'Утга', header());
+  putMerged(ws, 'C29:E29', 'Тайлбар', header());
+  ws.getRow(29).height = 22.05;
 
-  // ROW 26: Section Header 3: {Client} - ХУВААРИЛАЛТЫН ДҮН (A26:H26)
-  ws.getRow(26).height = 24;
-  mergeAndStyle(ws, 26, 1, 26, 8, {
-    value: clientName ? `${clientName} — ХУВААРИЛАЛТЫН ДҮН` : 'ХУВААРИЛАЛТЫН ДҮН',
-    font: { size: 10, bold: true, color: { argb: C_WHITE } },
-    fill: solidFill(C_NAVY),
-    alignment: { horizontal: 'left', vertical: 'middle', indent: 1 },
-    border: thinBorder(C_SLATE_HEADER),
-  });
+  put(ws, 'A30', 'Дууссан нийт цэнэглэлт', label());
+  put(ws, 'B30', f(`COUNT(${ctx.col('B')})`, ctx.sessions.length), val({ fmt: FMT.int }));
+  putMerged(ws, 'C30:E30', 'Тайлант хугацаанд', label());
+  putMerged(ws, 'A31:A32', 'Тайлант хугацааны цэнэглэлт', label());
+  put(ws, 'B31', 'Эхлэх огноо цаг', val());
+  putMerged(ws, 'C31:E31', excelLocal(ctx.firstStart), label({ fmt: FMT.dateTime }));
+  put(ws, 'B32', 'Дуусах огноо цаг', val());
+  putMerged(ws, 'C32:E32', excelLocal(ctx.lastStop), label({ fmt: FMT.dateTime }));
+  put(ws, 'A33', 'Платформын хэрэглээ (кВтц)', label());
+  put(ws, 'B33', f(`SUM(${ctx.col('L')})`, totals.kwh), val({ fmt: FMT.num2 }));
+  putMerged(ws, 'C33:E33', 'DC гаралт', label());
+  put(ws, 'A34', 'Нийт борлуулалт', total({ align: 'left', indent: 1 }));
+  put(ws, 'B34', f('B38', totals.gross), total({ align: 'right', fmt: FMT.money }));
+  putMerged(ws, 'C34:E34', 'Цэнэглэлтийн орлого', total({ align: 'left', indent: 1 }));
+  ws.getRow(35).height = 8.4;
 
-  // ROW 27: Хуваарилах цэвэр орлого
-  ws.getRow(27).height = 20;
-  setCellStyle(ws, 27, 1, {
-    value: 'Хуваарилах цэвэр орлого',
-    font: { bold: true, size: 9.5, color: { argb: C_TEXT_DARK } },
-    fill: solidFill(C_LABEL_BG),
-    alignment: { horizontal: 'left', indent: 1 },
-    border: thinBorder(C_BORDER),
-  });
-  setCellStyle(ws, 27, 2, {
-    value: { formula: 'B24', result: distributableNet },
-    font: { bold: true, size: 10, color: { argb: C_TEXT_DARK } },
-    fill: solidFill(C_LABEL_BG),
-    alignment: { horizontal: 'right' },
-    numFmt: '#,##0 "₮"',
-    border: thinBorder(C_BORDER),
-  });
-  mergeAndStyle(ws, 27, 3, 27, 8, {
-    value: '',
-    fill: solidFill(C_WHITE),
-    border: thinBorder(C_BORDER_LIGHT),
-  });
+  // 4. Орлого, зардлын тооцоо ------------------------------------------------
+  sectionTitle(ws, 'A36', '4. Орлого, зардлын тооцоо');
+  put(ws, 'A37', 'Үзүүлэлт', header());
+  put(ws, 'B37', 'Дүн', header());
+  putMerged(ws, 'C37:D37', 'Тайлбар', header());
+  put(ws, 'E37', 'Утга 1', header());
+  ws.getRow(37).height = 22.05;
 
-  // ROW 28: Ногдох хувь
-  ws.getRow(28).height = 20;
-  setCellStyle(ws, 28, 1, {
-    value: 'Ногдох хувь',
-    font: { size: 9.5, color: { argb: C_TEXT_DARK } },
-    fill: solidFill(C_WHITE),
-    alignment: { horizontal: 'left', indent: 1 },
-    border: thinBorder(C_BORDER),
-  });
-  setCellStyle(ws, 28, 2, {
-    value: clientShare,
-    font: { bold: true, size: 10, color: { argb: C_TEXT_DARK } },
-    fill: solidFill(C_WHITE),
-    alignment: { horizontal: 'right' },
-    numFmt: '0.0%',
-    border: thinBorder(C_BORDER),
-  });
-  mergeAndStyle(ws, 28, 3, 28, 8, {
-    value: '',
-    fill: solidFill(C_WHITE),
-    border: thinBorder(C_BORDER_LIGHT),
-  });
+  const qpayRate = params.qpayRate ?? DEFAULTS.qpayRate;
+  const otherCost = params.otherDirectCosts ?? DEFAULTS.otherDirectCost;
+  const costRows: [number, string, ExcelJS.CellValue, string, ExcelJS.CellValue, string?][] = [
+    [38, 'Цэнэглэлтийн орлого', f(`SUM(${ctx.col('Q')})`, totals.gross), `Платформын тайлан, ${ctx.sessions.length} цэнэглэлт`, null],
+    [39, 'Цахилгааны зардал', f('-B26'), 'Тоолуурын нэхэмжлэл', null],
+    [40, 'QPay шимтгэл', f('-B38*E40', -round2(totals.gross * qpayRate)), `Орлогын ${qpayRate * 100}%`, qpayRate, FMT.pct],
+    [41, 'Бусад шууд зардал', f('-E41', -otherCost), DEFAULTS.otherDirectCostLabel, otherCost, FMT.num2],
+  ];
+  for (const [r, name, value, desc, input, inputFmt] of costRows) {
+    put(ws, `A${r}`, name, label());
+    put(ws, `B${r}`, value, val({ fmt: FMT.money }));
+    putMerged(ws, `C${r}:D${r}`, desc, label());
+    put(ws, `E${r}`, input, val({ fmt: inputFmt, align: 'center' }));
+  }
+  put(ws, 'A42', 'Нийт шууд зардал', label({ bold: true }));
+  put(ws, 'B42', f('SUM(B39:B41)'), val({ bold: true, fmt: FMT.money }));
+  putMerged(ws, 'C42:D42', '', label());
+  put(ws, 'E42', null, val());
+  put(ws, 'A43', 'Хуваарилагдах орлого', total({ align: 'left', indent: 1 }));
+  put(ws, 'B43', f('B38+B42'), total({ align: 'right', fmt: FMT.money }));
+  putMerged(ws, 'C43:D43', 'Хувь тооцох суурь', total({ align: 'left', indent: 1 }));
+  put(ws, 'E43', null, total());
 
-  // ROW 29: ТӨЛӨХ ДҮН (Hero payout box with prominent emerald styling)
-  ws.getRow(29).height = 32;
-  setCellStyle(ws, 29, 1, {
-    value: 'ТӨЛӨХ ДҮН',
-    font: { bold: true, size: 12, color: { argb: C_EMERALD_TXT } },
-    fill: solidFill(C_EMERALD_BG),
-    alignment: { horizontal: 'center', vertical: 'middle' },
-    border: {
-      top: { style: 'medium', color: { argb: C_EMERALD_DEEP_BD } },
-      bottom: { style: 'double', color: { argb: C_EMERALD_DEEP_BD } },
-      left: { style: 'medium', color: { argb: C_EMERALD_DEEP_BD } },
-      right: { style: 'thin', color: { argb: C_EMERALD_BD } },
+  // 5. Орлого хуваарилалт ----------------------------------------------------
+  sectionTitle(ws, 'A45', '5. Орлого хуваарилалт');
+  ['Хүлээн авагч', 'Дүн', 'Банк', 'Төлбөр хүлээн авах данс', 'Ногдох хувь'].forEach((h, i) =>
+    put(ws, `${'ABCDE'[i]}46`, h, header()),
+  );
+  ws.getRow(46).height = 22.05;
+
+  const clientShare =
+    params.clientShare ??
+    (params.client?.feePercent != null ? round2((100 - params.client.feePercent) / 100) : 0.8);
+  const recipients = [
+    {
+      name: clientName,
+      bank: params.client?.payoutAccount?.bankName ?? '',
+      account: params.client?.payoutAccount?.accountNumber ?? '',
+      share: clientShare,
     },
-  });
-  setCellStyle(ws, 29, 2, {
-    value: { formula: 'B27*B28', result: payoutAmount },
-    font: { bold: true, size: 15, color: { argb: C_EMERALD_VAL } },
-    fill: solidFill(C_EMERALD_BG),
-    alignment: { horizontal: 'right', vertical: 'middle' },
-    numFmt: '#,##0 "₮"',
-    border: {
-      top: { style: 'medium', color: { argb: C_EMERALD_DEEP_BD } },
-      bottom: { style: 'double', color: { argb: C_EMERALD_DEEP_BD } },
-      left: { style: 'thin', color: { argb: C_EMERALD_BD } },
-      right: { style: 'thin', color: { argb: C_EMERALD_BD } },
-    },
-  });
-  mergeAndStyle(ws, 29, 3, 29, 8, {
-    value: '✓ Хуваарилах цэвэр орлого × Ногдох хувь',
-    font: { italic: true, size: 9.5, color: { argb: 'FF15803D' } },
-    fill: solidFill(C_EMERALD_BG),
-    alignment: { horizontal: 'left', vertical: 'middle', indent: 1 },
-    border: {
-      top: { style: 'medium', color: { argb: C_EMERALD_DEEP_BD } },
-      bottom: { style: 'double', color: { argb: C_EMERALD_DEEP_BD } },
-      left: { style: 'thin', color: { argb: C_EMERALD_BD } },
-      right: { style: 'medium', color: { argb: C_EMERALD_DEEP_BD } },
-    },
-  });
+    ...PLATFORM_RECIPIENTS.map((p) => ({ ...p, share: round2((1 - clientShare) * p.weight * 1000) / 1000 })),
+  ];
+  let r = 47;
+  for (const rc of recipients) {
+    put(ws, `A${r}`, rc.name, label({ wrap: true }));
+    put(ws, `B${r}`, f(`$B$43*E${r}`), val({ fmt: FMT.money }));
+    put(ws, `C${r}`, rc.bank, val({ align: 'center' }));
+    put(ws, `D${r}`, rc.account, val({ align: 'center' }));
+    put(ws, `E${r}`, rc.share, val({ align: 'center', fmt: FMT.pct1 }));
+    r++;
+  }
+  const firstRecipient = 47;
+  put(ws, `A${r}`, 'ТӨЛӨХ ДҮН', total({ align: 'left', indent: 1 }));
+  put(ws, `B${r}`, f(`SUM(B${firstRecipient}:B${r - 1})`), total({ align: 'right', fmt: FMT.money }));
+  put(ws, `C${r}`, null, total());
+  putMerged(ws, `D${r}:E${r}`, f(`SUM(E${firstRecipient}:E${r - 1})`), total({ align: 'center', fmt: FMT.pct1 }));
+  r++;
+  putMerged(ws, `A${r}:E${r}`, params.notes || DEFAULTS.note, { size: 9, color: MUTED, align: 'left' });
+  r++;
 
-  // ROW 30: Empty
-  ws.getRow(30).height = 10;
-
-  // ROW 31: Тайлбар
-  ws.getRow(31).height = 24;
-  setCellStyle(ws, 31, 1, {
-    value: 'Тайлбар:',
-    font: { bold: true, size: 9, color: { argb: C_TEXT_LABEL } },
-    fill: solidFill(C_SUBHEADER_BG),
-    alignment: { horizontal: 'left', indent: 1 },
-    border: thinBorder(C_BORDER),
-  });
-  mergeAndStyle(ws, 31, 2, 31, 8, {
-    value:
-      params.notes ||
-      'Станц эзэмшигч болон операторын хооронд байгуулсан хамтын ажиллагааны гэрээний дагуу орлого хуваарилалтын тооцоог батлав.',
-    font: { italic: true, size: 9, color: { argb: C_TEXT_MUTED } },
-    fill: solidFill(C_WHITE),
-    alignment: { horizontal: 'left', indent: 1 },
-    border: thinBorder(C_BORDER_LIGHT),
+  // 6. Эрчим хүчний тулгалт  |  7. Нэгжийн үзүүлэлт --------------------------
+  const t = r;
+  sectionTitle(ws, `A${t}`, '6. Эрчим хүчний тулгалт');
+  sectionTitle(ws, `D${t}`, '7. Нэгжийн үзүүлэлт');
+  put(ws, `A${t + 1}`, 'Үзүүлэлт', header({ align: 'left', indent: 1 }));
+  put(ws, `B${t + 1}`, 'Утга', header());
+  put(ws, `D${t + 1}`, 'Үзүүлэлт', header());
+  put(ws, `E${t + 1}`, 'Утга', header());
+  ws.getRow(t + 1).height = 22.05;
+  const a = t + 2;
+  const recon: [string, string, string, string, string, string][] = [
+    ['Тоолуурын хэрэглээ (кВтц)', 'B21', FMT.num2, 'Цахилгааны өртөг, 1 кВтц', 'IFERROR(B26/B21,0)', FMT.perKwh],
+    ['Платформын хэрэглээ (кВтц)', 'B33', FMT.num2, 'Дундаж борлуулалтын үнэ, 1 кВтц', 'IFERROR(B38/B33,0)', FMT.perKwh],
+    ['Зөрүү (кВтц)', `B${a}-B${a + 1}`, FMT.num2, 'Цэвэр орлого, 1 кВтц', 'IFERROR(B43/B33,0)', FMT.perKwh],
+    ['Зөрүү / тоолуур', `IFERROR(B${a + 2}/B${a},0)`, FMT.pct1Signed, 'Цэвэр орлогын хувь', 'IFERROR(B43/B38,0)', FMT.pct1Signed],
+  ];
+  recon.forEach(([l1, f1, fmt1, l2, f2, fmt2], i) => {
+    put(ws, `A${a + i}`, l1, label());
+    put(ws, `B${a + i}`, f(f1), val({ align: 'center', fmt: fmt1 }));
+    put(ws, `D${a + i}`, l2, val());
+    put(ws, `E${a + i}`, f(f2), val({ align: 'center', fmt: fmt2 }));
   });
 
   return ws;
 }
 
-/**
- * Build Sheet 2: «Цэнэглэлтийн лог» with clear headers, zebra striping and total footer
- */
-export function buildSessionsLogWorksheet(
-  wb: ExcelJS.Workbook,
-  sessions: RevenueReportSessionItem[],
-): ExcelJS.Worksheet {
-  const ws = wb.addWorksheet('Цэнэглэлтийн лог', {
-    views: [{ showGridLines: true }],
-    properties: { defaultRowHeight: 20 },
-  });
+// ---------------------------------------------------------------------------
+// Sheet 2 — Шинжилгээ
+// ---------------------------------------------------------------------------
 
-  const columns = [
-    { header: '№', key: 'no', width: 7, align: 'center' },
-    { header: 'Сеанс #', key: 'id', width: 11, align: 'center' },
-    { header: 'Буу', key: 'connector', width: 9, align: 'center' },
-    { header: 'Эхэлсэн огноо', key: 'start', width: 18, align: 'center' },
-    { header: 'Дууссан огноо', key: 'stop', width: 18, align: 'center' },
-    { header: 'Хугацаа (мин)', key: 'duration', width: 14, align: 'right', numFmt: '#,##0' },
-    { header: 'Жолооч', key: 'driver', width: 18, align: 'left' },
-    { header: 'Утас', key: 'phone', width: 14, align: 'center' },
-    { header: 'И-мэйл', key: 'email', width: 22, align: 'left' },
-    { header: 'Төрөл', key: 'driverType', width: 14, align: 'center' },
-    { header: 'Карт / ID Tag', key: 'idTag', width: 16, align: 'left' },
-    { header: 'Машин', key: 'vehicle', width: 18, align: 'left' },
-    { header: 'VIN', key: 'vin', width: 20, align: 'left' },
-    { header: 'Батерей (кВтц)', key: 'battery', width: 14, align: 'right', numFmt: '#,##0.0' },
-    { header: 'Тоолуур эхлэл (Втц)', key: 'meterStart', width: 18, align: 'right', numFmt: '#,##0' },
-    { header: 'Тоолуур төгсгөл (Втц)', key: 'meterStop', width: 18, align: 'right', numFmt: '#,##0' },
-    { header: 'Эрчим хүч (кВтц)', key: 'kwh', width: 16, align: 'right', numFmt: '#,##0.00' },
-    { header: 'Дундаж чадал (кВт)', key: 'power', width: 16, align: 'right', numFmt: '#,##0.0' },
-    { header: 'SoC эхлэл', key: 'startSoc', width: 11, align: 'center' },
-    { header: 'SoC төгсгөл', key: 'endSoc', width: 12, align: 'center' },
-    { header: 'Тариф (₮/кВтц)', key: 'tariff', width: 15, align: 'right', numFmt: '#,##0 "₮"' },
-    { header: 'Борлуулалт (₮)', key: 'gross', width: 16, align: 'right', numFmt: '#,##0 "₮"' },
-    { header: 'Шимтгэл (₮)', key: 'fee', width: 15, align: 'right', numFmt: '#,##0 "₮"' },
-    { header: 'Цэвэр орлого (₮)', key: 'net', width: 16, align: 'right', numFmt: '#,##0 "₮"' },
-    { header: 'Төлбөрийн хэрэгсэл', key: 'provider', width: 18, align: 'center' },
-    { header: 'Төлбөрийн төлөв', key: 'status', width: 15, align: 'center' },
-    { header: 'Төлсөн (₮)', key: 'paid', width: 15, align: 'right', numFmt: '#,##0 "₮"' },
-    { header: 'Буцаалт (₮)', key: 'refund', width: 15, align: 'right', numFmt: '#,##0 "₮"' },
-    { header: 'И-баримт', key: 'ebarimt', width: 14, align: 'center' },
-    { header: 'И-баримт ID', key: 'ebarimtId', width: 16, align: 'left' },
-    { header: 'Зогсоосон шалтгаан', key: 'stopReason', width: 18, align: 'left' },
+function buildAnalysisSheet(wb: ExcelJS.Workbook, ctx: Ctx) {
+  const ws = wb.addWorksheet('Шинжилгээ', {
+    views: [{ showGridLines: false }],
+    pageSetup: { paperSize: 9, orientation: 'portrait', fitToPage: true, fitToWidth: 1, fitToHeight: 0 },
+  });
+  ws.views = [{ showGridLines: false }];
+  ws.columns = [{ width: 3 }, { width: 40 }, { width: 14 }, { width: 16 }, { width: 18 }, { width: 16 }];
+  const hdr = (o: CellOpts = {}) => header({ bg: GREEN_DARK, align: 'right', ...o });
+  const { sessions, totals } = ctx;
+
+  putMerged(ws, 'B1:F1', 'Борлуулалтын шинжилгээ', {
+    bold: true,
+    size: 16,
+    color: WHITE,
+    bg: GREEN_DARK,
+    align: 'left',
+    indent: 1,
+    border: true,
+  });
+  ws.getRow(1).height = 26.4;
+
+  let r = 3;
+
+  /** A "group by" table: label column + count / kWh / revenue (+ share) via COUNTIF/SUMIF. */
+  const groupTable = (
+    title: string,
+    keyHeader: string,
+    keyCol: string,
+    keys: { value: ExcelJS.CellValue; fmt?: string; n: number; kwh: number; gross: number }[],
+    withShare: boolean,
+  ) => {
+    sectionTitle(ws, `B${r}`, title, GREEN_DARK);
+    r++;
+    put(ws, `B${r}`, keyHeader, hdr({ align: 'left', indent: 1 }));
+    put(ws, `C${r}`, 'Цэнэглэлт', hdr());
+    put(ws, `D${r}`, 'кВтц', hdr());
+    put(ws, `E${r}`, 'Борлуулалт', hdr());
+    if (withShare) put(ws, `F${r}`, 'Эзлэх хувь', hdr());
+    ws.getRow(r).height = 22.05;
+    r++;
+    const start = r;
+    const end = r + Math.max(keys.length, 1) - 1;
+    const totalRow = end + 1;
+    for (const k of keys) {
+      put(ws, `B${r}`, k.value, label({ fmt: k.fmt }));
+      put(ws, `C${r}`, f(`COUNTIF(${ctx.col(keyCol)},B${r})`, k.n), val({ fmt: FMT.int }));
+      put(ws, `D${r}`, f(`SUMIF(${ctx.col(keyCol)},B${r},${ctx.col('L')})`, round2(k.kwh)), val({ fmt: FMT.num2 }));
+      put(ws, `E${r}`, f(`SUMIF(${ctx.col(keyCol)},B${r},${ctx.col('Q')})`, round2(k.gross)), val({ fmt: FMT.moneyInt }));
+      if (withShare) {
+        put(ws, `F${r}`, f(`IFERROR(E${r}/E${totalRow},0)`, totals.gross ? k.gross / totals.gross : 0), val({ fmt: FMT.pct1 }));
+      }
+      r++;
+    }
+    if (!keys.length) r++;
+    put(ws, `B${totalRow}`, 'Нийт', total({ align: 'left', indent: 1 }));
+    put(ws, `C${totalRow}`, f(`SUM(C${start}:C${end})`, sessions.length), total({ align: 'right', fmt: FMT.int }));
+    put(ws, `D${totalRow}`, f(`SUM(D${start}:D${end})`, totals.kwh), total({ align: 'right', fmt: FMT.num2 }));
+    put(ws, `E${totalRow}`, f(`SUM(E${start}:E${end})`, totals.gross), total({ align: 'right', fmt: FMT.moneyInt }));
+    if (withShare) put(ws, `F${totalRow}`, f(`SUM(F${start}:F${end})`, 1), total({ align: 'right', fmt: FMT.pct }));
+    r = totalRow + 2;
+  };
+
+  const groupBy = <K>(key: (s: RevenueReportSessionItem) => K) => {
+    const m = new Map<K, { n: number; kwh: number; gross: number }>();
+    for (const s of sessions) {
+      const k = key(s);
+      const g = m.get(k) ?? { n: 0, kwh: 0, gross: 0 };
+      g.n += 1;
+      g.kwh += s.energyKwh || 0;
+      g.gross += s.cost || 0;
+      m.set(k, g);
+    }
+    return m;
+  };
+
+  // 1. Буугаар
+  const byConnector = groupBy((s) => `Буу ${connectorLetter(s.connectorId)}`);
+  groupTable(
+    '1. Буугаар',
+    'Буу',
+    'C',
+    [...byConnector.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([k, g]) => ({ value: k, ...g })),
+    true,
+  );
+
+  // 2. Тарифаар
+  const byTariff = groupBy((s) => (s.tariffPerKwh != null ? round2(s.tariffPerKwh) : null));
+  groupTable(
+    '2. Тарифаар (₮/кВтц)',
+    'Тариф',
+    'P',
+    [...byTariff.entries()]
+      .filter(([k]) => k != null)
+      .sort(([a], [b]) => (b as number) - (a as number))
+      .map(([k, g]) => ({ value: k, fmt: '#,##0" ₮"', ...g })),
+    true,
+  );
+
+  // 3. Үйл ажиллагааны үзүүлэлт
+  sectionTitle(ws, `B${r}`, '3. Үйл ажиллагааны үзүүлэлт', GREEN_DARK);
+  r++;
+  put(ws, `B${r}`, 'Үзүүлэлт', hdr({ align: 'left', indent: 1 }));
+  put(ws, `C${r}`, 'Утга', hdr());
+  ws.getRow(r).height = 22.05;
+  r++;
+  const success = sessions.filter((s) => (s.energyKwh || 0) > 0);
+  const successRow = r + 1;
+  const days =
+    Math.round((parseYmd(ctx.params.to).getTime() - parseYmd(ctx.params.from).getTime()) / 86400000) + 1;
+  const daysRow = r + 7;
+  const [fy, fm, fd] = ctx.params.from.split('-').map(Number);
+  const [ty, tm, td] = ctx.params.to.split('-').map(Number);
+  const ops: [string, string, ExcelJS.CellFormulaValue['result'], string][] = [
+    ['Нийт цэнэглэлт', `COUNT(${ctx.col('B')})`, sessions.length, FMT.int],
+    ['Амжилттай цэнэглэлт (кВтц > 0)', `COUNTIF(${ctx.col('L')},">0")`, success.length, FMT.int],
+    ['Цэнэглээгүй (0 кВтц)', `COUNTIF(${ctx.col('L')},0)`, sessions.length - success.length, FMT.int],
+    ['Нэг цэнэглэлтийн дундаж борлуулалт', `IFERROR(SUM(${ctx.col('Q')})/C${successRow},0)`, success.length ? totals.gross / success.length : 0, FMT.moneyInt],
+    ['Нэг цэнэглэлтийн дундаж эрчим хүч (кВтц)', `IFERROR(SUM(${ctx.col('L')})/C${successRow},0)`, success.length ? totals.kwh / success.length : 0, FMT.num2],
+    [
+      'Нэг цэнэглэлтийн дундаж хугацаа (мин)',
+      `IFERROR(SUMIF(${ctx.col('L')},">0",${ctx.col('G')})/C${successRow},0)`,
+      success.length ? success.reduce((a2, s) => a2 + (s.durationMin ?? 0), 0) / success.length : 0,
+      '0.0',
+    ],
+    [
+      'Давхардаагүй хэрэглэгч (ID Tag)',
+      `IFERROR(SUMPRODUCT(1/COUNTIF(${ctx.col('J')},${ctx.col('J')})),0)`,
+      new Set(sessions.map((s) => s.idTag)).size,
+      FMT.int,
+    ],
+    ['Тайлант хугацааны хоног', `DATE(${ty},${tm},${td})-DATE(${fy},${fm},${fd})+1`, days, FMT.int],
+    ['Өдрийн дундаж борлуулалт', `IFERROR(SUM(${ctx.col('Q')})/C${daysRow},0)`, days ? totals.gross / days : 0, FMT.moneyInt],
   ];
+  for (const [name, formula, result, fmt] of ops) {
+    put(ws, `B${r}`, name, label());
+    put(ws, `C${r}`, f(formula, result), val({ fmt }));
+    r++;
+  }
+  r++;
 
-  ws.columns = columns.map((c) => ({ key: c.key, width: c.width }));
+  // 4. Өдрөөр (by start day, matching =INT(Эхэлсэн) on the session sheet)
+  const byDay = groupBy((s) => excelDay(s.startTimestamp).getTime());
+  groupTable(
+    '4. Өдрөөр',
+    'Огноо',
+    'F',
+    [...byDay.entries()].sort(([a], [b]) => a - b).map(([k, g]) => ({ value: new Date(k), fmt: FMT.date, ...g })),
+    false,
+  );
 
-  // Header Row
-  const headerRow = ws.getRow(1);
-  headerRow.height = 26;
-  columns.forEach((c, idx) => {
-    const cell = headerRow.getCell(idx + 1);
-    cell.value = c.header;
-    cell.font = { name: 'Segoe UI', size: 9.5, bold: true, color: { argb: C_WHITE } };
-    cell.fill = solidFill(C_NAVY);
-    cell.alignment = { vertical: 'middle', horizontal: 'center' };
-    cell.border = thinBorder(C_SLATE_HEADER);
+  return ws;
+}
+
+// ---------------------------------------------------------------------------
+// Sheet 3 — Цэнэглэлт_дэлгэрэнгүй
+// ---------------------------------------------------------------------------
+
+const SESSION_COLUMNS: { header: string; width: number; fmt?: string; align?: Align }[] = [
+  { header: '№', width: 5, align: 'center' },
+  { header: 'Цэнэглэлтийн дугаар', width: 12, align: 'center' },
+  { header: 'Буу', width: 8, align: 'center' },
+  { header: 'Эхэлсэн', width: 17, fmt: FMT.dateTime },
+  { header: 'Дууссан', width: 17, fmt: FMT.dateTime },
+  { header: 'Огноо', width: 11, fmt: FMT.date },
+  { header: 'Хугацаа (мин)', width: 9, fmt: FMT.intSep },
+  { header: 'Утас', width: 13, align: 'center' },
+  { header: 'Төрөл', width: 13 },
+  { header: 'Карт / ID Tag', width: 20.33 },
+  { header: 'Машин', width: 16 },
+  { header: 'Эрчим хүч (кВтц)', width: 12.77, fmt: FMT.num2 },
+  { header: 'Дундаж чадал (кВт)', width: 12.33, fmt: '0.0' },
+  { header: 'SoC эхлэл', width: 8, fmt: FMT.pct, align: 'center' },
+  { header: 'SoC төгсгөл', width: 8, fmt: FMT.pct, align: 'center' },
+  { header: 'Тариф (₮/кВтц)', width: 9, fmt: FMT.intSep },
+  { header: 'Борлуулалт (₮)', width: 11.1, fmt: FMT.intSep },
+  { header: 'Буцаалт (₮)', width: 9, fmt: '#,##0;-#,##0;-' },
+  { header: 'И-баримт', width: 11, align: 'center' },
+  { header: 'И-баримт ID', width: 28 },
+  { header: 'Зогсоосон шалтгаан', width: 12, align: 'center' },
+];
+
+function buildSessionsSheet(wb: ExcelJS.Workbook, ctx: Ctx) {
+  const ws = wb.addWorksheet(SESSION_SHEET, {
+    views: [{ showGridLines: false, state: 'frozen', ySplit: 3 }],
+    pageSetup: {
+      paperSize: 9,
+      orientation: 'landscape',
+      fitToPage: true,
+      fitToWidth: 1,
+      fitToHeight: 0,
+      margins: { left: 0.2, right: 0.2, top: 1, bottom: 1, header: 0.5, footer: 0.5 },
+    },
   });
+  ws.views = [{ showGridLines: false, state: 'frozen', xSplit: 0, ySplit: 3 }];
+  ws.columns = SESSION_COLUMNS.map((c) => ({ width: c.width === 9 ? 9.01 : c.width }));
 
-  // Data rows
-  sessions.forEach((s, idx) => {
-    const r = idx + 2;
-    const row = ws.getRow(r);
-    row.height = 20;
-    const isEven = idx % 2 === 1;
-    const bgFill = isEven ? solidFill(C_ZEBRA) : solidFill(C_WHITE);
+  put(ws, 'A1', 'Цэнэглэлтийн мэдээлэл', { bold: true, size: 28, color: GREEN_DARK });
+  ws.getCell('A1').font = { name: 'Calibri', size: 28, bold: true, color: { argb: GREEN_DARK } };
+  ws.getRow(1).height = 36;
+  ws.getRow(2).height = 6.6;
 
-    const values: (string | number)[] = [
-      idx + 1,
+  SESSION_COLUMNS.forEach((c, i) => put(ws, ws.getCell(3, i + 1).address, c.header, header()));
+  ws.getRow(3).height = 34.05;
+
+  ctx.sessions.forEach((s, i) => {
+    const r = ctx.first + i;
+    const values: ExcelJS.CellValue[] = [
+      i + 1,
       s.id,
       `Буу ${connectorLetter(s.connectorId)}`,
-      formatDateTime(s.startTimestamp),
-      formatDateTime(s.stopTimestamp),
-      s.durationMin ?? 0,
-      s.driverName || '',
+      excelLocal(s.startTimestamp),
+      excelLocal(s.stopTimestamp),
+      f(`INT(D${r})`, excelDay(s.startTimestamp)),
+      s.durationMin ?? null,
       s.driverPhone || '',
-      s.driverEmail || '',
       s.driverType || '',
       s.idTag || '',
       s.vehicle || '',
-      s.vehicleVin || '',
-      s.vehicleBatteryKwh != null ? round2(s.vehicleBatteryKwh) : '',
-      s.meterStartWh ?? 0,
-      s.meterStopWh ?? 0,
-      round2(s.energyKwh),
-      s.avgPowerKw != null ? round2(s.avgPowerKw) : '',
-      s.startSocPercent != null ? `${s.startSocPercent}%` : '',
-      s.endSocPercent != null ? `${s.endSocPercent}%` : '',
-      s.tariffPerKwh != null ? round2(s.tariffPerKwh) : '',
-      round2(s.cost),
-      round2(s.feeAmount ?? 0),
-      round2(s.clientNet ?? s.cost - (s.feeAmount ?? 0)),
-      s.paymentProvider || '',
-      s.paymentStatus || '',
-      s.paidAmount != null ? round2(s.paidAmount) : '',
-      s.refundAmount != null ? round2(s.refundAmount) : '',
+      round2(s.energyKwh || 0),
+      s.avgPowerKw != null ? round2(s.avgPowerKw) : null,
+      s.startSocPercent != null ? s.startSocPercent / 100 : null,
+      s.endSocPercent != null ? s.endSocPercent / 100 : null,
+      s.tariffPerKwh != null ? round2(s.tariffPerKwh) : null,
+      round2(s.cost || 0),
+      s.refundAmount != null ? round2(s.refundAmount) : 0,
       s.ebarimtStatus || '',
       s.ebarimtReceiptId || '',
       s.stopReason || '',
     ];
-
-    values.forEach((v, colIdx) => {
-      const cell = row.getCell(colIdx + 1);
-      cell.value = v;
-      const colDef = columns[colIdx];
-      cell.font = { name: 'Segoe UI', size: 9, color: { argb: C_TEXT_DARK } };
-      cell.fill = bgFill;
-      cell.alignment = {
-        vertical: 'middle',
-        horizontal: (colDef?.align || 'left') as ExcelJS.Alignment['horizontal'],
-        indent: colDef?.align === 'left' ? 1 : 0,
-      };
-      if (colDef?.numFmt && typeof v === 'number') {
-        cell.numFmt = colDef.numFmt;
-      }
-      cell.border = thinBorder(C_BORDER_LIGHT);
+    values.forEach((v, c) => {
+      const col = SESSION_COLUMNS[c];
+      put(ws, ws.getCell(r, c + 1).address, v, { border: true, fmt: col.fmt, align: col.align });
     });
   });
 
-  // Total summary footer row
-  const totalR = sessions.length + 3;
-  const totalRow = ws.getRow(totalR);
-  totalRow.height = 24;
+  const totalRow = ctx.last + 1;
+  for (let c = 1; c <= SESSION_COLUMNS.length; c++) put(ws, ws.getCell(totalRow, c).address, null, total());
+  const range = (l: string) => `${l}${ctx.first}:${l}${ctx.last}`;
+  ws.getCell(`A${totalRow}`).value = 'НИЙТ';
+  put(ws, `B${totalRow}`, f(`COUNT(${range('B')})`, ctx.sessions.length), total({ fmt: '0" цэнэглэлт"' }));
+  put(ws, `G${totalRow}`, f(`SUM(${range('G')})`, ctx.totals.minutes), total({ fmt: FMT.intSep }));
+  put(ws, `L${totalRow}`, f(`SUM(${range('L')})`, ctx.totals.kwh), total({ fmt: FMT.num2 }));
+  put(ws, `Q${totalRow}`, f(`SUM(${range('Q')})`, ctx.totals.gross), total({ fmt: FMT.intSep }));
+  put(ws, `R${totalRow}`, f(`SUM(${range('R')})`, ctx.totals.refund), total({ fmt: '#,##0;-#,##0;-' }));
 
-  const totalDuration = sessions.reduce((sum, s) => sum + (s.durationMin ?? 0), 0);
-  const totalKwh = round2(sessions.reduce((sum, s) => sum + (s.energyKwh ?? 0), 0));
-  const totalGross = round2(sessions.reduce((sum, s) => sum + (s.cost ?? 0), 0));
-  const totalFee = round2(sessions.reduce((sum, s) => sum + (s.feeAmount ?? 0), 0));
-  const totalNet = round2(sessions.reduce((sum, s) => sum + (s.clientNet ?? s.cost - (s.feeAmount ?? 0)), 0));
-  const totalPaid = round2(sessions.reduce((sum, s) => sum + (s.paidAmount ?? 0), 0));
-  const totalRefund = round2(sessions.reduce((sum, s) => sum + (s.refundAmount ?? 0), 0));
-  const uniqueDrivers = new Set(sessions.map((s) => s.idTag).filter(Boolean)).size;
+  const fmtN = (n: number, d = 0) => n.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
+  put(
+    ws,
+    `A${totalRow + 2}`,
+    `Борлуулалт = системд бүртгэгдсэн цэнэглэлт бүрийн дүн (нийт: ${fmtN(ctx.totals.gross)} ₮, ${fmtN(ctx.totals.kwh, 2)} кВтц, ${fmtN(ctx.totals.minutes)} мин).`,
+    { size: 9, color: MUTED },
+  );
 
-  for (let c = 1; c <= columns.length; c++) {
-    const cell = totalRow.getCell(c);
-    cell.font = { name: 'Segoe UI', size: 9.5, bold: true, color: { argb: C_TEXT_DARK } };
-    cell.fill = solidFill(C_SUBHEADER_BG);
-    cell.border = {
-      top: { style: 'medium', color: { argb: 'FF94A3B8' } },
-      bottom: { style: 'double', color: { argb: C_DARK_SLATE } },
-      left: { style: 'thin', color: { argb: C_BORDER } },
-      right: { style: 'thin', color: { argb: C_BORDER } },
-    };
-  }
-
-  totalRow.getCell(1).value = 'НИЙТ';
-  totalRow.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
-
-  totalRow.getCell(2).value = `${sessions.length} сеанс`;
-  totalRow.getCell(2).alignment = { horizontal: 'center', vertical: 'middle' };
-
-  totalRow.getCell(6).value = totalDuration;
-  totalRow.getCell(6).numFmt = '#,##0';
-  totalRow.getCell(6).alignment = { horizontal: 'right', vertical: 'middle' };
-
-  totalRow.getCell(7).value = `${uniqueDrivers} жолооч`;
-  totalRow.getCell(7).alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
-
-  totalRow.getCell(17).value = totalKwh;
-  totalRow.getCell(17).numFmt = '#,##0.00';
-  totalRow.getCell(17).alignment = { horizontal: 'right', vertical: 'middle' };
-
-  totalRow.getCell(22).value = totalGross;
-  totalRow.getCell(22).numFmt = '#,##0 "₮"';
-  totalRow.getCell(22).alignment = { horizontal: 'right', vertical: 'middle' };
-
-  totalRow.getCell(23).value = totalFee;
-  totalRow.getCell(23).numFmt = '#,##0 "₮"';
-  totalRow.getCell(23).alignment = { horizontal: 'right', vertical: 'middle' };
-
-  totalRow.getCell(24).value = totalNet;
-  totalRow.getCell(24).numFmt = '#,##0 "₮"';
-  totalRow.getCell(24).alignment = { horizontal: 'right', vertical: 'middle' };
-
-  totalRow.getCell(27).value = totalPaid;
-  totalRow.getCell(27).numFmt = '#,##0 "₮"';
-  totalRow.getCell(27).alignment = { horizontal: 'right', vertical: 'middle' };
-
-  totalRow.getCell(28).value = totalRefund;
-  totalRow.getCell(28).numFmt = '#,##0 "₮"';
-  totalRow.getCell(28).alignment = { horizontal: 'right', vertical: 'middle' };
-
+  ws.autoFilter = `A3:U${ctx.last}`;
   return ws;
 }
 
-/**
- * Builds the full styled 2-sheet workbook
- */
+// ---------------------------------------------------------------------------
+// Public API
+// ---------------------------------------------------------------------------
+
 export async function buildStationRevenueWorkbook(
   params: RevenueReportParams,
   sessions: RevenueReportSessionItem[],
 ): Promise<ExcelJS.Workbook> {
   const wb = new ExcelJS.Workbook();
-  wb.creator = 'Eplug.mn CSMS';
-  wb.lastModifiedBy = 'Eplug Operator';
+  wb.creator = 'Eplug.mn';
   wb.created = new Date();
   wb.modified = new Date();
+  // Cached results are best-effort; make Excel recompute everything on open.
+  wb.calcProperties = { fullCalcOnLoad: true };
 
-  // Sheet 1: «Тайлан»
-  buildRevenueReportWorksheet(wb, params);
-
-  // Sheet 2: «Цэнэглэлтийн лог»
-  buildSessionsLogWorksheet(wb, sessions);
-
+  const ctx = buildCtx(params, sessions);
+  buildSummarySheet(wb, ctx);
+  buildAnalysisSheet(wb, ctx);
+  buildSessionsSheet(wb, ctx);
   return wb;
 }
 
-/**
- * Browser download helper
- */
+/** Browser download helper. */
 export async function downloadWorkbook(wb: ExcelJS.Workbook, filename: string): Promise<void> {
   const buffer = await wb.xlsx.writeBuffer();
   const blob = new Blob([buffer], {

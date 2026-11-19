@@ -42,7 +42,8 @@ import type {
   SessionPaymentMethod,
   SessionUser,
 } from '@/lib/types';
-import { Badge, Button, Card, Input, Select, type Tone } from '@/components/ui/primitives';
+import { Badge, Button, Card, Field, Input, Select, type Tone } from '@/components/ui/primitives';
+import { Modal } from '@/components/ui/modal';
 import { DateRangePicker, toIsoDate, type DateRange } from '@/components/ui/date-picker';
 import {
   Table,
@@ -492,8 +493,62 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
   // Per-station Revenue Allocation Report («EV ЦЭНЭГЛЭХ СТАНЦЫН ОРЛОГО ХУВААРИЛАЛТЫН ТАЙЛАН»)
   const [revenueReportLoading, setRevenueReportLoading] = React.useState(false);
 
-  async function handleDownloadRevenueReport() {
+  // Manual inputs for the report: meter readings and the data-SIM cost (entered by staff).
+  const [revenueFormOpen, setRevenueFormOpen] = React.useState(false);
+  const [meterStartInput, setMeterStartInput] = React.useState('');
+  const [meterEndInput, setMeterEndInput] = React.useState('');
+  const [simCostInput, setSimCostInput] = React.useState('5000');
+
+  const meterStorageKey = (stationId: string) => `eplug.report.meter.${stationId}`;
+
+  function openRevenueForm() {
     if (selectedStation === 'all') return;
+    // Last report's end reading is this report's start reading.
+    let saved: { end?: string; sim?: string } = {};
+    try {
+      saved = JSON.parse(localStorage.getItem(meterStorageKey(selectedStation)) ?? '{}');
+    } catch {
+      saved = {};
+    }
+    setMeterStartInput(saved.end ?? '');
+    setMeterEndInput('');
+    setSimCostInput(saved.sim ?? '5000');
+    setRevenueFormOpen(true);
+  }
+
+  const parseNum = (s: string) => {
+    const n = Number(s.replace(/[\s,]/g, ''));
+    return s.trim() !== '' && Number.isFinite(n) ? n : undefined;
+  };
+  const meterStart = parseNum(meterStartInput);
+  const meterEnd = parseNum(meterEndInput);
+  const simCost = parseNum(simCostInput);
+  const meterError =
+    meterStart != null && meterEnd != null && meterEnd < meterStart
+      ? 'Эцсийн заалт эхний заалтаас бага байж болохгүй'
+      : undefined;
+
+  async function submitRevenueForm(e: React.FormEvent) {
+    e.preventDefault();
+    if (meterError) return;
+    try {
+      localStorage.setItem(
+        meterStorageKey(selectedStation),
+        JSON.stringify({ end: meterEndInput.trim(), sim: simCostInput.trim() }),
+      );
+    } catch {
+      // Remembering the reading is a convenience only.
+    }
+    const ok = await handleDownloadRevenueReport({ meterStart, meterEnd, simCost });
+    if (ok) setRevenueFormOpen(false);
+  }
+
+  async function handleDownloadRevenueReport(inputs: {
+    meterStart?: number;
+    meterEnd?: number;
+    simCost?: number;
+  }): Promise<boolean> {
+    if (selectedStation === 'all') return false;
     setRevenueReportLoading(true);
     try {
       const rep = await fetcher<StationSessionsExport>(
@@ -531,14 +586,19 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
         sessionsCount: rep.totals.sessionsCount,
         platformKwh: rep.totals.energyKwh,
         grossRevenue: rep.totals.gross,
-        // Meter readings are left blank for staff to fill in; the bill recalculates from them.
+        // Entered in the form; any left empty stay blank in Excel for manual entry.
+        meterStartReading: inputs.meterStart,
+        meterEndReading: inputs.meterEnd,
+        otherDirectCosts: inputs.simCost,
       };
 
       const wb = await buildStationRevenueWorkbook(params, rep.sessions);
       await downloadWorkbook(wb, revenueReportFileName(params));
       toast.success('Орлого хуваарилалтын Excel тайлан амжилттай татагдлаа');
+      return true;
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Тайлан татахад алдаа гарлаа');
+      return false;
     } finally {
       setRevenueReportLoading(false);
     }
@@ -974,7 +1034,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
             <Button
               variant="secondary"
               size="sm"
-              onClick={handleDownloadRevenueReport}
+              onClick={openRevenueForm}
               disabled={selectedStation === 'all' || revenueReportLoading}
               className={cn(
                 'text-xs h-8 font-medium gap-1 transition-all',
@@ -1550,6 +1610,74 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
           </TableWrap>
         )}
       </Card>
+
+      <Modal
+        open={revenueFormOpen}
+        onClose={() => setRevenueFormOpen(false)}
+        title="Тайлан татах"
+        description={`${
+          stationOptions.find((s) => s.id === selectedStation)?.name ?? ''
+        } · ${range.from} — ${range.to}`}
+        footer={
+          <>
+            <Button type="button" variant="secondary" onClick={() => setRevenueFormOpen(false)}>
+              Болих
+            </Button>
+            <Button
+              type="submit"
+              form="revenue-report-form"
+              disabled={revenueReportLoading || !!meterError}
+              className="gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
+            >
+              <FileSpreadsheet className="h-3.5 w-3.5" />
+              {revenueReportLoading ? 'Бэлдэж байна…' : 'Excel татах'}
+            </Button>
+          </>
+        }
+      >
+        <form id="revenue-report-form" onSubmit={submitRevenueForm} className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="Тоолуурын эхний заалт" htmlFor="meter-start" hint="Өмнөх тайлангийн эцсийн заалт">
+              <Input
+                id="meter-start"
+                inputMode="decimal"
+                value={meterStartInput}
+                onChange={(e) => setMeterStartInput(e.target.value)}
+                placeholder="0.00"
+              />
+            </Field>
+            <Field label="Тоолуурын эцсийн заалт" htmlFor="meter-end" error={meterError}>
+              <Input
+                id="meter-end"
+                inputMode="decimal"
+                value={meterEndInput}
+                onChange={(e) => setMeterEndInput(e.target.value)}
+                placeholder="0.00"
+                autoFocus
+              />
+            </Field>
+          </div>
+          <Field label="Дата сим тогтмол зардал (₮)" htmlFor="sim-cost">
+            <Input
+              id="sim-cost"
+              inputMode="numeric"
+              value={simCostInput}
+              onChange={(e) => setSimCostInput(e.target.value)}
+              placeholder="5000"
+            />
+          </Field>
+          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)]/40 px-3 py-2 text-xs text-[var(--color-fg-muted)]">
+            Тоолуурын хэрэглээ:{' '}
+            <span className="font-mono font-semibold text-[var(--color-fg)]">
+              {meterStart != null && meterEnd != null && !meterError
+                ? `${formatNumber((meterEnd - meterStart) * 60 * 1.025, 2)} кВтц`
+                : '—'}
+            </span>
+            <span className="ml-1">= (эцсийн − эхний) × 60 × 1.025</span>
+            <div className="mt-1">Хоосон үлдээвэл Excel дээр гараар оруулж болно.</div>
+          </div>
+        </form>
+      </Modal>
     </div>
   );
 }

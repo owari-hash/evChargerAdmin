@@ -556,8 +556,219 @@ export const LIVE_EVENT_NAMES = [
   'diagnostics.status',
   'log.status',
   'command.result',
+  'power.telemetry',
+  'power.alert',
   'ocpp.message',
 ] as const;
+
+// ---------------------------------------------------------------------------
+// Power Monitoring & Electrical Analytics (backend: /api/power-monitoring/*)
+// ---------------------------------------------------------------------------
+
+export interface StationElectricalConfig {
+  ratedCapacityKW: number;
+  configuredGridLimitKW: number;
+  inputMeterAvailable: boolean;
+  inputMeterId?: string;
+  powerSharingEnabled: boolean;
+  powerSharingMode: 'EQUAL' | 'DYNAMIC_DEMAND' | 'PRIORITY' | 'FIFO';
+  maximumSimultaneousSessions?: number;
+  warningThresholds?: {
+    highUtilizationPct?: number;
+    overloadPct?: number;
+    underperformancePct?: number;
+    minVoltageV?: number;
+    maxVoltageV?: number;
+    maxCurrentA?: number;
+  };
+}
+
+export interface PowerMonitoringSummary {
+  totalStations: number;
+  onlineStations: number;
+  offlineStations: number;
+  chargingPilesCount: number;
+  activeSessionsCount: number;
+  totalCurrentPowerKw: number;
+  totalAvailableCapacityKw: number;
+  totalStationCapacityKw: number;
+  networkUtilizationPct: number;
+  stationsSharingPowerCount: number;
+  totalEnergyDeliveredTodayKwh: number;
+  lastTelemetryTimestamp: string | null;
+}
+
+export interface ElectricalEfficiency {
+  inputMeterAvailable: boolean;
+  incomingPowerKw: number | null;
+  totalOutputKw: number;
+  powerDifferenceKw: number | null;
+  outputEfficiencyPct: number | null;
+  status: 'NORMAL' | 'HIGH_LOSS' | 'INPUT_METER_UNAVAILABLE';
+  notice: string | null;
+}
+
+export interface PilePowerItem {
+  connectorId: number;
+  code?: string;
+  label?: string;
+  status: string;
+  powerKw: number;
+  voltageV?: number;
+  currentA?: number;
+  socPercent?: number;
+  performanceStatus:
+    | 'NORMAL'
+    | 'LIMITED_BY_VEHICLE'
+    | 'LIMITED_BY_STATION'
+    | 'LIMITED_BY_CHARGER'
+    | 'UNDERPERFORMING'
+    | 'POSSIBLE_ELECTRICAL_SUPPLY_ISSUE'
+    | 'INSUFFICIENT_TELEMETRY'
+    | 'IDLE';
+}
+
+export interface StationPowerItem {
+  id: string;
+  cpId: string;
+  name: string;
+  isOnline: boolean;
+  lastSeenAt: string | null;
+  ratedCapacityKw: number;
+  configuredGridLimitKw: number;
+  actualIncomingPowerKw: number | null;
+  inputMeterAvailable: boolean;
+  totalOutputPowerKw: number;
+  availablePowerKw: number;
+  overloadKw: number;
+  utilizationPct: number;
+  statusLevel: 'NORMAL' | 'HIGH' | 'NEAR_MAX' | 'AT_MAX' | 'OVERLOAD';
+  activePilesCount: number;
+  totalPilesCount: number;
+  availablePilesCount: number;
+  faultyPilesCount: number;
+  powerSharingStatus: 'IDLE' | 'SINGLE_PILE' | 'EQUAL_SHARING' | 'DYNAMIC_SHARING' | 'OVERLOAD';
+  efficiency: ElectricalEfficiency;
+  activeAlertsCount: number;
+  telemetryFreshness: 'LIVE' | 'STALE' | 'OFFLINE';
+  lastTelemetryAt: string | null;
+  connectors: PilePowerItem[];
+}
+
+export interface StationPowerDetail {
+  station: {
+    id: string;
+    cpId: string;
+    name: string;
+    isOnline: boolean;
+    lastSeenAt: string | null;
+    electricalConfig: StationElectricalConfig;
+  };
+  powerMetrics: {
+    ratedCapacityKw: number;
+    configuredGridLimitKw: number;
+    totalOutputPowerKw: number;
+    availablePowerKw: number;
+    overloadKw: number;
+    utilizationPct: number;
+    statusLevel: 'NORMAL' | 'HIGH' | 'NEAR_MAX' | 'AT_MAX' | 'OVERLOAD';
+  };
+  powerSharing: {
+    mode: string;
+    activePilesCount: number;
+    totalOutputKw: number;
+    configuredCapacityKw: number;
+    remainingCapacityKw: number;
+    overloadKw: number;
+    isCapacityReached: boolean;
+    isThrottled: boolean;
+    status: 'IDLE' | 'SINGLE_PILE' | 'EQUAL_SHARING' | 'DYNAMIC_SHARING' | 'OVERLOAD';
+    allocations: {
+      connectorId: number;
+      activePowerKw: number;
+      ratedPowerKw: number;
+      sharePct: number;
+      utilizationOfRatedPct: number;
+    }[];
+  };
+  efficiency: ElectricalEfficiency;
+  piles: {
+    connectorId: number;
+    code?: string;
+    label?: string;
+    status: string;
+    ratedPowerKw: number;
+    maximumPowerKw: number;
+    configuredPowerLimitKw: number;
+    activePowerKw: number;
+    voltageV?: number;
+    currentA?: number;
+    energyKwh: number;
+    socPercent: number | null;
+    sessionDurationSec: number;
+    transactionId: number | null;
+    vehicle?: {
+      vin?: string;
+      model?: string;
+      batteryKwh?: number;
+    };
+    diagnosis: {
+      status: string;
+      ratedPowerKw: number;
+      actualPowerKw: number;
+      expectedPowerKw: number;
+      utilizationOfRatedPct: number;
+      explanation: string;
+    };
+    lastTelemetryAt: string | null;
+    qualityStatus: string;
+  }[];
+  alerts: {
+    id: string;
+    alertType: string;
+    severity: 'CRITICAL' | 'WARNING' | 'INFO';
+    title: string;
+    message: string;
+    firstSeenAt: string;
+    lastSeenAt: string;
+    status: string;
+  }[];
+}
+
+export interface HistoricalPowerPoint {
+  t: string;
+  timestamp: string;
+  stationOutputKw: number;
+  stationCapacityKw: number;
+  utilizationPct: number;
+  energyKwh: number;
+  piles: Record<string, number>;
+}
+
+export interface HistoricalPowerAnalytics {
+  range: string;
+  bucketMinutes: number;
+  stationCapacityKw: number;
+  points: HistoricalPowerPoint[];
+}
+
+export interface PowerAlertItem {
+  id: string;
+  chargePointId: string;
+  cpId: string;
+  connectorId?: number;
+  alertType: string;
+  severity: 'CRITICAL' | 'WARNING' | 'INFO';
+  title: string;
+  message: string;
+  status: 'ACTIVE' | 'ACKNOWLEDGED' | 'RESOLVED';
+  firstSeenAt: string;
+  lastSeenAt: string;
+  resolvedAt?: string;
+  resolvedBy?: string;
+  measuredValues?: Record<string, unknown>;
+  threshold?: Record<string, unknown>;
+}
 
 // ---------------------------------------------------------------------------
 // QPay QuickQR merchants (backend: /api/qpay/*)

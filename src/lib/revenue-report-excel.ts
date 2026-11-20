@@ -89,6 +89,8 @@ export interface RevenueReportParams {
   /** Payment-provider fee as a fraction of revenue, e.g. 0.01. */
   qpayRate?: number;
   otherDirectCosts?: number;
+  /** Extra cost lines (Бусад зардал), each its own row under the data-SIM cost. */
+  extraCosts?: { label: string; amount: number }[];
   reportNumber?: string;
   operatorName?: string;
   platformName?: string;
@@ -462,27 +464,39 @@ function buildSummarySheet(wb: ExcelJS.Workbook, ctx: Ctx) {
     [40, 'QPay шимтгэл', f('-B38*E40', -round2(totals.gross * qpayRate)), `Орлогын ${qpayRate * 100}%`, qpayRate, FMT.pct],
     [41, 'Бусад шууд зардал', f('-E41', -otherCost), DEFAULTS.otherDirectCostLabel, otherCost, FMT.num2],
   ];
+  const extraCosts = (params.extraCosts ?? []).filter((c) => c.amount || c.label.trim());
+  extraCosts.forEach((c, i) => {
+    const row = 42 + i;
+    costRows.push([row, 'Бусад зардал', f(`-E${row}`, -c.amount), c.label.trim() || 'Бусад зардал', c.amount, FMT.num2]);
+  });
+  const lastCostRow = 41 + extraCosts.length;
+  const totalCostRow = lastCostRow + 1;
+  const netRow = totalCostRow + 1;
   for (const [r, name, value, desc, input, inputFmt] of costRows) {
     put(ws, `A${r}`, name, label());
     put(ws, `B${r}`, value, val({ fmt: FMT.money }));
     putMerged(ws, `C${r}:D${r}`, desc, label());
     put(ws, `E${r}`, input, val({ fmt: inputFmt, align: 'center' }));
   }
-  put(ws, 'A42', 'Нийт шууд зардал', label({ bold: true }));
-  put(ws, 'B42', f('SUM(B39:B41)'), val({ bold: true, fmt: FMT.money }));
-  putMerged(ws, 'C42:D42', '', label());
-  put(ws, 'E42', null, val());
-  put(ws, 'A43', 'Хуваарилагдах орлого', total({ align: 'left', indent: 1 }));
-  put(ws, 'B43', f('B38+B42'), total({ align: 'right', fmt: FMT.money }));
-  putMerged(ws, 'C43:D43', 'Хувь тооцох суурь', total({ align: 'left', indent: 1 }));
-  put(ws, 'E43', null, total());
+  put(ws, `A${totalCostRow}`, 'Нийт шууд зардал', label({ bold: true }));
+  put(ws, `B${totalCostRow}`, f(`SUM(B39:B${lastCostRow})`), val({ bold: true, fmt: FMT.money }));
+  putMerged(ws, `C${totalCostRow}:D${totalCostRow}`, '', label());
+  put(ws, `E${totalCostRow}`, null, val());
+  put(ws, `A${netRow}`, 'Хуваарилагдах орлого', total({ align: 'left', indent: 1 }));
+  put(ws, `B${netRow}`, f(`B38+B${totalCostRow}`), total({ align: 'right', fmt: FMT.money }));
+  putMerged(ws, `C${netRow}:D${netRow}`, 'Хувь тооцох суурь', total({ align: 'left', indent: 1 }));
+  put(ws, `E${netRow}`, null, total());
 
   // 5. Орлого хуваарилалт ----------------------------------------------------
-  sectionTitle(ws, 'A45', '5. Орлого хуваарилалт');
+  // Rows below shift down by one for every extra cost line.
+  const allocTitleRow = netRow + 2;
+  const allocHeaderRow = allocTitleRow + 1;
+  const firstRecipient = allocHeaderRow + 1;
+  sectionTitle(ws, `A${allocTitleRow}`, '5. Орлого хуваарилалт');
   ['Хүлээн авагч', 'Дүн', 'Банк', 'Төлбөр хүлээн авах данс', 'Ногдох хувь'].forEach((h, i) =>
-    put(ws, `${'ABCDE'[i]}46`, h, header()),
+    put(ws, `${'ABCDE'[i]}${allocHeaderRow}`, h, header()),
   );
-  ws.getRow(46).height = 22.05;
+  ws.getRow(allocHeaderRow).height = 22.05;
 
   const clientShare =
     params.clientShare ??
@@ -496,16 +510,15 @@ function buildSummarySheet(wb: ExcelJS.Workbook, ctx: Ctx) {
     },
     ...PLATFORM_RECIPIENTS.map((p) => ({ ...p, share: round2((1 - clientShare) * p.weight * 1000) / 1000 })),
   ];
-  let r = 47;
+  let r = firstRecipient;
   for (const rc of recipients) {
     put(ws, `A${r}`, rc.name, label({ wrap: true }));
-    put(ws, `B${r}`, f(`$B$43*E${r}`), val({ fmt: FMT.money }));
+    put(ws, `B${r}`, f(`$B$${netRow}*E${r}`), val({ fmt: FMT.money }));
     put(ws, `C${r}`, rc.bank, val({ align: 'center' }));
     put(ws, `D${r}`, rc.account, val({ align: 'center' }));
     put(ws, `E${r}`, rc.share, val({ align: 'center', fmt: FMT.pct1 }));
     r++;
   }
-  const firstRecipient = 47;
   put(ws, `A${r}`, 'ТӨЛӨХ ДҮН', total({ align: 'left', indent: 1 }));
   put(ws, `B${r}`, f(`SUM(B${firstRecipient}:B${r - 1})`), total({ align: 'right', fmt: FMT.money }));
   put(ws, `C${r}`, null, total());
@@ -527,8 +540,8 @@ function buildSummarySheet(wb: ExcelJS.Workbook, ctx: Ctx) {
   const recon: [string, string, string, string, string, string][] = [
     ['Тоолуурын хэрэглээ (кВтц)', 'B21', FMT.num2, 'Цахилгааны өртөг, 1 кВтц', 'IFERROR(B26/B21,0)', FMT.perKwh],
     ['Платформын хэрэглээ (кВтц)', 'B33', FMT.num2, 'Дундаж борлуулалтын үнэ, 1 кВтц', 'IFERROR(B38/B33,0)', FMT.perKwh],
-    ['Зөрүү (кВтц)', `B${a}-B${a + 1}`, FMT.num2, 'Цэвэр орлого, 1 кВтц', 'IFERROR(B43/B33,0)', FMT.perKwh],
-    ['Зөрүү / тоолуур', `IFERROR(B${a + 2}/B${a},0)`, FMT.pct1Signed, 'Цэвэр орлогын хувь', 'IFERROR(B43/B38,0)', FMT.pct1Signed],
+    ['Зөрүү (кВтц)', `B${a}-B${a + 1}`, FMT.num2, 'Цэвэр орлого, 1 кВтц', `IFERROR(B${netRow}/B33,0)`, FMT.perKwh],
+    ['Зөрүү / тоолуур', `IFERROR(B${a + 2}/B${a},0)`, FMT.pct1Signed, 'Цэвэр орлогын хувь', `IFERROR(B${netRow}/B38,0)`, FMT.pct1Signed],
   ];
   recon.forEach(([l1, f1, fmt1, l2, f2, fmt2], i) => {
     put(ws, `A${a + i}`, l1, label());

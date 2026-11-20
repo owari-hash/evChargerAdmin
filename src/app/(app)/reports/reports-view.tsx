@@ -20,6 +20,8 @@ import {
   TrendingUp,
   Wallet,
   X,
+  Plus,
+  Trash2,
 } from 'lucide-react';
 import { apiUrl, fetcher } from '@/lib/client';
 import {
@@ -498,13 +500,19 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
   const [meterStartInput, setMeterStartInput] = React.useState('');
   const [meterEndInput, setMeterEndInput] = React.useState('');
   const [simCostInput, setSimCostInput] = React.useState('5000');
+  // "Бусад зардал": any number of extra cost lines, each with a name and amount.
+  const [extraCosts, setExtraCosts] = React.useState<{ label: string; amount: string }[]>([]);
+  const addExtraCost = () => setExtraCosts((list) => [...list, { label: '', amount: '' }]);
+  const updateExtraCost = (i: number, patch: Partial<{ label: string; amount: string }>) =>
+    setExtraCosts((list) => list.map((c, j) => (j === i ? { ...c, ...patch } : c)));
+  const removeExtraCost = (i: number) => setExtraCosts((list) => list.filter((_, j) => j !== i));
 
   const meterStorageKey = (stationId: string) => `eplug.report.meter.${stationId}`;
 
   function openRevenueForm() {
     if (selectedStation === 'all') return;
     // Last report's end reading is this report's start reading.
-    let saved: { end?: string; sim?: string } = {};
+    let saved: { end?: string; sim?: string; extra?: { label: string; amount: string }[] } = {};
     try {
       saved = JSON.parse(localStorage.getItem(meterStorageKey(selectedStation)) ?? '{}');
     } catch {
@@ -513,6 +521,9 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
     setMeterStartInput(saved.end ?? '');
     setMeterEndInput('');
     setSimCostInput(saved.sim ?? '5000');
+    // Recurring costs come back with their names; amounts are kept too so a
+    // monthly fixed cost doesn't need retyping.
+    setExtraCosts(Array.isArray(saved.extra) ? saved.extra : []);
     setRevenueFormOpen(true);
   }
 
@@ -523,6 +534,10 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
   const meterStart = parseNum(meterStartInput);
   const meterEnd = parseNum(meterEndInput);
   const simCost = parseNum(simCostInput);
+  const extraCostItems = extraCosts
+    .map((c) => ({ label: c.label.trim(), amount: parseNum(c.amount) ?? 0 }))
+    .filter((c) => c.label || c.amount);
+  const extraCostTotal = extraCostItems.reduce((s, c) => s + c.amount, 0);
   const meterError =
     meterStart != null && meterEnd != null && meterEnd < meterStart
       ? 'Эцсийн заалт эхний заалтаас бага байж болохгүй'
@@ -534,12 +549,16 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
     try {
       localStorage.setItem(
         meterStorageKey(selectedStation),
-        JSON.stringify({ end: meterEndInput.trim(), sim: simCostInput.trim() }),
+        JSON.stringify({
+          end: meterEndInput.trim(),
+          sim: simCostInput.trim(),
+          extra: extraCosts.filter((c) => c.label.trim() || c.amount.trim()),
+        }),
       );
     } catch {
       // Remembering the reading is a convenience only.
     }
-    const ok = await handleDownloadRevenueReport({ meterStart, meterEnd, simCost });
+    const ok = await handleDownloadRevenueReport({ meterStart, meterEnd, simCost, extraCosts: extraCostItems });
     if (ok) setRevenueFormOpen(false);
   }
 
@@ -547,6 +566,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
     meterStart?: number;
     meterEnd?: number;
     simCost?: number;
+    extraCosts?: { label: string; amount: number }[];
   }): Promise<boolean> {
     if (selectedStation === 'all') return false;
     setRevenueReportLoading(true);
@@ -590,6 +610,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
         meterStartReading: inputs.meterStart,
         meterEndReading: inputs.meterEnd,
         otherDirectCosts: inputs.simCost,
+        extraCosts: inputs.extraCosts,
       };
 
       const wb = await buildStationRevenueWorkbook(params, rep.sessions);
@@ -1666,6 +1687,50 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
               placeholder="5000"
             />
           </Field>
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium text-[var(--color-fg)]">Бусад зардал (₮)</span>
+              {extraCostTotal > 0 ? (
+                <span className="text-xs text-[var(--color-fg-muted)]">
+                  Нийт: <span className="font-mono font-semibold text-[var(--color-fg)]">{formatMoney(extraCostTotal)}</span>
+                </span>
+              ) : null}
+            </div>
+            {extraCosts.map((c, i) => (
+              <div key={i} className="flex items-center gap-2">
+                <Input
+                  aria-label={`Бусад зардал ${i + 1} нэр`}
+                  className="min-w-0 flex-[3]"
+                  value={c.label}
+                  onChange={(e) => updateExtraCost(i, { label: e.target.value })}
+                  placeholder="Зардлын нэр (ж: засвар, түрээс)"
+                  autoFocus={i === extraCosts.length - 1 && !c.label && !c.amount}
+                />
+                <Input
+                  aria-label={`Бусад зардал ${i + 1} дүн`}
+                  className="min-w-0 flex-[2] font-mono"
+                  inputMode="numeric"
+                  value={c.amount}
+                  onChange={(e) => updateExtraCost(i, { amount: e.target.value })}
+                  placeholder="0"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => removeExtraCost(i)}
+                  aria-label="Устгах"
+                  className="shrink-0 text-[var(--color-fg-muted)] hover:text-rose-500"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </Button>
+              </div>
+            ))}
+            <Button type="button" variant="secondary" size="sm" onClick={addExtraCost} className="w-full gap-1 border-dashed">
+              <Plus className="h-3.5 w-3.5" />
+              Бусад зардал нэмэх
+            </Button>
+          </div>
           <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)]/40 px-3 py-2 text-xs text-[var(--color-fg-muted)]">
             Тоолуурын хэрэглээ:{' '}
             <span className="font-mono font-semibold text-[var(--color-fg)]">

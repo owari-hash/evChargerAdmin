@@ -502,8 +502,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
   const [simCostInput, setSimCostInput] = React.useState('5000');
   // "Бусад зардал": any number of extra cost lines, each with a name and amount.
   const [extraCosts, setExtraCosts] = React.useState<{ label: string; amount: string }[]>([]);
-  const [extraCostsTitle, setExtraCostsTitle] = React.useState('Бусад зардал');
-  const addExtraCost = () => setExtraCosts((list) => [...list, { label: '', amount: '' }]);
+  const addExtraCost = () => setExtraCosts((list) => [...list, { label: 'Бусад зардал', amount: '' }]);
   const updateExtraCost = (i: number, patch: Partial<{ label: string; amount: string }>) =>
     setExtraCosts((list) => list.map((c, j) => (j === i ? { ...c, ...patch } : c)));
   const removeExtraCost = (i: number) => setExtraCosts((list) => list.filter((_, j) => j !== i));
@@ -513,7 +512,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
   function openRevenueForm() {
     if (selectedStation === 'all') return;
     // Last report's end reading is this report's start reading.
-    let saved: { end?: string; sim?: string; extra?: { label: string; amount: string }[]; extraTitle?: string } = {};
+    let saved: { end?: string; sim?: string; extra?: { label: string; amount: string }[] } = {};
     try {
       saved = JSON.parse(localStorage.getItem(meterStorageKey(selectedStation)) ?? '{}');
     } catch {
@@ -524,9 +523,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
     setSimCostInput(saved.sim ?? '5000');
     // Recurring costs come back with their names; amounts are kept too so a
     // monthly fixed cost doesn't need retyping.
-    setExtraCosts(Array.isArray(saved.extra) ? saved.extra : []);
-    setExtraCostsTitle(saved.extraTitle || 'Бусад зардал');
-    setRevenueFormOpen(true);
+    setExtraCosts(Array.isArray(saved.extra) ? saved.extra : []);    setRevenueFormOpen(true);
   }
 
   const parseNum = (s: string) => {
@@ -539,7 +536,6 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
   const extraCostItems = extraCosts
     .map((c) => ({ label: c.label.trim(), amount: parseNum(c.amount) ?? 0 }))
     .filter((c) => c.label || c.amount);
-  const extraCostTotal = extraCostItems.reduce((s, c) => s + c.amount, 0);
   const meterError =
     meterStart != null && meterEnd != null && meterEnd < meterStart
       ? 'Эцсийн заалт эхний заалтаас бага байж болохгүй'
@@ -554,9 +550,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
         JSON.stringify({
           end: meterEndInput.trim(),
           sim: simCostInput.trim(),
-          extra: extraCosts.filter((c) => c.label.trim() || c.amount.trim()),
-          extraTitle: extraCostsTitle.trim(),
-        }),
+          extra: extraCosts.filter((c) => c.label.trim() || c.amount.trim()),        }),
       );
     } catch {
       // Remembering the reading is a convenience only.
@@ -566,7 +560,6 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
       meterEnd,
       simCost,
       extraCosts: extraCostItems,
-      extraCostsTitle: extraCostsTitle.trim() || 'Бусад зардал',
     });
     if (ok) setRevenueFormOpen(false);
   }
@@ -576,7 +569,6 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
     meterEnd?: number;
     simCost?: number;
     extraCosts?: { label: string; amount: number }[];
-    extraCostsTitle?: string;
   }): Promise<boolean> {
     if (selectedStation === 'all') return false;
     setRevenueReportLoading(true);
@@ -621,7 +613,6 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
         meterEndReading: inputs.meterEnd,
         otherDirectCosts: inputs.simCost,
         extraCosts: inputs.extraCosts,
-        extraCostsTitle: inputs.extraCostsTitle,
       };
 
       const wb = await buildStationRevenueWorkbook(params, rep.sessions);
@@ -1698,61 +1689,44 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
               placeholder="5000"
             />
           </Field>
-          <div className="space-y-2">
-            <div className="flex items-center justify-between">
-              <label className="flex min-w-0 flex-1 items-center gap-1 text-sm font-medium text-[var(--color-fg)]">
+          {/* Each added cost is its own field: a title you can rename, then the amount. */}
+          {extraCosts.map((c, i) => (
+            <div key={i} className="space-y-1.5">
+              <div className="flex items-center gap-1">
                 <input
-                  aria-label="Хэсгийн нэр"
+                  aria-label={`Зардал ${i + 1}-ийн нэр`}
                   title="Нэрийг өөрчлөхийн тулд дарна уу"
-                  value={extraCostsTitle}
-                  onChange={(e) => setExtraCostsTitle(e.target.value)}
-                  placeholder="Бусад зардал"
-                  size={Math.max(8, extraCostsTitle.length + 1)}
-                  className="min-w-0 max-w-full rounded-md border border-transparent bg-transparent px-1 py-0.5 -ml-1 hover:border-[var(--color-border)] focus:border-[var(--color-brand)] focus:outline-none"
-                />
-                <span className="shrink-0 text-[var(--color-fg-muted)]">(₮)</span>
-              </label>
-              {extraCostTotal > 0 ? (
-                <span className="text-xs text-[var(--color-fg-muted)]">
-                  Нийт: <span className="font-mono font-semibold text-[var(--color-fg)]">{formatMoney(extraCostTotal)}</span>
-                </span>
-              ) : null}
-            </div>
-            {extraCosts.map((c, i) => (
-              <div key={i} className="flex items-center gap-2">
-                <Input
-                  aria-label={`Бусад зардал ${i + 1} нэр`}
-                  className="min-w-0 flex-[3]"
                   value={c.label}
                   onChange={(e) => updateExtraCost(i, { label: e.target.value })}
-                  placeholder="Зардлын нэр (ж: Засвар, Түрээс)"
-                  autoFocus={i === extraCosts.length - 1 && !c.label && !c.amount}
+                  onFocus={(e) => e.currentTarget.select()}
+                  placeholder="Бусад зардал"
+                  size={Math.max(8, c.label.length + 1)}
+                  className="min-w-0 max-w-full -ml-1 rounded-md border border-dashed border-transparent bg-transparent px-1 py-0.5 text-sm font-medium text-[var(--color-fg)] hover:border-[var(--color-border)] focus:border-solid focus:border-[var(--color-brand)] focus:outline-none"
                 />
-                <Input
-                  aria-label={`Бусад зардал ${i + 1} дүн`}
-                  className="min-w-0 flex-[2] font-mono"
-                  inputMode="numeric"
-                  value={c.amount}
-                  onChange={(e) => updateExtraCost(i, { amount: e.target.value })}
-                  placeholder="0"
-                />
-                <Button
+                <span className="shrink-0 text-sm font-medium text-[var(--color-fg)]">(₮)</span>
+                <button
                   type="button"
-                  variant="ghost"
-                  size="sm"
                   onClick={() => removeExtraCost(i)}
                   aria-label="Устгах"
-                  className="shrink-0 text-[var(--color-fg-muted)] hover:text-rose-500"
+                  className="ml-auto grid size-7 shrink-0 place-items-center rounded-md text-[var(--color-fg-muted)] hover:bg-rose-500/10 hover:text-rose-500"
                 >
                   <Trash2 className="h-4 w-4" />
-                </Button>
+                </button>
               </div>
-            ))}
-            <Button type="button" variant="secondary" size="sm" onClick={addExtraCost} className="w-full gap-1 border-dashed">
-              <Plus className="h-3.5 w-3.5" />
-              {(extraCostsTitle.trim() || 'Бусад зардал')} нэмэх
-            </Button>
-          </div>
+              <Input
+                aria-label={`${c.label || 'Бусад зардал'} дүн`}
+                inputMode="numeric"
+                value={c.amount}
+                onChange={(e) => updateExtraCost(i, { amount: e.target.value })}
+                placeholder="0"
+                autoFocus={i === extraCosts.length - 1 && !c.amount}
+              />
+            </div>
+          ))}
+          <Button type="button" variant="secondary" size="sm" onClick={addExtraCost} className="w-full gap-1 border-dashed">
+            <Plus className="h-3.5 w-3.5" />
+            Бусад зардал нэмэх
+          </Button>
           <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)]/40 px-3 py-2 text-xs text-[var(--color-fg-muted)]">
             Тоолуурын хэрэглээ:{' '}
             <span className="font-mono font-semibold text-[var(--color-fg)]">

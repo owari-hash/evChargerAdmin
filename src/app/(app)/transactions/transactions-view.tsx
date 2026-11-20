@@ -69,19 +69,11 @@ function StationFaultCell({ fault }: { fault: StationFaultInfo }) {
 ${fault.body}${fault.errorCode ? `
 OCPP: ${fault.errorCode}` : ''}`}
     >
-      <span
-        className={cn(
-          'inline-flex items-center gap-1 font-medium',
-          fault.endedSession ? 'text-[var(--color-danger)]' : 'text-[var(--color-warn)]',
-        )}
-      >
+      <span className="inline-flex items-center gap-1 font-medium text-[var(--color-danger)]">
         <AlertTriangle className="h-3 w-3 shrink-0" />
         <span className="truncate">{fault.title}</span>
       </span>
-      <span className="truncate font-mono text-[10px] text-[var(--color-fg-subtle)]">
-        {code}
-        {fault.endedSession ? '' : ' · цэнэглэлтийг зогсоогоогүй'}
-      </span>
+      <span className="truncate font-mono text-[10px] text-[var(--color-fg-subtle)]">{code}</span>
     </div>
   );
 }
@@ -576,7 +568,9 @@ export function TransactionsView({
                           </TD>
                           <TD className="text-xs text-[var(--color-fg-muted)]">
                             <span>{tx.stopReason ?? '—'}</span>
-                            {tx.stationFault ? <StationFaultCell fault={tx.stationFault} /> : null}
+                            {/* Only errors that actually ended the session; a brief hiccup the
+                                station recovered from is on the detail page. */}
+                            {tx.stationFault?.endedSession ? <StationFaultCell fault={tx.stationFault} /> : null}
                           </TD>
                           {!isClient ? (
                             <TD align="center" className="py-1.5">

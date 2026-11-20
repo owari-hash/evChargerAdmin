@@ -212,29 +212,18 @@ export function TransactionView({
         />
       </Card>
 
-      {tx.stationFault ? (
-        <Card
-          className={
-            tx.stationFault.endedSession
-              ? 'mb-4 border-[var(--color-danger)]/40 bg-[var(--color-danger-soft)]'
-              : 'mb-4 border-[var(--color-warn)]/40 bg-[var(--color-warn-soft)]'
-          }
-        >
+      {/* Only an error that ended the session gets the banner; a brief hiccup
+          the station recovered from is just noted in the details below. */}
+      {tx.stationFault?.endedSession ? (
+        <Card className="mb-4 border-[var(--color-danger)]/40 bg-[var(--color-danger-soft)]">
           <div className="flex items-start gap-3 px-5 py-4">
-            <AlertTriangle
-              className={
-                tx.stationFault.endedSession
-                  ? 'mt-0.5 h-5 w-5 shrink-0 text-[var(--color-danger)]'
-                  : 'mt-0.5 h-5 w-5 shrink-0 text-[var(--color-warn)]'
-              }
-            />
+            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-[var(--color-danger)]" />
             <div className="min-w-0 space-y-1">
               <div className="flex flex-wrap items-center gap-2">
                 <span className="text-sm font-semibold text-[var(--color-fg)]">{tx.stationFault.title}</span>
                 <Badge tone={tx.stationFault.vehicleSide ? 'info' : 'danger'}>
                   {tx.stationFault.vehicleSide ? 'Машины талын' : 'Станцын талын'}
                 </Badge>
-                {tx.stationFault.endedSession ? null : <Badge tone="idle">Цэнэглэлтийг зогсоогоогүй</Badge>}
               </div>
               <p className="text-xs text-[var(--color-fg-muted)]">{tx.stationFault.body}</p>
               <p className="font-mono text-[11px] text-[var(--color-fg-subtle)]">
@@ -301,7 +290,10 @@ export function TransactionView({
             <DataRow label="Зогссон шалтгаан">{mn(STOP_REASON, tx.stopReason)}</DataRow>
             {tx.stationFault ? (
               <DataRow label="Станцын алдаа" mono>
-                {tx.stationFault.vendorErrorCode || tx.stationFault.errorCode}
+                <span title={tx.stationFault.endedSession ? undefined : `${tx.stationFault.title} — станц өөрөө сэргэж, цэнэглэлт үргэлжилсэн`}>
+                  {tx.stationFault.vendorErrorCode || tx.stationFault.errorCode}
+                  {tx.stationFault.endedSession ? '' : ' (түр зуурын)'}
+                </span>
               </DataRow>
             ) : null}
             <DataRow label="Эхний тоолуур" mono>

@@ -1703,7 +1703,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                   className="min-w-0 flex-[3]"
                   value={c.label}
                   onChange={(e) => updateExtraCost(i, { label: e.target.value })}
-                  placeholder="Зардлын нэр (ж: засвар, түрээс)"
+                  placeholder="Зардлын нэр (ж: Засвар, Түрээс)"
                   autoFocus={i === extraCosts.length - 1 && !c.label && !c.amount}
                 />
                 <Input

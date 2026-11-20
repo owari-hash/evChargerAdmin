@@ -467,7 +467,8 @@ function buildSummarySheet(wb: ExcelJS.Workbook, ctx: Ctx) {
   const extraCosts = (params.extraCosts ?? []).filter((c) => c.amount || c.label.trim());
   extraCosts.forEach((c, i) => {
     const row = 42 + i;
-    costRows.push([row, 'Бусад зардал', f(`-E${row}`, -c.amount), c.label.trim() || 'Бусад зардал', c.amount, FMT.num2]);
+    // The name typed in the form is the row's title; the description says what kind of cost it is.
+    costRows.push([row, c.label.trim() || 'Бусад зардал', f(`-E${row}`, -c.amount), 'Бусад зардал', c.amount, FMT.num2]);
   });
   const lastCostRow = 41 + extraCosts.length;
   const totalCostRow = lastCostRow + 1;

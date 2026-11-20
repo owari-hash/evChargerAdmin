@@ -22,6 +22,7 @@ import {
   X,
   Plus,
   Trash2,
+  Pencil,
 } from 'lucide-react';
 import { apiUrl, fetcher } from '@/lib/client';
 import {
@@ -500,10 +501,11 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
   const [meterStartInput, setMeterStartInput] = React.useState('');
   const [meterEndInput, setMeterEndInput] = React.useState('');
   const [simCostInput, setSimCostInput] = React.useState('5000');
-  // "Бусад зардал": any number of extra cost lines, each with a name and amount.
-  const [extraCosts, setExtraCosts] = React.useState<{ label: string; amount: string }[]>([]);
-  const addExtraCost = () => setExtraCosts((list) => [...list, { label: 'Бусад зардал', amount: '' }]);
-  const updateExtraCost = (i: number, patch: Partial<{ label: string; amount: string }>) =>
+  // "Бусад зардал": any number of extra cost lines, each with a name, amount and optional note.
+  type ExtraCostInput = { label: string; amount: string; note?: string };
+  const [extraCosts, setExtraCosts] = React.useState<ExtraCostInput[]>([]);
+  const addExtraCost = () => setExtraCosts((list) => [...list, { label: 'Бусад зардал', amount: '', note: '' }]);
+  const updateExtraCost = (i: number, patch: Partial<ExtraCostInput>) =>
     setExtraCosts((list) => list.map((c, j) => (j === i ? { ...c, ...patch } : c)));
   const removeExtraCost = (i: number) => setExtraCosts((list) => list.filter((_, j) => j !== i));
 
@@ -512,7 +514,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
   function openRevenueForm() {
     if (selectedStation === 'all') return;
     // Last report's end reading is this report's start reading.
-    let saved: { end?: string; sim?: string; extra?: { label: string; amount: string }[] } = {};
+    let saved: { end?: string; sim?: string; extra?: ExtraCostInput[] } = {};
     try {
       saved = JSON.parse(localStorage.getItem(meterStorageKey(selectedStation)) ?? '{}');
     } catch {
@@ -523,7 +525,8 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
     setSimCostInput(saved.sim ?? '5000');
     // Recurring costs come back with their names; amounts are kept too so a
     // monthly fixed cost doesn't need retyping.
-    setExtraCosts(Array.isArray(saved.extra) ? saved.extra : []);    setRevenueFormOpen(true);
+    setExtraCosts(Array.isArray(saved.extra) ? saved.extra : []);
+    setRevenueFormOpen(true);
   }
 
   const parseNum = (s: string) => {
@@ -534,7 +537,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
   const meterEnd = parseNum(meterEndInput);
   const simCost = parseNum(simCostInput);
   const extraCostItems = extraCosts
-    .map((c) => ({ label: c.label.trim(), amount: parseNum(c.amount) ?? 0 }))
+    .map((c) => ({ label: c.label.trim(), amount: parseNum(c.amount) ?? 0, note: c.note?.trim() || undefined }))
     .filter((c) => c.label || c.amount);
   const meterError =
     meterStart != null && meterEnd != null && meterEnd < meterStart
@@ -550,7 +553,8 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
         JSON.stringify({
           end: meterEndInput.trim(),
           sim: simCostInput.trim(),
-          extra: extraCosts.filter((c) => c.label.trim() || c.amount.trim()),        }),
+          extra: extraCosts.filter((c) => c.label.trim() || c.amount.trim()),
+        }),
       );
     } catch {
       // Remembering the reading is a convenience only.
@@ -568,7 +572,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
     meterStart?: number;
     meterEnd?: number;
     simCost?: number;
-    extraCosts?: { label: string; amount: number }[];
+    extraCosts?: { label: string; amount: number; note?: string }[];
   }): Promise<boolean> {
     if (selectedStation === 'all') return false;
     setRevenueReportLoading(true);
@@ -1692,17 +1696,21 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
           {/* Each added cost is its own field: a title you can rename, then the amount. */}
           {extraCosts.map((c, i) => (
             <div key={i} className="space-y-1.5">
-              <div className="flex items-center gap-1">
-                <input
-                  aria-label={`Зардал ${i + 1}-ийн нэр`}
-                  title="Нэрийг өөрчлөхийн тулд дарна уу"
-                  value={c.label}
-                  onChange={(e) => updateExtraCost(i, { label: e.target.value })}
-                  onFocus={(e) => e.currentTarget.select()}
-                  placeholder="Бусад зардал"
-                  size={Math.max(8, c.label.length + 1)}
-                  className="min-w-0 max-w-full -ml-1 rounded-md border border-dashed border-transparent bg-transparent px-1 py-0.5 text-sm font-medium text-[var(--color-fg)] hover:border-[var(--color-border)] focus:border-solid focus:border-[var(--color-brand)] focus:outline-none"
-                />
+              <div className="flex items-center gap-1.5">
+                {/* Looks like an editable chip (pencil + dashed box) so it's clear the name can be changed. */}
+                <label className="group inline-flex min-w-0 max-w-[80%] cursor-text items-center gap-1.5 rounded-md border border-dashed border-[var(--color-border)] bg-[var(--color-surface-2)]/40 px-2 py-1 hover:border-[var(--color-brand)] focus-within:border-solid focus-within:border-[var(--color-brand)]">
+                  <Pencil className="h-3.5 w-3.5 shrink-0 text-[var(--color-fg-muted)] group-hover:text-[var(--color-brand)]" aria-hidden="true" />
+                  <input
+                    aria-label={`Зардал ${i + 1}-ийн нэр`}
+                    title="Нэрийг өөрчлөх"
+                    value={c.label}
+                    onChange={(e) => updateExtraCost(i, { label: e.target.value })}
+                    onFocus={(e) => e.currentTarget.select()}
+                    placeholder="Зардлын нэр"
+                    size={Math.max(4, (c.label || 'Зардлын нэр').length)}
+                    className="min-w-0 bg-transparent text-sm font-medium text-[var(--color-fg)] placeholder:text-[var(--color-fg-subtle)] focus:outline-none"
+                  />
+                </label>
                 <span className="shrink-0 text-sm font-medium text-[var(--color-fg)]">(₮)</span>
                 <button
                   type="button"
@@ -1720,6 +1728,13 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                 onChange={(e) => updateExtraCost(i, { amount: e.target.value })}
                 placeholder="0"
                 autoFocus={i === extraCosts.length - 1 && !c.amount}
+              />
+              <Input
+                aria-label={`${c.label || 'Бусад зардал'} тайлбар`}
+                value={c.note ?? ''}
+                onChange={(e) => updateExtraCost(i, { note: e.target.value })}
+                placeholder="Тайлбар (заавал биш) — Excel-ийн «Тайлбар» баганад орно"
+                className="h-8 text-xs"
               />
             </div>
           ))}

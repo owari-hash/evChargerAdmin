@@ -90,7 +90,7 @@ export interface RevenueReportParams {
   qpayRate?: number;
   otherDirectCosts?: number;
   /** Extra cost lines (Бусад зардал), each its own row under the data-SIM cost. */
-  extraCosts?: { label: string; amount: number }[];
+  extraCosts?: { label: string; amount: number; note?: string }[];
   reportNumber?: string;
   operatorName?: string;
   platformName?: string;
@@ -468,7 +468,7 @@ function buildSummarySheet(wb: ExcelJS.Workbook, ctx: Ctx) {
   extraCosts.forEach((c, i) => {
     const row = 42 + i;
     // The name typed in the form is the row's title; the description says what kind of cost it is.
-    costRows.push([row, c.label.trim() || 'Бусад зардал', f(`-E${row}`, -c.amount), 'Бусад зардал', c.amount, FMT.num2]);
+    costRows.push([row, c.label.trim() || 'Бусад зардал', f(`-E${row}`, -c.amount), c.note?.trim() || 'Бусад зардал', c.amount, FMT.num2]);
   });
   const lastCostRow = 41 + extraCosts.length;
   const totalCostRow = lastCostRow + 1;

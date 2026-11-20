@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { ArrowLeft, Square, Undo2, XCircle } from 'lucide-react';
+import { AlertTriangle, ArrowLeft, Square, Undo2, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
 import { api, errorMessage } from '@/lib/client';
 import { REFRESH, useAutoRefresh } from '@/lib/live-query';
@@ -212,6 +212,41 @@ export function TransactionView({
         />
       </Card>
 
+      {tx.stationFault ? (
+        <Card
+          className={
+            tx.stationFault.endedSession
+              ? 'mb-4 border-[var(--color-danger)]/40 bg-[var(--color-danger-soft)]'
+              : 'mb-4 border-[var(--color-warn)]/40 bg-[var(--color-warn-soft)]'
+          }
+        >
+          <div className="flex items-start gap-3 px-5 py-4">
+            <AlertTriangle
+              className={
+                tx.stationFault.endedSession
+                  ? 'mt-0.5 h-5 w-5 shrink-0 text-[var(--color-danger)]'
+                  : 'mt-0.5 h-5 w-5 shrink-0 text-[var(--color-warn)]'
+              }
+            />
+            <div className="min-w-0 space-y-1">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-sm font-semibold text-[var(--color-fg)]">{tx.stationFault.title}</span>
+                <Badge tone={tx.stationFault.vehicleSide ? 'info' : 'danger'}>
+                  {tx.stationFault.vehicleSide ? 'Машины талын' : 'Станцын талын'}
+                </Badge>
+                {tx.stationFault.endedSession ? null : <Badge tone="idle">Цэнэглэлтийг зогсоогоогүй</Badge>}
+              </div>
+              <p className="text-xs text-[var(--color-fg-muted)]">{tx.stationFault.body}</p>
+              <p className="font-mono text-[11px] text-[var(--color-fg-subtle)]">
+                {tx.stationFault.vendorErrorCode || '—'}
+                {tx.stationFault.errorCode ? ` · OCPP: ${tx.stationFault.errorCode}` : ''}
+                {tx.stationFault.at ? ` · ${formatDateTime(tx.stationFault.at)}` : ''}
+              </p>
+            </div>
+          </div>
+        </Card>
+      ) : null}
+
       <StatGrid>
         <StatCard label="Эрчим хүч" value={formatWh(energyWh)} />
         <StatCard
@@ -264,6 +299,11 @@ export function TransactionView({
             <DataRow label="Эхэлсэн">{formatDateTime(tx.startTimestamp)}</DataRow>
             <DataRow label="Дууссан">{formatDateTime(tx.stopTimestamp)}</DataRow>
             <DataRow label="Зогссон шалтгаан">{mn(STOP_REASON, tx.stopReason)}</DataRow>
+            {tx.stationFault ? (
+              <DataRow label="Станцын алдаа" mono>
+                {tx.stationFault.vendorErrorCode || tx.stationFault.errorCode}
+              </DataRow>
+            ) : null}
             <DataRow label="Эхний тоолуур" mono>
               {formatWh(tx.meterStart)}
             </DataRow>

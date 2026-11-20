@@ -3,7 +3,7 @@
 import * as React from 'react';
 import Link from 'next/link';
 import useSWR, { useSWRConfig } from 'swr';
-import { Eye, Trash2, Zap } from 'lucide-react';
+import { AlertTriangle, Eye, Trash2, Zap } from 'lucide-react';
 import { REFRESH } from '@/lib/live-query';
 import { apiUrl, fetcher } from '@/lib/client';
 import {
@@ -21,6 +21,7 @@ import {
   type Paginated,
   type Transaction,
   type StationPowerItem,
+  type StationFaultInfo,
 } from '@/lib/types';
 import { Button, Card, Input, Select } from '@/components/ui/primitives';
 import { DateRangePicker, toIsoDate } from '@/components/ui/date-picker';
@@ -56,6 +57,33 @@ function toEndOfDayIso(dateStr: string): string {
   const [y, m, d] = dateStr.split('-').map(Number);
   if (!y || !m || !d) return '';
   return new Date(y, m - 1, d, 23, 59, 59, 999).toISOString();
+}
+
+/** The station's reason under the stop reason: vendor code plus the Mongolian title. */
+function StationFaultCell({ fault }: { fault: StationFaultInfo }) {
+  const code = fault.vendorErrorCode || fault.errorCode;
+  return (
+    <div
+      className="mt-0.5 flex max-w-[240px] flex-col"
+      title={`${fault.title}
+${fault.body}${fault.errorCode ? `
+OCPP: ${fault.errorCode}` : ''}`}
+    >
+      <span
+        className={cn(
+          'inline-flex items-center gap-1 font-medium',
+          fault.endedSession ? 'text-[var(--color-danger)]' : 'text-[var(--color-warn)]',
+        )}
+      >
+        <AlertTriangle className="h-3 w-3 shrink-0" />
+        <span className="truncate">{fault.title}</span>
+      </span>
+      <span className="truncate font-mono text-[10px] text-[var(--color-fg-subtle)]">
+        {code}
+        {fault.endedSession ? '' : ' · цэнэглэлтийг зогсоогоогүй'}
+      </span>
+    </div>
+  );
 }
 
 export function TransactionsView({
@@ -546,7 +574,10 @@ export function TransactionsView({
                           <TD align="right" className="text-xs font-mono font-normal">
                             {tx.cost != null ? formatAmount(tx.cost) : '0.00'}
                           </TD>
-                          <TD className="text-xs text-[var(--color-fg-muted)]">{tx.stopReason ?? '—'}</TD>
+                          <TD className="text-xs text-[var(--color-fg-muted)]">
+                            <span>{tx.stopReason ?? '—'}</span>
+                            {tx.stationFault ? <StationFaultCell fault={tx.stationFault} /> : null}
+                          </TD>
                           {!isClient ? (
                             <TD align="center" className="py-1.5">
                               <div className="flex items-center justify-center gap-1.5">

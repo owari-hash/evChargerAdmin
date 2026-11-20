@@ -247,6 +247,23 @@ export interface ChargePointDetail extends ChargePoint {
   configuration: ConfigurationKey[];
 }
 
+/** Why a session failed, as the station reported it — mapped by the backend. */
+export interface StationFaultInfo {
+  kind: string;
+  /** OCPP errorCode, usually just "OtherError". */
+  errorCode: string;
+  /** The station's own code, e.g. "BMSBatteryTemperatureFault". */
+  vendorErrorCode: string;
+  /** True when the car's side caused it, false for the station. */
+  vehicleSide: boolean;
+  title: string;
+  titleEn: string;
+  body: string;
+  at: string | null;
+  /** True when this error is what ended the session. */
+  endedSession: boolean;
+}
+
 export interface Transaction {
   id: number;
   transactionId: number;
@@ -312,6 +329,10 @@ export interface Transaction {
     refundedAt?: string;
     ebarimtReturned?: boolean;
   };
+  /** The last error the station reported on this session's connector while it ran (raw OCPP). */
+  stationError?: { errorCode?: string; vendorErrorCode?: string; at?: string };
+  /** That error explained by the backend (station-faults.ts); null when there was none. */
+  stationFault?: StationFaultInfo | null;
   /** Who was actually charging, and which vehicle — looked up from `idTag`. Null for a tag with no linked driver account (an RFID card, say). */
   driver?: { name?: string; phone?: string; vehicleBrand?: string; vehicleModel?: string } | null;
 }

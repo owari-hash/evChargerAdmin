@@ -245,6 +245,8 @@ interface StationSessionsExport {
     ebarimtReceiptId: string;
     refundAmount: number | null;
     stationError: string;
+    stationErrorVendorCode?: string;
+    stationErrorTitle?: string;
   } & SessionPaymentFields)[];
 }
 
@@ -698,6 +700,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
           'Төлбөрийн хэлбэр', 'Хэтэвчээс (₮)', 'Үлдэгдэл (₮)',
           'Төлбөрийн хэрэгсэл', 'Төлбөрийн төлөв', 'Төлсөн (₮)', 'Буцаалт (₮)',
           'И-баримт', 'И-баримт ID', 'Зогсоосон шалтгаан', 'Алсаас эхлүүлсэн', 'Станцын алдаа',
+          'Станцын алдааны код', 'Алдааны тайлбар',
         ],
         ...s.map((x, i) => [
           i + 1, x.id, `Буу ${connectorLetter(x.connectorId)}`, formatDateTime(x.startTimestamp),
@@ -707,7 +710,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
           x.cost, paymentMethodLabel(x), x.walletPaid ?? 0, x.balanceAfter ?? '',
           x.paymentProvider, x.paymentStatus, x.paidAmount,
           x.refundAmount, x.ebarimtStatus, x.ebarimtReceiptId, x.stopReason, x.startedRemotely ? 'Тийм' : 'Үгүй',
-          x.stationError,
+          x.stationError, x.stationErrorVendorCode ?? '', x.stationErrorTitle ?? '',
         ]),
         [],
         [

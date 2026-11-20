@@ -1457,3 +1457,49 @@ export interface PartnerApiLogListResponse {
 }
 
 
+
+// --- Per-station power statistics (GET power-monitoring/stations/:id/stats) ---
+export interface PowerStatsAgg {
+  chargingMinutes: number;
+  avgKw: number;
+  peakKw: number;
+  peakAt: string | null;
+  lowKw: number;
+  energyKwh: number;
+  simultaneousMinutes: number;
+  sessions: number;
+}
+
+export interface StationPowerStats {
+  station: {
+    id: string;
+    cpId: string;
+    name: string;
+    model: string | null;
+    ratedCapacityKw: number | null;
+    gridLimitKw: number | null;
+    connectors: { connectorId: number; ratedKw: number | null; type: string | null }[];
+  };
+  from: string;
+  to: string;
+  bucketMinutes: number;
+  summary: PowerStatsAgg & { maxSimultaneous: number };
+  days: (PowerStatsAgg & { date: string })[];
+  connectors: (PowerStatsAgg & {
+    connectorId: number;
+    soloAvgKw: number | null;
+    soloPeakKw: number | null;
+    soloMinutes: number;
+    sharedAvgKw: number | null;
+    sharedPeakKw: number | null;
+    sharedMinutes: number;
+  })[];
+  sharing: {
+    minutes: number;
+    avgTotalKw: number | null;
+    peakTotalKw: number | null;
+    splits: { minutes: number; pct: number; totalKw: number; piles: { connectorId: number; kw: number }[] }[];
+  };
+  hourly: { hour: number; avgKw: number; peakKw: number }[];
+  series: { t: string; totalKw: number; peakKw: number; piles: Record<string, number> }[];
+}

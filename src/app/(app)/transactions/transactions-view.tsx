@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import Link from 'next/link';
-import useSWR from 'swr';
+import useSWR, { useSWRConfig } from 'swr';
 import { Eye, Trash2, Zap } from 'lucide-react';
 import { REFRESH } from '@/lib/live-query';
 import { apiUrl, fetcher } from '@/lib/client';
@@ -20,7 +20,6 @@ import {
   TRANSACTION_STATUSES,
   type Paginated,
   type Transaction,
-  type PowerMonitoringSummary,
   type StationPowerItem,
 } from '@/lib/types';
 import { Button, Card, Input, Select } from '@/components/ui/primitives';
@@ -32,9 +31,8 @@ import { Table, TableWrap, TBody, TD, TH, THead, TR, TableEmpty, TableLoading } 
 import { ConfirmModal } from '@/components/ui/modal';
 import { Tabs, TabCount } from '@/components/ui/tabs';
 import { useLiveEvents } from '@/lib/use-live-events';
-import { PowerKpiCards } from '@/components/power-monitoring/power-kpi-cards';
+import { StationPowerStatsPanel } from '@/components/power-monitoring/station-power-stats';
 import { StationPowerTable } from '@/components/power-monitoring/station-power-table';
-import { HistoricalPowerCharts } from '@/components/power-monitoring/historical-power-charts';
 import { PowerAlertsPanel } from '@/components/power-monitoring/power-alerts-panel';
 import { StationPowerDetailModal } from '@/components/power-monitoring/station-power-detail-modal';
 import { StationElectricalConfigModal } from '@/components/power-monitoring/station-electrical-config-modal';
@@ -85,6 +83,26 @@ export function TransactionsView({
     initialTab === 'history' ? 'history' : 'monitoring',
   );
 
+  // Station picked for the power statistics panel (remembered per browser)
+  const [pickedStationId, setPickedStationId] = React.useState('');
+  const savedStationId = React.useSyncExternalStore(
+    () => () => {},
+    () => {
+      try {
+        return localStorage.getItem('power-stats.station') ?? '';
+      } catch {
+        return '';
+      }
+    },
+    () => '',
+  );
+  const pickStatsStation = React.useCallback((id: string) => {
+    setPickedStationId(id);
+    try {
+      localStorage.setItem('power-stats.station', id);
+    } catch {}
+  }, []);
+
   // Power Monitoring drill-down and config modal states
   const [selectedStation, setSelectedStation] = React.useState<StationPowerItem | null>(null);
   const [detailModalOpen, setDetailModalOpen] = React.useState(false);
@@ -132,15 +150,10 @@ export function TransactionsView({
     keepPreviousData: true,
   });
 
-  // SWR for live power monitoring summary
-  const {
-    data: summaryData,
-    isLoading: isSummaryLoading,
-    mutate: mutateSummary,
-  } = useSWR<PowerMonitoringSummary>(
-    apiUrl('power-monitoring/summary'),
-    fetcher,
-    { refreshInterval: 4000 },
+  const { mutate: globalMutate } = useSWRConfig();
+  const mutateStats = React.useCallback(
+    () => globalMutate((k) => typeof k === 'string' && k.includes('power-monitoring/stations/') && k.includes('/stats')),
+    [globalMutate],
   );
 
   // SWR for stations power monitoring list
@@ -153,6 +166,19 @@ export function TransactionsView({
     fetcher,
     { refreshInterval: 4000 },
   );
+
+  // Fall back to the saved station, then the busiest online one, so the
+  // panel shows data straight away.
+  const statsStationId = React.useMemo(() => {
+    const list = stationsData ?? [];
+    const has = (id: string) => id && list.some((s) => s.id === id);
+    if (has(pickedStationId)) return pickedStationId;
+    if (has(savedStationId)) return savedStationId;
+    const best = [...list].sort(
+      (a, b) => Number(b.isOnline) - Number(a.isOnline) || b.totalOutputPowerKw - a.totalOutputPowerKw,
+    )[0];
+    return best?.id ?? '';
+  }, [stationsData, pickedStationId, savedStationId]);
 
   // Listen to live CSMS SSE events for zero-refresh real-time updates
   useLiveEvents({
@@ -167,7 +193,6 @@ export function TransactionsView({
       'chargepoint.disconnected',
     ],
     onEvent: () => {
-      void mutateSummary();
       void mutateStations();
       if (status !== 'Completed') {
         void mutate();
@@ -206,11 +231,6 @@ export function TransactionsView({
     { energyWh: 0, cost: 0 },
   );
 
-  const handleOpenDetail = (st: StationPowerItem) => {
-    setSelectedStation(st);
-    setDetailModalOpen(true);
-  };
-
   const handleOpenConfig = (st: StationPowerItem) => {
     setConfigStation(st);
     setConfigModalOpen(true);
@@ -246,22 +266,25 @@ export function TransactionsView({
       {/* =================================================================== */}
       {activeTab === 'monitoring' && (
         <div className="space-y-6">
-          {/* Top-level KPI cards and Network Power Summary */}
-          <PowerKpiCards
-            summary={summaryData}
-            isLoading={isSummaryLoading}
+          {/* Selected station: peak / average / low kW and gun sharing */}
+          <StationPowerStatsPanel
+            stations={stationsData ?? []}
+            stationsLoading={isStationsLoading}
+            stationId={statsStationId}
+            onStationChange={pickStatsStation}
+            onConfigure={canOperate ? handleOpenConfig : undefined}
           />
 
-          {/* Station Power Monitoring Table */}
+          {/* All stations, live. Clicking a row shows its statistics above. */}
           <StationPowerTable
             stations={stationsData ?? []}
             isLoading={isStationsLoading}
-            onSelectStation={handleOpenDetail}
+            onSelectStation={(st) => {
+              pickStatsStation(st.id);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
             onConfigureStation={handleOpenConfig}
           />
-
-          {/* Historical Power Analytics Charts */}
-          <HistoricalPowerCharts />
 
           {/* Operational Alerts & Anomaly Feed */}
           <PowerAlertsPanel />
@@ -611,7 +634,7 @@ export function TransactionsView({
         onClose={() => setConfigModalOpen(false)}
         onSaved={() => {
           void mutateStations();
-          void mutateSummary();
+          void mutateStats();
         }}
       />
     </div>

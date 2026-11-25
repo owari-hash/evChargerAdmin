@@ -24,7 +24,7 @@ import {
   Trash2,
   Pencil,
 } from 'lucide-react';
-import { apiUrl, fetcher } from '@/lib/client';
+import { api, apiUrl, fetcher } from '@/lib/client';
 import {
   connectorLetter,
   formatAmount,
@@ -584,68 +584,47 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
     setRecipients((list) => list.map((r, j) => (j === i ? { ...r, ...patch } : r)));
   const [recipientsOpen, setRecipientsOpen] = React.useState(false);
 
-  // Saved Bank Accounts ("Дансны сан") — own IT, third-party service, and owner accounts
-  type BankAccountRole = 'OWN' | 'THIRD_PARTY' | 'OWNER';
+  // Saved Bank Accounts ("Дансны сан") — persisted in MongoDB via /api/reports/bank-accounts
   type SavedBankAccount = {
     id: string;
     name: string;
     bank: string;
     account: string;
-    role: BankAccountRole;
   };
-  const BANK_ACCOUNTS_KEY = 'eplug.report.bankAccounts';
-  const DEFAULT_BANK_ACCOUNTS: SavedBankAccount[] = [
-    {
-      id: 'own-jirkto',
-      name: 'ЖИРКТО ХХК /IT платформ/',
-      bank: 'Голомт',
-      account: '88001500 2255103877',
-      role: 'OWN',
-    },
-    {
-      id: '3p-sequoia',
-      name: 'СЕКУОИА ИНДАСТРИАЛ ХХК /Засвар үйлчилгээ/',
-      bank: 'Хаан',
-      account: '5111748965',
-      role: 'THIRD_PARTY',
-    },
-  ];
-  const [savedAccounts, setSavedAccounts] = React.useState<SavedBankAccount[]>(DEFAULT_BANK_ACCOUNTS);
+  const [savedAccounts, setSavedAccounts] = React.useState<SavedBankAccount[]>([]);
   const [accountsDirOpen, setAccountsDirOpen] = React.useState(false);
   const [newAccName, setNewAccName] = React.useState('');
   const [newAccBank, setNewAccBank] = React.useState('');
   const [newAccNum, setNewAccNum] = React.useState('');
-  const [newAccRole, setNewAccRole] = React.useState<BankAccountRole>('THIRD_PARTY');
 
-  const persistBankAccounts = (next: SavedBankAccount[]) => {
-    setSavedAccounts(next);
+  const addSavedAccount = async () => {
+    if (!newAccName.trim() || !newAccNum.trim()) return;
     try {
-      localStorage.setItem(BANK_ACCOUNTS_KEY, JSON.stringify(next));
-    } catch {
-      // ignore storage errors
+      const res = await api.post<{ bankAccount: SavedBankAccount }>('reports/bank-accounts', {
+        name: newAccName.trim(),
+        bank: newAccBank.trim(),
+        account: newAccNum.trim(),
+      });
+      setSavedAccounts((prev) => [...prev, res.bankAccount]);
+      setNewAccName('');
+      setNewAccBank('');
+      setNewAccNum('');
+      toast.success('Данс хадгалагдлаа');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Данс хадгалахад алдаа гарлаа');
     }
   };
 
-  const addSavedAccount = () => {
-    if (!newAccName.trim() || !newAccNum.trim()) return;
-    const item: SavedBankAccount = {
-      id: `acc-${Date.now()}`,
-      name: newAccName.trim(),
-      bank: newAccBank.trim(),
-      account: newAccNum.trim(),
-      role: newAccRole,
-    };
-    persistBankAccounts([...savedAccounts, item]);
-    setNewAccName('');
-    setNewAccBank('');
-    setNewAccNum('');
+  const removeSavedAccount = async (id: string) => {
+    try {
+      await api.del(`reports/bank-accounts/${encodeURIComponent(id)}`);
+      setSavedAccounts((prev) => prev.filter((a) => a.id !== id));
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Данс устгахад алдаа гарлаа');
+    }
   };
 
-  const removeSavedAccount = (id: string) => {
-    persistBankAccounts(savedAccounts.filter((a) => a.id !== id));
-  };
-
-  const saveRecipientToDirectory = (rc: RecipientFormItem, role: BankAccountRole = 'THIRD_PARTY') => {
+  const saveRecipientToDirectory = async (rc: RecipientFormItem) => {
     if (!rc.name.trim() || !rc.account.trim()) return;
     const exists = savedAccounts.some(
       (a) => a.account.replace(/\s+/g, '') === rc.account.replace(/\s+/g, ''),
@@ -654,38 +633,43 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
       toast.info('Энэ данс хадгалагдсан байна');
       return;
     }
-    persistBankAccounts([
-      ...savedAccounts,
-      {
-        id: `acc-${Date.now()}`,
+    try {
+      const res = await api.post<{ bankAccount: SavedBankAccount }>('reports/bank-accounts', {
         name: rc.name.trim(),
         bank: rc.bank.trim(),
         account: rc.account.trim(),
-        role,
-      },
-    ]);
-    toast.success('Данс амжилттай хадгалагдлаа');
+      });
+      setSavedAccounts((prev) => [...prev, res.bankAccount]);
+      toast.success('Данс амжилттай хадгалагдлаа');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Данс хадгалахад алдаа гарлаа');
+    }
   };
 
-  // Saved Station Groups ("Зайсан хилл", "Материал Импекс ХК", ...)
-  type StationGroup = { id: string; name: string; stationIds: string[] };
-  const STATION_GROUPS_KEY = 'eplug.report.stationGroups';
+  // Saved Station Groups & Presets — persisted in MongoDB via /api/reports/presets
+  type StoredPreset = {
+    id?: string;
+    key: string;
+    name?: string;
+    isGroup?: boolean;
+    stationIds?: string[];
+    end?: string;
+    meters?: Partial<MeterFormItem>[];
+    simCost?: string;
+    extraCosts?: ExtraCostInput[];
+    stationOwner?: string;
+    siteOwner?: string;
+    recipients?: RecipientFormItem[];
+    lastPeriodEnd?: string;
+  };
+  type StationGroup = { id: string; key: string; name: string; stationIds: string[] };
+  const [presetsByKey, setPresetsByKey] = React.useState<Record<string, StoredPreset>>({});
   const [stationGroups, setStationGroups] = React.useState<StationGroup[]>([]);
   const [activeGroupId, setActiveGroupId] = React.useState<string | null>(null);
   const [reportStationIds, setReportStationIds] = React.useState<string[]>([]);
   const [reportGroupName, setReportGroupName] = React.useState('');
 
-  const persistStationGroups = (next: StationGroup[]) => {
-    setStationGroups(next);
-    try {
-      localStorage.setItem(STATION_GROUPS_KEY, JSON.stringify(next));
-    } catch {
-      // ignore storage errors
-    }
-  };
-
   const [simCostInput, setSimCostInput] = React.useState('5000');
-  // "Бусад зардал": any number of extra cost lines, each with a name, amount and optional note.
   type ExtraCostInput = { label: string; amount: string; note?: string };
   const [extraCosts, setExtraCosts] = React.useState<ExtraCostInput[]>([]);
   const addExtraCost = () => setExtraCosts((list) => [...list, { label: 'Бусад зардал', amount: '', note: '' }]);
@@ -693,13 +677,18 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
     setExtraCosts((list) => list.map((c, j) => (j === i ? { ...c, ...patch } : c)));
   const removeExtraCost = (i: number) => setExtraCosts((list) => list.filter((_, j) => j !== i));
 
-  const targetStorageKey = (groupId: string | null, ids: string[]) => {
-    if (groupId) return `eplug.report.group.${groupId}`;
-    if (ids.length === 1) return `eplug.report.meter.${ids[0]}`;
-    return `eplug.report.multi.${[...ids].sort().join(',')}`;
+  const targetStorageKey = (groupKey: string | null, ids: string[]) => {
+    if (groupKey) return groupKey;
+    if (ids.length === 1) return `station:${ids[0]}`;
+    return `multi:${[...ids].sort().join(',')}`;
   };
 
-  function loadTargetSettings(groupId: string | null, ids: string[], accountsList: SavedBankAccount[]) {
+  function loadTargetSettings(
+    groupKey: string | null,
+    ids: string[],
+    accountsList: SavedBankAccount[],
+    map: Record<string, StoredPreset> = presetsByKey,
+  ) {
     const primaryId = ids[0];
     const matchedCp = stationOptions.find((s) => s.id === primaryId || s.cpId === primaryId);
     const matchedClient =
@@ -710,27 +699,11 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
     const clientFee = (matchedClient as { feePercent?: number } | null | undefined)?.feePercent;
     const clientSharePct = clientFee != null ? Math.round((100 - clientFee) * 10) / 10 : 80;
 
-    type SavedReportState = {
-      end?: string;
-      meters?: Partial<MeterFormItem>[];
-      sim?: string;
-      extra?: ExtraCostInput[];
-      stationOwner?: string;
-      siteOwner?: string;
-      recipients?: RecipientFormItem[];
-      lastPeriodEnd?: string;
-    };
-    let saved: SavedReportState = {};
-    if (ids.length > 0) {
-      try {
-        saved = JSON.parse(localStorage.getItem(targetStorageKey(groupId, ids)) ?? '{}');
-      } catch {
-        saved = {};
-      }
-    }
+    const key = targetStorageKey(groupKey, ids);
+    const saved: Partial<StoredPreset> = ids.length > 0 ? (map[key] ?? {}) : {};
 
-    setStationOwnerInput(saved.stationOwner ?? defaultOwner);
-    setSiteOwnerInput(saved.siteOwner ?? defaultOwner);
+    setStationOwnerInput(saved.stationOwner || defaultOwner);
+    setSiteOwnerInput(saved.siteOwner || defaultOwner);
     setLastPeriodEnd(saved.lastPeriodEnd);
 
     if (Array.isArray(saved.meters) && saved.meters.length > 0) {
@@ -770,8 +743,16 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
     } else {
       const platRemain = Math.round((100 - clientSharePct) * 10) / 10;
       const halfPlat = Math.round((platRemain / 2) * 10) / 10;
-      const ownAcc = accountsList.find((a) => a.role === 'OWN') ?? DEFAULT_BANK_ACCOUNTS[0];
-      const thirdAcc = accountsList.find((a) => a.role === 'THIRD_PARTY') ?? DEFAULT_BANK_ACCOUNTS[1];
+      const ownAcc = accountsList[0] ?? {
+        name: 'ЖИРКТО ХХК /IT платформ/',
+        bank: 'Голомт',
+        account: '88001500 2255103877',
+      };
+      const thirdAcc = accountsList[1] ?? {
+        name: 'СЕКУОИА ИНДАСТРИАЛ ХХК /Засвар үйлчилгээ/',
+        bank: 'Хаан',
+        account: '5111748965',
+      };
       setRecipients([
         {
           name: defaultOwner,
@@ -794,33 +775,34 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
       ]);
     }
 
-    setSimCostInput(saved.sim ?? '5000');
-    setExtraCosts(Array.isArray(saved.extra) ? saved.extra : []);
+    setSimCostInput(saved.simCost || '5000');
+    setExtraCosts(Array.isArray(saved.extraCosts) ? saved.extraCosts : []);
   }
 
-  function openRevenueForm() {
-    let loadedAccounts = DEFAULT_BANK_ACCOUNTS;
+  async function openRevenueForm() {
+    let loadedAccounts: SavedBankAccount[] = [];
+    const loadedMap: Record<string, StoredPreset> = {};
+    const loadedGroups: StationGroup[] = [];
     try {
-      const rawAcc = localStorage.getItem(BANK_ACCOUNTS_KEY);
-      if (rawAcc) {
-        const parsed = JSON.parse(rawAcc);
-        if (Array.isArray(parsed) && parsed.length > 0) loadedAccounts = parsed;
+      const res = await api.get<{ presets: StoredPreset[]; bankAccounts: SavedBankAccount[] }>('reports/presets');
+      loadedAccounts = res.bankAccounts ?? [];
+      for (const p of res.presets ?? []) {
+        loadedMap[p.key] = p;
+        if (p.isGroup) {
+          loadedGroups.push({
+            id: p.key,
+            key: p.key,
+            name: p.name || 'Бүлэг',
+            stationIds: p.stationIds ?? [],
+          });
+        }
       }
-    } catch {
-      loadedAccounts = DEFAULT_BANK_ACCOUNTS;
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Тайлангийн тохиргоо татахад алдаа гарлаа');
     }
-    setSavedAccounts(loadedAccounts);
 
-    let loadedGroups: StationGroup[] = [];
-    try {
-      const rawGrp = localStorage.getItem(STATION_GROUPS_KEY);
-      if (rawGrp) {
-        const parsed = JSON.parse(rawGrp);
-        if (Array.isArray(parsed)) loadedGroups = parsed;
-      }
-    } catch {
-      loadedGroups = [];
-    }
+    setSavedAccounts(loadedAccounts);
+    setPresetsByKey(loadedMap);
     setStationGroups(loadedGroups);
 
     const initialIds =
@@ -834,7 +816,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
         ? loadedGroups.find((g) => g.stationIds.includes(selectedStation) && g.stationIds.length === 1) ?? null
         : null;
 
-    setActiveGroupId(matchedGroup?.id ?? null);
+    setActiveGroupId(matchedGroup?.key ?? null);
     setReportStationIds(initialIds);
     setReportGroupName(
       matchedGroup?.name ??
@@ -844,7 +826,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
     );
     setMeterDateInput(range.to);
     setMeterTimeInput('23:59:00');
-    loadTargetSettings(matchedGroup?.id ?? null, initialIds, loadedAccounts);
+    loadTargetSettings(matchedGroup?.key ?? null, initialIds, loadedAccounts, loadedMap);
     setModalTab(selectedStation !== 'all' ? 'meters' : 'station');
     setRecipientsOpen(false);
     setAccountsDirOpen(false);
@@ -854,10 +836,10 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
   const selectGroupInModal = (group: StationGroup) => {
     const validIds = group.stationIds.filter((id) => stationOptions.some((s) => s.id === id));
     const ids = validIds.length > 0 ? validIds : group.stationIds;
-    setActiveGroupId(group.id);
+    setActiveGroupId(group.key);
     setReportStationIds(ids);
     setReportGroupName(group.name);
-    loadTargetSettings(group.id, ids, savedAccounts);
+    loadTargetSettings(group.key, ids, savedAccounts);
   };
 
   const toggleStationInModal = (stationId: string) => {
@@ -874,64 +856,85 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
     });
   };
 
-  const saveCurrentAsGroup = () => {
+  const buildPresetPayload = (
+    key: string,
+    opts: { isGroup: boolean; name: string; stationIds: string[]; periodEndIso?: string },
+  ): StoredPreset => ({
+    key,
+    name: opts.name,
+    isGroup: opts.isGroup,
+    stationIds: opts.stationIds,
+    end: meters[0]?.end?.trim() ?? '',
+    meters: meters.map((m) => ({
+      type: m.type,
+      label: m.label.trim(),
+      ctCoefficient: m.ctCoefficient.trim(),
+      basePrice: m.basePrice.trim(),
+      cosPhiPercent: m.cosPhiPercent.trim(),
+      capacityChargeFormula: m.capacityChargeFormula.trim(),
+      renewablePerKwh: m.renewablePerKwh.trim(),
+      dayPrice: m.dayPrice.trim(),
+      peakPrice: m.peakPrice.trim(),
+      nightPrice: m.nightPrice.trim(),
+      peakPowerCoeff: m.peakPowerCoeff.trim(),
+      peakCapacityPrice: m.peakCapacityPrice.trim(),
+      vatPercent: m.vatPercent.trim(),
+      end: m.end.trim(),
+      dayEnd: m.dayEnd.trim(),
+      peakEnd: m.peakEnd.trim(),
+      nightEnd: m.nightEnd.trim(),
+    })),
+    simCost: simCostInput.trim(),
+    extraCosts: extraCosts.filter((c) => c.label.trim() || c.amount.trim()),
+    stationOwner: stationOwnerInput.trim(),
+    siteOwner: siteOwnerInput.trim(),
+    recipients,
+    lastPeriodEnd: opts.periodEndIso ?? lastPeriodEnd,
+  });
+
+  const saveCurrentAsGroup = async () => {
     const name = reportGroupName.trim();
     if (!name || reportStationIds.length === 0) {
       toast.error('Бүлгийн нэр болон станцуудаа сонгоно уу');
       return;
     }
-    const existing = activeGroupId ? stationGroups.find((g) => g.id === activeGroupId) : undefined;
-    const id = existing?.id ?? `grp-${Date.now()}`;
-    const updated: StationGroup = { id, name, stationIds: reportStationIds };
-    const next = existing
-      ? stationGroups.map((g) => (g.id === id ? updated : g))
-      : [...stationGroups, updated];
-    persistStationGroups(next);
-    setActiveGroupId(id);
-    // Also persist this group's own settings (meters, owners, recipients, costs) immediately
+    const existing = activeGroupId ? stationGroups.find((g) => g.key === activeGroupId) : undefined;
+    const key = existing?.key ?? `group:${Date.now()}`;
+    const payload = buildPresetPayload(key, {
+      isGroup: true,
+      name,
+      stationIds: reportStationIds,
+    });
     try {
-      localStorage.setItem(
-        targetStorageKey(id, reportStationIds),
-        JSON.stringify({
-          end: meters[0]?.end?.trim() ?? '',
-          meters: meters.map((m) => ({
-            type: m.type,
-            label: m.label.trim(),
-            ctCoefficient: m.ctCoefficient.trim(),
-            basePrice: m.basePrice.trim(),
-            cosPhiPercent: m.cosPhiPercent.trim(),
-            capacityChargeFormula: m.capacityChargeFormula.trim(),
-            renewablePerKwh: m.renewablePerKwh.trim(),
-            dayPrice: m.dayPrice.trim(),
-            peakPrice: m.peakPrice.trim(),
-            nightPrice: m.nightPrice.trim(),
-            peakPowerCoeff: m.peakPowerCoeff.trim(),
-            peakCapacityPrice: m.peakCapacityPrice.trim(),
-            vatPercent: m.vatPercent.trim(),
-            end: m.end.trim(),
-            dayEnd: m.dayEnd.trim(),
-            peakEnd: m.peakEnd.trim(),
-            nightEnd: m.nightEnd.trim(),
-          })),
-          sim: simCostInput.trim(),
-          extra: extraCosts.filter((c) => c.label.trim() || c.amount.trim()),
-          stationOwner: stationOwnerInput.trim(),
-          siteOwner: siteOwnerInput.trim(),
-          recipients,
-          lastPeriodEnd,
-        }),
+      const res = await api.put<{ preset: StoredPreset }>('reports/presets', payload);
+      const savedPreset = res.preset ?? payload;
+      setPresetsByKey((prev) => ({ ...prev, [key]: savedPreset }));
+      const updatedGroup: StationGroup = { id: key, key, name, stationIds: reportStationIds };
+      setStationGroups((prev) =>
+        existing ? prev.map((g) => (g.key === key ? updatedGroup : g)) : [...prev, updatedGroup],
       );
-    } catch {
-      // ignore storage errors
+      setActiveGroupId(key);
+      toast.success(`«${name}» бүлэг баазад хадгалагдлаа`);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Бүлэг хадгалахад алдаа гарлаа');
     }
-    toast.success(`«${name}» бүлэг хадгалагдлаа`);
   };
 
-  const deleteActiveGroup = () => {
+  const deleteActiveGroup = async () => {
     if (!activeGroupId) return;
-    persistStationGroups(stationGroups.filter((g) => g.id !== activeGroupId));
-    setActiveGroupId(null);
-    toast.success('Бүлэг устгагдлаа');
+    try {
+      await api.del(`reports/presets/${encodeURIComponent(activeGroupId)}`);
+      setStationGroups((prev) => prev.filter((g) => g.key !== activeGroupId));
+      setPresetsByKey((prev) => {
+        const copy = { ...prev };
+        delete copy[activeGroupId];
+        return copy;
+      });
+      setActiveGroupId(null);
+      toast.success('Бүлэг устгагдлаа');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Бүлэг устгахад алдаа гарлаа');
+    }
   };
 
   const parseNum = (s: string) => {
@@ -982,6 +985,36 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
     const n = Math.max(0, (parseNum(m.nightEnd) ?? 0) - (parseNum(m.nightStart) ?? 0));
     return acc + (d + p + n) * ct;
   }, 0);
+
+  const [savingPreset, setSavingPreset] = React.useState(false);
+
+  const saveOnlyToDb = async () => {
+    if (reportStationIds.length === 0) {
+      toast.error('Станц эсвэл бүлэг сонгоно уу');
+      return;
+    }
+    if (meterError || recipientError) {
+      toast.error(meterError || recipientError || 'Оруулсан утгаа шалгана уу');
+      return;
+    }
+    setSavingPreset(true);
+    try {
+      const key = targetStorageKey(activeGroupId, reportStationIds);
+      const isGroup = Boolean(activeGroupId);
+      const payload = buildPresetPayload(key, {
+        isGroup,
+        name: reportGroupName.trim() || (isGroup ? 'Бүлэг' : ''),
+        stationIds: reportStationIds,
+      });
+      const res = await api.put<{ preset: StoredPreset }>('reports/presets', payload);
+      setPresetsByKey((prev) => ({ ...prev, [key]: res.preset ?? payload }));
+      toast.success('Тохиргоо баазад амжилттай хадгалагдлаа');
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Хадгалахад алдаа гарлаа');
+    } finally {
+      setSavingPreset(false);
+    }
+  };
 
   async function submitRevenueForm(e: React.FormEvent) {
     e.preventDefault();
@@ -1044,40 +1077,19 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
       extraCosts: extraCostItems,
     });
     if (result.ok) {
+      const key = targetStorageKey(activeGroupId, reportStationIds);
+      const isGroup = Boolean(activeGroupId);
+      const payload = buildPresetPayload(key, {
+        isGroup,
+        name: reportGroupName.trim() || (isGroup ? 'Бүлэг' : ''),
+        stationIds: reportStationIds,
+        periodEndIso: result.periodEndIso ?? lastPeriodEnd,
+      });
       try {
-        localStorage.setItem(
-          targetStorageKey(activeGroupId, reportStationIds),
-          JSON.stringify({
-            end: meters[0]?.end?.trim() ?? '',
-            meters: meters.map((m) => ({
-              type: m.type,
-              label: m.label.trim(),
-              ctCoefficient: m.ctCoefficient.trim(),
-              basePrice: m.basePrice.trim(),
-              cosPhiPercent: m.cosPhiPercent.trim(),
-              capacityChargeFormula: m.capacityChargeFormula.trim(),
-              renewablePerKwh: m.renewablePerKwh.trim(),
-              dayPrice: m.dayPrice.trim(),
-              peakPrice: m.peakPrice.trim(),
-              nightPrice: m.nightPrice.trim(),
-              peakPowerCoeff: m.peakPowerCoeff.trim(),
-              peakCapacityPrice: m.peakCapacityPrice.trim(),
-              vatPercent: m.vatPercent.trim(),
-              end: m.end.trim(),
-              dayEnd: m.dayEnd.trim(),
-              peakEnd: m.peakEnd.trim(),
-              nightEnd: m.nightEnd.trim(),
-            })),
-            sim: simCostInput.trim(),
-            extra: extraCosts.filter((c) => c.label.trim() || c.amount.trim()),
-            stationOwner: stationOwnerInput.trim(),
-            siteOwner: siteOwnerInput.trim(),
-            recipients,
-            lastPeriodEnd: result.periodEndIso ?? lastPeriodEnd,
-          }),
-        );
+        await api.put('reports/presets', payload);
+        setPresetsByKey((prev) => ({ ...prev, [key]: payload }));
       } catch {
-        // Remembering the reading is a convenience only.
+        // Excel already downloaded; preset save failure shouldn't block closing
       }
       setRevenueFormOpen(false);
     }
@@ -2214,13 +2226,21 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
               Болих
             </Button>
             <Button
+              type="button"
+              variant="secondary"
+              onClick={saveOnlyToDb}
+              disabled={savingPreset || revenueReportLoading || reportStationIds.length === 0 || !!meterError || !!recipientError}
+            >
+              {savingPreset ? 'Хадгалж байна…' : 'Хадгалах'}
+            </Button>
+            <Button
               type="submit"
               form="revenue-report-form"
-              disabled={revenueReportLoading || reportStationIds.length === 0 || !!meterError || !!recipientError}
+              disabled={revenueReportLoading || savingPreset || reportStationIds.length === 0 || !!meterError || !!recipientError}
               className="gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
             >
               <FileSpreadsheet className="h-3.5 w-3.5" />
-              {revenueReportLoading ? 'Бэлдэж байна…' : 'Excel татах'}
+              {revenueReportLoading ? 'Бэлдэж байна…' : 'Хадгалах & Excel'}
             </Button>
           </>
         }
@@ -2785,7 +2805,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                       </Select>
                       <button
                         type="button"
-                        onClick={() => saveRecipientToDirectory(rc, 'THIRD_PARTY')}
+                        onClick={() => saveRecipientToDirectory(rc)}
                         title="Дансны санд хадгалах"
                         className="px-2 h-9 rounded-md border border-[var(--color-border)] text-xs font-medium text-emerald-600 hover:bg-emerald-500/10 dark:text-emerald-400"
                       >

@@ -503,6 +503,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
   // Manual inputs for the report: dynamic meters (1, 2, 3...; single or 3-tier),
   // meter reading date/time, site owner, recipients, and direct costs.
   const [revenueFormOpen, setRevenueFormOpen] = React.useState(false);
+  const [modalTab, setModalTab] = React.useState<'station' | 'meters' | 'split'>('station');
   const [meterDateInput, setMeterDateInput] = React.useState('');
   const [meterTimeInput, setMeterTimeInput] = React.useState('23:59:00');
   const [stationOwnerInput, setStationOwnerInput] = React.useState('');
@@ -844,6 +845,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
     setMeterDateInput(range.to);
     setMeterTimeInput('23:59:00');
     loadTargetSettings(matchedGroup?.id ?? null, initialIds, loadedAccounts);
+    setModalTab(selectedStation !== 'all' ? 'meters' : 'station');
     setRecipientsOpen(false);
     setAccountsDirOpen(false);
     setRevenueFormOpen(true);
@@ -2167,7 +2169,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
       <Modal
         open={revenueFormOpen}
         onClose={() => setRevenueFormOpen(false)}
-        size="xl"
+        size="2xl"
         title="Тайлан татах"
         description={`${range.from} — ${range.to}`}
         footer={
@@ -2187,14 +2189,45 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
           </>
         }
       >
-        <form id="revenue-report-form" onSubmit={submitRevenueForm} className="max-h-[75vh] overflow-y-auto pr-1">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
-            {/* LEFT COLUMN: Station/Group, Date/Time, Owners */}
-            <div className="space-y-4">
+        <form id="revenue-report-form" onSubmit={submitRevenueForm} className="space-y-4 text-sm">
+          {/* Clean Tab Bar */}
+          <div className="flex flex-wrap items-center gap-1.5 border-b border-[var(--color-border)] pb-3">
+            {(
+              [
+                { id: 'station', label: `1. Станц & Эзэмшигч (${reportStationIds.length})` },
+                { id: 'meters', label: `2. Тоолуур (${meters.length}) & Зардал` },
+                {
+                  id: 'split',
+                  label: `3. Орлого хуваарилалт (${round2(recipientTotalPct)}%)`,
+                  error: !!recipientError,
+                },
+              ] as const
+            ).map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => setModalTab(t.id)}
+                className={cn(
+                  'px-3.5 py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors',
+                  modalTab === t.id
+                    ? 'bg-emerald-600 text-white shadow-xs'
+                    : 'text-[var(--color-fg-muted)] hover:bg-[var(--color-surface-2)] hover:text-[var(--color-fg)]',
+                  'error' in t && t.error && modalTab !== t.id ? 'text-rose-500' : '',
+                )}
+              >
+                {t.label}
+              </button>
+            ))}
+          </div>
+
+          <div className="max-h-[64vh] overflow-y-auto pr-1 space-y-4">
+            {modalTab === 'station' && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+                <div className="space-y-4">
               {/* 0. Station Group & Multi-station selector */}
-              <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)]/25 p-3 space-y-2.5">
+              <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)]/25 p-3.5 space-y-3">
                 <div className="flex flex-wrap items-center justify-between gap-2">
-                  <span className="text-xs font-semibold uppercase tracking-wider text-[var(--color-fg-muted)]">
+                  <span className="text-sm font-semibold text-[var(--color-fg)]">
                     Станц / Бүлэг ({reportStationIds.length} сонгогдсон)
                   </span>
                   {stationGroups.length > 0 && (
@@ -2205,7 +2238,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                           type="button"
                           onClick={() => selectGroupInModal(g)}
                           className={cn(
-                            'px-2 py-0.5 rounded-full text-[11px] font-medium border transition-colors',
+                            'px-2.5 py-1 rounded-full text-xs font-medium border transition-colors',
                             activeGroupId === g.id
                               ? 'bg-emerald-600 text-white border-emerald-600'
                               : 'bg-[var(--color-surface-2)] text-[var(--color-fg)] border-[var(--color-border)] hover:border-emerald-500/60',
@@ -2218,14 +2251,14 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-40 overflow-y-auto pr-1">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 max-h-48 overflow-y-auto pr-1">
                   {stationOptions.map((st) => {
                     const checked = reportStationIds.includes(st.id);
                     return (
                       <label
                         key={st.id}
                         className={cn(
-                          'flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs cursor-pointer transition-colors',
+                          'flex items-center gap-2 rounded-md border px-3 py-2 text-sm cursor-pointer transition-colors',
                           checked
                             ? 'border-emerald-500/60 bg-emerald-500/10 text-[var(--color-fg)] font-medium'
                             : 'border-[var(--color-border)] text-[var(--color-fg-muted)] hover:bg-[var(--color-surface-2)]/40',
@@ -2235,7 +2268,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                           type="checkbox"
                           checked={checked}
                           onChange={() => toggleStationInModal(st.id)}
-                          className="accent-emerald-600"
+                          className="size-4 accent-emerald-600"
                         />
                         <span className="truncate">{st.name || st.cpId}</span>
                       </label>
@@ -2248,7 +2281,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                     value={reportGroupName}
                     onChange={(e) => setReportGroupName(e.target.value)}
                     placeholder="Нэгдсэн тайлан / бүлгийн нэр (ж.нь: Зайсан хилл)"
-                    className="h-8 flex-1 min-w-[12rem] text-xs"
+                    className="h-9 flex-1 min-w-[12rem] text-sm"
                   />
                   <Button
                     type="button"
@@ -2256,7 +2289,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                     size="sm"
                     onClick={saveCurrentAsGroup}
                     disabled={reportStationIds.length === 0 || !reportGroupName.trim()}
-                    className="h-8 text-xs"
+                    className="h-9 text-xs"
                   >
                     {activeGroupId ? 'Бүлэг шинэчлэх' : 'Бүлэг хадгалах'}
                   </Button>
@@ -2265,13 +2298,14 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                       type="button"
                       onClick={deleteActiveGroup}
                       aria-label="Бүлэг устгах"
-                      className="grid size-8 place-items-center rounded-md text-[var(--color-fg-muted)] hover:bg-rose-500/10 hover:text-rose-500"
+                      className="grid size-9 place-items-center rounded-md text-[var(--color-fg-muted)] hover:bg-rose-500/10 hover:text-rose-500"
                     >
-                      <Trash2 className="h-3.5 w-3.5" />
+                      <Trash2 className="h-4 w-4" />
                     </button>
                   )}
                 </div>
               </div>
+                </div>
 
               {/* 1. Meter reading date/time & owners */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -2309,18 +2343,19 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                   />
                 </Field>
               </div>
-            </div>
+              </div>
+            )}
 
-            {/* RIGHT COLUMN: Dynamic Meters, Costs, Revenue Split */}
-            <div className="space-y-4">
+            {modalTab === 'meters' && (
+              <div className="space-y-4">
 
           {/* 2. Dynamic Meters (1, 2, 3...) */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <span className="text-xs font-semibold uppercase tracking-wider text-[var(--color-fg-muted)]">
+              <span className="text-sm font-semibold text-[var(--color-fg)]">
                 Тоолуурууд ({meters.length})
               </span>
-              <Button type="button" variant="secondary" size="sm" onClick={addMeter} className="h-7 gap-1 text-xs">
+              <Button type="button" variant="secondary" size="sm" onClick={addMeter} className="h-8 gap-1 text-xs">
                 <Plus className="h-3.5 w-3.5" />
                 Тоолуур нэмэх
               </Button>
@@ -2329,14 +2364,14 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
             {meters.map((m, idx) => (
               <div
                 key={idx}
-                className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)]/30 p-3 space-y-2.5"
+                className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)]/30 p-3.5 space-y-3"
               >
                 <div className="flex flex-wrap items-center gap-2">
                   <Input
                     aria-label={`Тоолуур ${idx + 1} нэр`}
                     value={m.label}
                     onChange={(e) => updateMeter(idx, { label: e.target.value })}
-                    className="h-8 w-32 text-xs font-medium"
+                    className="h-9 w-36 text-sm font-medium"
                   />
                   <Select
                     aria-label={`Тоолуур ${idx + 1} төрөл`}
@@ -2344,28 +2379,28 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                     onChange={(e) =>
                       updateMeter(idx, { type: e.target.value as 'single' | 'three_tier' })
                     }
-                    className="h-8 text-xs"
+                    className="h-9 text-sm"
                   >
                     <option value="single">1 тарифт (Энгийн)</option>
                     <option value="three_tier">3 тарифт (Өдөр / Оргил / Шөнө)</option>
                   </Select>
-                  <div className="flex items-center gap-1 ml-auto">
-                    <span className="text-[11px] text-[var(--color-fg-muted)]">Коэф:</span>
+                  <div className="flex items-center gap-1.5 ml-auto">
+                    <span className="text-xs text-[var(--color-fg-muted)]">Коэф:</span>
                     <Input
                       aria-label={`Тоолуур ${idx + 1} коэффициент`}
                       inputMode="decimal"
                       value={m.ctCoefficient}
                       onChange={(e) => updateMeter(idx, { ctCoefficient: e.target.value })}
-                      className="h-8 w-16 text-xs text-center"
+                      className="h-9 w-16 text-sm text-center"
                     />
                     {meters.length > 1 && (
                       <button
                         type="button"
                         onClick={() => removeMeter(idx)}
                         aria-label="Тоолуур устгах"
-                        className="grid size-7 place-items-center rounded-md text-[var(--color-fg-muted)] hover:bg-rose-500/10 hover:text-rose-500"
+                        className="grid size-8 place-items-center rounded-md text-[var(--color-fg-muted)] hover:bg-rose-500/10 hover:text-rose-500"
                       >
-                        <Trash2 className="h-3.5 w-3.5" />
+                        <Trash2 className="h-4 w-4" />
                       </button>
                     )}
                   </div>
@@ -2613,29 +2648,83 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
               />
             </div>
           ))}
-          <Button type="button" variant="secondary" size="sm" onClick={addExtraCost} className="w-full gap-1 border-dashed">
+          <Button type="button" variant="secondary" size="sm" onClick={addExtraCost} className="w-full gap-1 border-dashed h-9">
             <Plus className="h-3.5 w-3.5" />
             Бусад зардал нэмэх
           </Button>
 
-          {/* 4. Revenue split recipients */}
-          <div className="rounded-lg border border-[var(--color-border)] p-3 space-y-2">
-            <button
-              type="button"
-              onClick={() => setRecipientsOpen((o) => !o)}
-              className="flex w-full items-center justify-between text-xs font-semibold text-[var(--color-fg)]"
-            >
-              <span>
-                Орлого хуваарилалт ({recipients.length} хүлээн авагч · {round2(recipientTotalPct)}%)
-              </span>
-              {recipientsOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-            </button>
-            {recipientError && <p className="text-xs text-rose-500">{recipientError}</p>}
-            {recipientsOpen && (
-              <div className="space-y-2.5 pt-2">
+          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)]/40 px-4 py-3 text-sm text-[var(--color-fg-muted)]">
+            Нийт тоолуурын хэрэглээ:{' '}
+            <span className="font-mono font-semibold text-[var(--color-fg)]">
+              {totalPreviewKwh > 0 && !meterError
+                ? `${formatNumber(totalPreviewKwh, 2)} кВтц`
+                : '—'}
+            </span>
+            <span className="ml-3 text-xs">Хоосон үлдээвэл Excel дээр гараар оруулж болно.</span>
+          </div>
+              </div>
+            )}
+
+          {modalTab === 'split' && (
+            <div className="space-y-4">
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className="text-sm font-semibold text-[var(--color-fg)]">
+                  Хүлээн авагчид (Нийт: {round2(recipientTotalPct)}%)
+                </span>
+                <div className="flex items-center gap-2">
+                  <Button type="button" variant="secondary" size="sm" onClick={addRecipient} className="h-8 gap-1 text-xs">
+                    <Plus className="h-3.5 w-3.5" />
+                    Хүлээн авагч нэмэх
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={() => setAccountsDirOpen((v) => !v)}
+                    className="h-8 text-xs"
+                  >
+                    {accountsDirOpen ? 'Дансны сан хаах' : `Дансны сан (${savedAccounts.length})`}
+                  </Button>
+                </div>
+              </div>
+              {recipientError && <p className="text-sm text-rose-500">{recipientError}</p>}
+              <div className="space-y-2.5">
                 {recipients.map((rc, idx) => (
-                  <div key={idx} className="space-y-1 rounded-md border border-[var(--color-border)]/70 p-2 bg-[var(--color-surface-2)]/20">
-                    <div className="flex flex-wrap items-center gap-1.5">
+                  <div key={idx} className="grid grid-cols-12 gap-2.5 items-center rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)]/20 p-3">
+                    <div className="col-span-12 sm:col-span-4">
+                      <Input
+                        value={rc.name}
+                        onChange={(e) => updateRecipient(idx, { name: e.target.value })}
+                        placeholder="Хүлээн авагчийн нэр"
+                        className="h-9 text-sm"
+                      />
+                    </div>
+                    <div className="col-span-4 sm:col-span-2">
+                      <Input
+                        value={rc.bank}
+                        onChange={(e) => updateRecipient(idx, { bank: e.target.value })}
+                        placeholder="Банк"
+                        className="h-9 text-sm"
+                      />
+                    </div>
+                    <div className="col-span-5 sm:col-span-3">
+                      <Input
+                        value={rc.account}
+                        onChange={(e) => updateRecipient(idx, { account: e.target.value })}
+                        placeholder="Дансны дугаар"
+                        className="h-9 text-sm font-mono"
+                      />
+                    </div>
+                    <div className="col-span-3 sm:col-span-1">
+                      <Input
+                        inputMode="decimal"
+                        value={rc.percent}
+                        onChange={(e) => updateRecipient(idx, { percent: e.target.value })}
+                        placeholder="%"
+                        className="h-9 text-sm text-center"
+                      />
+                    </div>
+                    <div className="col-span-12 sm:col-span-2 flex items-center justify-end gap-1.5">
                       <Select
                         aria-label="Хадгалсан данснаас сонгох"
                         value=""
@@ -2649,150 +2738,99 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                             });
                           }
                         }}
-                        className="h-7 text-[11px] max-w-[14rem]"
+                        className="h-9 text-xs flex-1"
                       >
-                        <option value="">Дансны сангаас сонгох…</option>
+                        <option value="">Данс…</option>
                         {savedAccounts.map((acc) => (
                           <option key={acc.id} value={acc.id}>
-                            [{acc.role === 'OWN' ? 'Манай' : acc.role === 'OWNER' ? 'Эзэмшигч' : '3-дагч'}] {acc.name} ({acc.account})
+                            [{acc.role === 'OWN' ? 'Манай' : acc.role === 'OWNER' ? 'Эзэмшигч' : '3-дагч'}] {acc.name}
                           </option>
                         ))}
                       </Select>
                       <button
                         type="button"
                         onClick={() => saveRecipientToDirectory(rc, 'THIRD_PARTY')}
-                        className="ml-auto text-[11px] font-medium text-emerald-600 hover:underline dark:text-emerald-400"
+                        title="Дансны санд хадгалах"
+                        className="px-2 h-9 rounded-md border border-[var(--color-border)] text-xs font-medium text-emerald-600 hover:bg-emerald-500/10 dark:text-emerald-400"
                       >
-                        + Данс хадгалах
+                        +
                       </button>
                       {recipients.length > 1 && (
                         <button
                           type="button"
                           onClick={() => removeRecipient(idx)}
                           aria-label="Устгах"
-                          className="grid size-6 place-items-center rounded text-[var(--color-fg-muted)] hover:text-rose-500"
+                          className="grid size-9 place-items-center rounded-md text-[var(--color-fg-muted)] hover:text-rose-500"
                         >
-                          <Trash2 className="h-3.5 w-3.5" />
+                          <Trash2 className="h-4 w-4" />
                         </button>
                       )}
                     </div>
-                    <div className="grid grid-cols-12 gap-1.5 items-center">
-                      <Input
-                        value={rc.name}
-                        onChange={(e) => updateRecipient(idx, { name: e.target.value })}
-                        placeholder="Хүлээн авагч"
-                        className="col-span-5 h-8 text-xs"
-                      />
-                      <Input
-                        value={rc.bank}
-                        onChange={(e) => updateRecipient(idx, { bank: e.target.value })}
-                        placeholder="Банк"
-                        className="col-span-2 h-8 text-xs"
-                      />
-                      <Input
-                        value={rc.account}
-                        onChange={(e) => updateRecipient(idx, { account: e.target.value })}
-                        placeholder="Данс"
-                        className="col-span-3 h-8 text-xs"
-                      />
-                      <Input
-                        inputMode="decimal"
-                        value={rc.percent}
-                        onChange={(e) => updateRecipient(idx, { percent: e.target.value })}
-                        placeholder="%"
-                        className="col-span-2 h-8 text-xs text-center px-1"
-                      />
-                    </div>
                   </div>
                 ))}
-
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <Button type="button" variant="secondary" size="sm" onClick={addRecipient} className="h-7 gap-1 text-xs">
-                    <Plus className="h-3 w-3" />
-                    Хүлээн авагч нэмэх
-                  </Button>
-                  <button
-                    type="button"
-                    onClick={() => setAccountsDirOpen((v) => !v)}
-                    className="text-xs font-medium text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] underline"
-                  >
-                    {accountsDirOpen ? 'Дансны сан хаах' : `Дансны сан удирдах (${savedAccounts.length})`}
-                  </button>
-                </div>
-
-                {accountsDirOpen && (
-                  <div className="rounded-md border border-dashed border-[var(--color-border)] p-2.5 space-y-2 bg-[var(--color-surface-2)]/30">
-                    <div className="text-[11px] font-semibold text-[var(--color-fg-muted)]">
-                      Хадгалсан дансууд (Манай IT / Эзэмшигч / Гуравдагч тал)
-                    </div>
-                    <div className="space-y-1 max-h-32 overflow-y-auto">
-                      {savedAccounts.map((acc) => (
-                        <div key={acc.id} className="flex items-center justify-between gap-2 text-xs py-0.5">
-                          <span className="truncate">
-                            <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-[var(--color-surface-2)] mr-1.5">
-                              {acc.role === 'OWN' ? 'Манай' : acc.role === 'OWNER' ? 'Эзэмшигч' : '3-дагч'}
-                            </span>
-                            <span className="font-medium">{acc.name}</span> · {acc.bank} · <span className="font-mono">{acc.account}</span>
-                          </span>
-                          <button
-                            type="button"
-                            onClick={() => removeSavedAccount(acc.id)}
-                            aria-label="Данс устгах"
-                            className="text-[var(--color-fg-muted)] hover:text-rose-500"
-                          >
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                    <div className="grid grid-cols-12 gap-1.5 pt-1 border-t border-[var(--color-border)]/60">
-                      <Input
-                        value={newAccName}
-                        onChange={(e) => setNewAccName(e.target.value)}
-                        placeholder="Нэр (ж.нь: СЕКУОИА...)"
-                        className="col-span-4 h-7 text-xs"
-                      />
-                      <Input
-                        value={newAccBank}
-                        onChange={(e) => setNewAccBank(e.target.value)}
-                        placeholder="Банк"
-                        className="col-span-2 h-7 text-xs"
-                      />
-                      <Input
-                        value={newAccNum}
-                        onChange={(e) => setNewAccNum(e.target.value)}
-                        placeholder="Дансны дугаар"
-                        className="col-span-3 h-7 text-xs"
-                      />
-                      <Select
-                        value={newAccRole}
-                        onChange={(e) => setNewAccRole(e.target.value as BankAccountRole)}
-                        className="col-span-2 h-7 text-[11px]"
-                      >
-                        <option value="OWN">Манай</option>
-                        <option value="OWNER">Эзэмшигч</option>
-                        <option value="THIRD_PARTY">3-дагч</option>
-                      </Select>
-                      <Button type="button" variant="secondary" size="sm" onClick={addSavedAccount} className="col-span-1 h-7 px-1 text-xs">
-                        +
-                      </Button>
-                    </div>
-                  </div>
-                )}
               </div>
-            )}
-          </div>
 
-          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)]/40 px-3 py-2 text-xs text-[var(--color-fg-muted)]">
-            Нийт тоолуурын хэрэглээ:{' '}
-            <span className="font-mono font-semibold text-[var(--color-fg)]">
-              {totalPreviewKwh > 0 && !meterError
-                ? `${formatNumber(totalPreviewKwh, 2)} кВтц`
-                : '—'}
-            </span>
-            <div className="mt-1">Хоосон үлдээвэл Excel дээр гараар оруулж болно.</div>
-          </div>
+              {accountsDirOpen && (
+                <div className="rounded-lg border border-dashed border-[var(--color-border)] p-3.5 space-y-2.5 bg-[var(--color-surface-2)]/30">
+                  <div className="text-xs font-semibold text-[var(--color-fg-muted)]">
+                    Хадгалсан дансууд (Манай IT / Эзэмшигч / Гуравдагч тал)
+                  </div>
+                  <div className="space-y-1.5 max-h-40 overflow-y-auto">
+                    {savedAccounts.map((acc) => (
+                      <div key={acc.id} className="flex items-center justify-between gap-2 text-sm py-1">
+                        <span className="truncate">
+                          <span className="font-mono text-xs px-1.5 py-0.5 rounded bg-[var(--color-surface-2)] mr-2">
+                            {acc.role === 'OWN' ? 'Манай' : acc.role === 'OWNER' ? 'Эзэмшигч' : '3-дагч'}
+                          </span>
+                          <span className="font-medium">{acc.name}</span> · {acc.bank} · <span className="font-mono">{acc.account}</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => removeSavedAccount(acc.id)}
+                          aria-label="Данс устгах"
+                          className="text-[var(--color-fg-muted)] hover:text-rose-500"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  <div className="grid grid-cols-12 gap-2 pt-2 border-t border-[var(--color-border)]/60">
+                    <Input
+                      value={newAccName}
+                      onChange={(e) => setNewAccName(e.target.value)}
+                      placeholder="Нэр (ж.нь: СЕКУОИА...)"
+                      className="col-span-4 h-9 text-sm"
+                    />
+                    <Input
+                      value={newAccBank}
+                      onChange={(e) => setNewAccBank(e.target.value)}
+                      placeholder="Банк"
+                      className="col-span-2 h-9 text-sm"
+                    />
+                    <Input
+                      value={newAccNum}
+                      onChange={(e) => setNewAccNum(e.target.value)}
+                      placeholder="Дансны дугаар"
+                      className="col-span-3 h-9 text-sm"
+                    />
+                    <Select
+                      value={newAccRole}
+                      onChange={(e) => setNewAccRole(e.target.value as BankAccountRole)}
+                      className="col-span-2 h-9 text-xs"
+                    >
+                      <option value="OWN">Манай</option>
+                      <option value="OWNER">Эзэмшигч</option>
+                      <option value="THIRD_PARTY">3-дагч</option>
+                    </Select>
+                    <Button type="button" variant="secondary" size="sm" onClick={addSavedAccount} className="col-span-1 h-9 text-sm">
+                      +
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
+          )}
           </div>
         </form>
       </Modal>

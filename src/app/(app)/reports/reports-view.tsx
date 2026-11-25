@@ -513,6 +513,17 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
     type: 'single' | 'three_tier';
     label: string;
     ctCoefficient: string;
+    basePrice: string;
+    cosPhiPercent: string;
+    capacityChargeFormula: string;
+    renewablePerKwh: string;
+    dayPrice: string;
+    peakPrice: string;
+    nightPrice: string;
+    peakPowerCoeff: string;
+    peakCapacityPrice: string;
+    vatPercent: string;
+    showAdvanced?: boolean;
     start: string;
     end: string;
     dayStart: string;
@@ -526,6 +537,17 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
     type,
     label: `Тоолуур ${idx + 1}`,
     ctCoefficient: type === 'three_tier' ? '40' : '60',
+    basePrice: '278',
+    cosPhiPercent: '15',
+    capacityChargeFormula: '16275*1.1',
+    renewablePerKwh: '23.79',
+    dayPrice: '278',
+    peakPrice: '417',
+    nightPrice: '168',
+    peakPowerCoeff: '150',
+    peakCapacityPrice: '16275',
+    vatPercent: '10',
+    showAdvanced: false,
     start: '',
     end: '',
     dayStart: '',
@@ -716,6 +738,16 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
           ...makeMeter(idx, sm.type === 'three_tier' ? 'three_tier' : 'single'),
           label: sm.label || `Тоолуур ${idx + 1}`,
           ctCoefficient: sm.ctCoefficient || (sm.type === 'three_tier' ? '40' : '60'),
+          basePrice: sm.basePrice || '278',
+          cosPhiPercent: sm.cosPhiPercent || '15',
+          capacityChargeFormula: sm.capacityChargeFormula || '16275*1.1',
+          renewablePerKwh: sm.renewablePerKwh || '23.79',
+          dayPrice: sm.dayPrice || '278',
+          peakPrice: sm.peakPrice || '417',
+          nightPrice: sm.nightPrice || '168',
+          peakPowerCoeff: sm.peakPowerCoeff || '150',
+          peakCapacityPrice: sm.peakCapacityPrice || '16275',
+          vatPercent: sm.vatPercent || '10',
           start: sm.end ?? '',
           end: '',
           dayStart: sm.dayEnd ?? '',
@@ -920,10 +952,17 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
     const reportMeters: RevenueReportMeter[] = meters.map((m) => {
       const ct = parseNum(m.ctCoefficient);
       if (m.type === 'three_tier') {
+        const vatPct = parseNum(m.vatPercent);
         return {
           type: 'three_tier',
           label: m.label.trim() || undefined,
           ctCoefficient: ct,
+          dayPrice: parseNum(m.dayPrice),
+          peakPrice: parseNum(m.peakPrice),
+          nightPrice: parseNum(m.nightPrice),
+          peakPowerCoeff: parseNum(m.peakPowerCoeff),
+          peakCapacityPrice: parseNum(m.peakCapacityPrice),
+          vatRate: vatPct != null ? vatPct / 100 : undefined,
           dayStart: parseNum(m.dayStart),
           dayEnd: parseNum(m.dayEnd),
           peakStart: parseNum(m.peakStart),
@@ -932,10 +971,15 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
           nightEnd: parseNum(m.nightEnd),
         };
       }
+      const cosPct = parseNum(m.cosPhiPercent);
       return {
         type: 'single',
         label: m.label.trim() || undefined,
         ctCoefficient: ct,
+        basePrice: parseNum(m.basePrice),
+        cosPhiLoss: cosPct != null ? cosPct / 100 : undefined,
+        capacityChargeFormula: m.capacityChargeFormula.trim() || undefined,
+        renewablePerKwh: parseNum(m.renewablePerKwh),
         startReading: parseNum(m.start),
         endReading: parseNum(m.end),
       };
@@ -971,6 +1015,16 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
               type: m.type,
               label: m.label.trim(),
               ctCoefficient: m.ctCoefficient.trim(),
+              basePrice: m.basePrice.trim(),
+              cosPhiPercent: m.cosPhiPercent.trim(),
+              capacityChargeFormula: m.capacityChargeFormula.trim(),
+              renewablePerKwh: m.renewablePerKwh.trim(),
+              dayPrice: m.dayPrice.trim(),
+              peakPrice: m.peakPrice.trim(),
+              nightPrice: m.nightPrice.trim(),
+              peakPowerCoeff: m.peakPowerCoeff.trim(),
+              peakCapacityPrice: m.peakCapacityPrice.trim(),
+              vatPercent: m.vatPercent.trim(),
               end: m.end.trim(),
               dayEnd: m.dayEnd.trim(),
               peakEnd: m.peakEnd.trim(),
@@ -2113,14 +2167,9 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
       <Modal
         open={revenueFormOpen}
         onClose={() => setRevenueFormOpen(false)}
-        size="lg"
+        size="xl"
         title="Тайлан татах"
-        description={`${
-          reportGroupName.trim() ||
-          (reportStationIds.length === 1
-            ? (stationOptions.find((s) => s.id === reportStationIds[0])?.name ?? '')
-            : `${reportStationIds.length} станцын нэгдсэн тайлан`)
-        } · ${range.from} — ${range.to}`}
+        description={`${range.from} — ${range.to}`}
         footer={
           <>
             <Button type="button" variant="secondary" onClick={() => setRevenueFormOpen(false)}>
@@ -2138,125 +2187,132 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
           </>
         }
       >
-        <form id="revenue-report-form" onSubmit={submitRevenueForm} className="space-y-4 max-h-[75vh] overflow-y-auto pr-1">
-          {/* 0. Station Group & Multi-station selector */}
-          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)]/25 p-3 space-y-2.5">
-            <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-xs font-semibold uppercase tracking-wider text-[var(--color-fg-muted)]">
-                Станц / Бүлэг ({reportStationIds.length} сонгогдсон)
-              </span>
-              {stationGroups.length > 0 && (
-                <div className="flex flex-wrap items-center gap-1.5">
-                  {stationGroups.map((g) => (
-                    <button
-                      key={g.id}
-                      type="button"
-                      onClick={() => selectGroupInModal(g)}
-                      className={cn(
-                        'px-2 py-0.5 rounded-full text-[11px] font-medium border transition-colors',
-                        activeGroupId === g.id
-                          ? 'bg-emerald-600 text-white border-emerald-600'
-                          : 'bg-[var(--color-surface-2)] text-[var(--color-fg)] border-[var(--color-border)] hover:border-emerald-500/60',
-                      )}
-                    >
-                      {g.name} ({g.stationIds.length})
-                    </button>
-                  ))}
+        <form id="revenue-report-form" onSubmit={submitRevenueForm} className="max-h-[75vh] overflow-y-auto pr-1">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 items-start">
+            {/* LEFT COLUMN: Station/Group, Date/Time, Owners */}
+            <div className="space-y-4">
+              {/* 0. Station Group & Multi-station selector */}
+              <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)]/25 p-3 space-y-2.5">
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <span className="text-xs font-semibold uppercase tracking-wider text-[var(--color-fg-muted)]">
+                    Станц / Бүлэг ({reportStationIds.length} сонгогдсон)
+                  </span>
+                  {stationGroups.length > 0 && (
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      {stationGroups.map((g) => (
+                        <button
+                          key={g.id}
+                          type="button"
+                          onClick={() => selectGroupInModal(g)}
+                          className={cn(
+                            'px-2 py-0.5 rounded-full text-[11px] font-medium border transition-colors',
+                            activeGroupId === g.id
+                              ? 'bg-emerald-600 text-white border-emerald-600'
+                              : 'bg-[var(--color-surface-2)] text-[var(--color-fg)] border-[var(--color-border)] hover:border-emerald-500/60',
+                          )}
+                        >
+                          {g.name} ({g.stationIds.length})
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
-              )}
-            </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-32 overflow-y-auto pr-1">
-              {stationOptions.map((st) => {
-                const checked = reportStationIds.includes(st.id);
-                return (
-                  <label
-                    key={st.id}
-                    className={cn(
-                      'flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs cursor-pointer transition-colors',
-                      checked
-                        ? 'border-emerald-500/60 bg-emerald-500/10 text-[var(--color-fg)] font-medium'
-                        : 'border-[var(--color-border)] text-[var(--color-fg-muted)] hover:bg-[var(--color-surface-2)]/40',
-                    )}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-40 overflow-y-auto pr-1">
+                  {stationOptions.map((st) => {
+                    const checked = reportStationIds.includes(st.id);
+                    return (
+                      <label
+                        key={st.id}
+                        className={cn(
+                          'flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs cursor-pointer transition-colors',
+                          checked
+                            ? 'border-emerald-500/60 bg-emerald-500/10 text-[var(--color-fg)] font-medium'
+                            : 'border-[var(--color-border)] text-[var(--color-fg-muted)] hover:bg-[var(--color-surface-2)]/40',
+                        )}
+                      >
+                        <input
+                          type="checkbox"
+                          checked={checked}
+                          onChange={() => toggleStationInModal(st.id)}
+                          className="accent-emerald-600"
+                        />
+                        <span className="truncate">{st.name || st.cpId}</span>
+                      </label>
+                    );
+                  })}
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2 pt-1">
+                  <Input
+                    value={reportGroupName}
+                    onChange={(e) => setReportGroupName(e.target.value)}
+                    placeholder="Нэгдсэн тайлан / бүлгийн нэр (ж.нь: Зайсан хилл)"
+                    className="h-8 flex-1 min-w-[12rem] text-xs"
+                  />
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={saveCurrentAsGroup}
+                    disabled={reportStationIds.length === 0 || !reportGroupName.trim()}
+                    className="h-8 text-xs"
                   >
-                    <input
-                      type="checkbox"
-                      checked={checked}
-                      onChange={() => toggleStationInModal(st.id)}
-                      className="accent-emerald-600"
-                    />
-                    <span className="truncate">{st.name || st.cpId}</span>
-                  </label>
-                );
-              })}
+                    {activeGroupId ? 'Бүлэг шинэчлэх' : 'Бүлэг хадгалах'}
+                  </Button>
+                  {activeGroupId && (
+                    <button
+                      type="button"
+                      onClick={deleteActiveGroup}
+                      aria-label="Бүлэг устгах"
+                      className="grid size-8 place-items-center rounded-md text-[var(--color-fg-muted)] hover:bg-rose-500/10 hover:text-rose-500"
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* 1. Meter reading date/time & owners */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <Field label="Тоолуурын заалтын огноо" htmlFor="meter-date">
+                  <Input
+                    id="meter-date"
+                    type="date"
+                    value={meterDateInput}
+                    onChange={(e) => setMeterDateInput(e.target.value)}
+                  />
+                </Field>
+                <Field label="Тоолуурын заалтын цаг, минут" htmlFor="meter-time">
+                  <Input
+                    id="meter-time"
+                    type="time"
+                    step="1"
+                    value={meterTimeInput}
+                    onChange={(e) => setMeterTimeInput(e.target.value)}
+                  />
+                </Field>
+                <Field label="Станц эзэмшигч" htmlFor="station-owner">
+                  <Input
+                    id="station-owner"
+                    value={stationOwnerInput}
+                    onChange={(e) => setStationOwnerInput(e.target.value)}
+                    placeholder="Станц эзэмшигч"
+                  />
+                </Field>
+                <Field label="Талбай эзэмшигч" htmlFor="site-owner">
+                  <Input
+                    id="site-owner"
+                    value={siteOwnerInput}
+                    onChange={(e) => setSiteOwnerInput(e.target.value)}
+                    placeholder="Талбай эзэмшигч"
+                  />
+                </Field>
+              </div>
             </div>
 
-            <div className="flex flex-wrap items-center gap-2 pt-1">
-              <Input
-                value={reportGroupName}
-                onChange={(e) => setReportGroupName(e.target.value)}
-                placeholder="Нэгдсэн тайлан / бүлгийн нэр (ж.нь: Зайсан хилл)"
-                className="h-8 flex-1 min-w-[12rem] text-xs"
-              />
-              <Button
-                type="button"
-                variant="secondary"
-                size="sm"
-                onClick={saveCurrentAsGroup}
-                disabled={reportStationIds.length === 0 || !reportGroupName.trim()}
-                className="h-8 text-xs"
-              >
-                {activeGroupId ? 'Бүлэг шинэчлэх' : 'Бүлэг хадгалах'}
-              </Button>
-              {activeGroupId && (
-                <button
-                  type="button"
-                  onClick={deleteActiveGroup}
-                  aria-label="Бүлэг устгах"
-                  className="grid size-8 place-items-center rounded-md text-[var(--color-fg-muted)] hover:bg-rose-500/10 hover:text-rose-500"
-                >
-                  <Trash2 className="h-3.5 w-3.5" />
-                </button>
-              )}
-            </div>
-          </div>
-
-          {/* 1. Meter reading date/time & owners */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Field label="Тоолуурын заалтын огноо" htmlFor="meter-date">
-              <Input
-                id="meter-date"
-                type="date"
-                value={meterDateInput}
-                onChange={(e) => setMeterDateInput(e.target.value)}
-              />
-            </Field>
-            <Field label="Тоолуурын заалтын цаг, минут" htmlFor="meter-time">
-              <Input
-                id="meter-time"
-                type="time"
-                step="1"
-                value={meterTimeInput}
-                onChange={(e) => setMeterTimeInput(e.target.value)}
-              />
-            </Field>
-            <Field label="Станц эзэмшигч" htmlFor="station-owner">
-              <Input
-                id="station-owner"
-                value={stationOwnerInput}
-                onChange={(e) => setStationOwnerInput(e.target.value)}
-                placeholder="Станц эзэмшигч"
-              />
-            </Field>
-            <Field label="Талбай эзэмшигч" htmlFor="site-owner">
-              <Input
-                id="site-owner"
-                value={siteOwnerInput}
-                onChange={(e) => setSiteOwnerInput(e.target.value)}
-                placeholder="Талбай эзэмшигч"
-              />
-            </Field>
-          </div>
+            {/* RIGHT COLUMN: Dynamic Meters, Costs, Revenue Split */}
+            <div className="space-y-4">
 
           {/* 2. Dynamic Meters (1, 2, 3...) */}
           <div className="space-y-3">
@@ -2316,8 +2372,8 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                 </div>
 
                 {m.type === 'single' ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                    <Field label="Эхний заалт" hint="Өмнөх тайлангийн эцсийн заалт">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5">
+                    <Field label="Эхний заалт" hint="Өмнөх эцсийн заалт">
                       <Input
                         inputMode="decimal"
                         value={m.start}
@@ -2334,13 +2390,44 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                         autoFocus={idx === 0}
                       />
                     </Field>
+                    <Field label="Суурь үнэ (₮/кВтц)">
+                      <Input
+                        inputMode="decimal"
+                        value={m.basePrice}
+                        onChange={(e) => updateMeter(idx, { basePrice: e.target.value })}
+                        placeholder="278"
+                      />
+                    </Field>
                   </div>
                 ) : (
                   <div className="space-y-2">
                     <div className="grid grid-cols-3 gap-2 text-center text-[11px] font-medium text-[var(--color-fg-muted)]">
-                      <span>Өдөр (278₮)</span>
-                      <span>Оргил (417₮)</span>
-                      <span>Шөнө (168₮)</span>
+                      <span>Өдөр</span>
+                      <span>Оргил</span>
+                      <span>Шөнө</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <Input
+                        inputMode="decimal"
+                        value={m.dayPrice}
+                        onChange={(e) => updateMeter(idx, { dayPrice: e.target.value })}
+                        placeholder="Үнэ (278)"
+                        className="h-7 text-xs text-center"
+                      />
+                      <Input
+                        inputMode="decimal"
+                        value={m.peakPrice}
+                        onChange={(e) => updateMeter(idx, { peakPrice: e.target.value })}
+                        placeholder="Үнэ (417)"
+                        className="h-7 text-xs text-center"
+                      />
+                      <Input
+                        inputMode="decimal"
+                        value={m.nightPrice}
+                        onChange={(e) => updateMeter(idx, { nightPrice: e.target.value })}
+                        placeholder="Үнэ (168)"
+                        className="h-7 text-xs text-center"
+                      />
                     </div>
                     <div className="grid grid-cols-3 gap-2">
                       <Input
@@ -2393,6 +2480,82 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                     )}
                   </div>
                 )}
+
+                <div className="pt-1">
+                  <button
+                    type="button"
+                    onClick={() => updateMeter(idx, { showAdvanced: !m.showAdvanced })}
+                    className="text-[11px] font-medium text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] underline"
+                  >
+                    {m.showAdvanced
+                      ? 'Нэмэлт тохиргоо нуух'
+                      : m.type === 'single'
+                        ? `Тохиргоо: Cos φ ${m.cosPhiPercent}% · Чадал ${m.capacityChargeFormula} · СЭХ ${m.renewablePerKwh}`
+                        : `Тохиргоо: Оргил коэф ${m.peakPowerCoeff} · Чадал ${m.peakCapacityPrice} · НӨАТ ${m.vatPercent}%`}
+                  </button>
+                  {m.showAdvanced && (
+                    m.type === 'single' ? (
+                      <div className="mt-2 grid grid-cols-3 gap-2">
+                        <Field label="Cos φ (%)">
+                          <Input
+                            inputMode="decimal"
+                            value={m.cosPhiPercent}
+                            onChange={(e) => updateMeter(idx, { cosPhiPercent: e.target.value })}
+                            placeholder="15"
+                            className="h-8 text-xs"
+                          />
+                        </Field>
+                        <Field label="Чадал (томьёо/дүн)">
+                          <Input
+                            value={m.capacityChargeFormula}
+                            onChange={(e) => updateMeter(idx, { capacityChargeFormula: e.target.value })}
+                            placeholder="16275*1.1"
+                            className="h-8 text-xs"
+                          />
+                        </Field>
+                        <Field label="СЭХ (₮/кВтц)">
+                          <Input
+                            inputMode="decimal"
+                            value={m.renewablePerKwh}
+                            onChange={(e) => updateMeter(idx, { renewablePerKwh: e.target.value })}
+                            placeholder="23.79"
+                            className="h-8 text-xs"
+                          />
+                        </Field>
+                      </div>
+                    ) : (
+                      <div className="mt-2 grid grid-cols-3 gap-2">
+                        <Field label="Оргил коэф">
+                          <Input
+                            inputMode="decimal"
+                            value={m.peakPowerCoeff}
+                            onChange={(e) => updateMeter(idx, { peakPowerCoeff: e.target.value })}
+                            placeholder="150"
+                            className="h-8 text-xs"
+                          />
+                        </Field>
+                        <Field label="Чадлын тариф">
+                          <Input
+                            inputMode="decimal"
+                            value={m.peakCapacityPrice}
+                            onChange={(e) => updateMeter(idx, { peakCapacityPrice: e.target.value })}
+                            placeholder="16275"
+                            className="h-8 text-xs"
+                          />
+                        </Field>
+                        <Field label="НӨАТ (%)">
+                          <Input
+                            inputMode="decimal"
+                            value={m.vatPercent}
+                            onChange={(e) => updateMeter(idx, { vatPercent: e.target.value })}
+                            placeholder="10"
+                            className="h-8 text-xs"
+                          />
+                        </Field>
+                      </div>
+                    )
+                  )}
+                </div>
               </div>
             ))}
           </div>
@@ -2628,6 +2791,8 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                 : '—'}
             </span>
             <div className="mt-1">Хоосон үлдээвэл Excel дээр гараар оруулж болно.</div>
+          </div>
+            </div>
           </div>
         </form>
       </Modal>

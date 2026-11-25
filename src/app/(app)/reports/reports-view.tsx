@@ -68,7 +68,9 @@ import {
   buildStationRevenueWorkbook,
   downloadWorkbook,
   revenueReportFileName,
+  type RevenueReportMeter,
   type RevenueReportParams,
+  type RevenueReportRecipient,
 } from '@/lib/revenue-report-excel';
 
 function localDate(iso: string): Date | null {
@@ -498,10 +500,167 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
   // Per-station Revenue Allocation Report («EV ЦЭНЭГЛЭХ СТАНЦЫН ОРЛОГО ХУВААРИЛАЛТЫН ТАЙЛАН»)
   const [revenueReportLoading, setRevenueReportLoading] = React.useState(false);
 
-  // Manual inputs for the report: meter readings and the data-SIM cost (entered by staff).
+  // Manual inputs for the report: dynamic meters (1, 2, 3...; single or 3-tier),
+  // meter reading date/time, site owner, recipients, and direct costs.
   const [revenueFormOpen, setRevenueFormOpen] = React.useState(false);
-  const [meterStartInput, setMeterStartInput] = React.useState('');
-  const [meterEndInput, setMeterEndInput] = React.useState('');
+  const [meterDateInput, setMeterDateInput] = React.useState('');
+  const [meterTimeInput, setMeterTimeInput] = React.useState('23:59:00');
+  const [stationOwnerInput, setStationOwnerInput] = React.useState('');
+  const [siteOwnerInput, setSiteOwnerInput] = React.useState('');
+  const [lastPeriodEnd, setLastPeriodEnd] = React.useState<string | undefined>(undefined);
+
+  type MeterFormItem = {
+    type: 'single' | 'three_tier';
+    label: string;
+    ctCoefficient: string;
+    start: string;
+    end: string;
+    dayStart: string;
+    dayEnd: string;
+    peakStart: string;
+    peakEnd: string;
+    nightStart: string;
+    nightEnd: string;
+  };
+  const makeMeter = (idx: number, type: 'single' | 'three_tier' = 'single'): MeterFormItem => ({
+    type,
+    label: `Тоолуур ${idx + 1}`,
+    ctCoefficient: type === 'three_tier' ? '40' : '60',
+    start: '',
+    end: '',
+    dayStart: '',
+    dayEnd: '',
+    peakStart: '',
+    peakEnd: '',
+    nightStart: '',
+    nightEnd: '',
+  });
+  const [meters, setMeters] = React.useState<MeterFormItem[]>([makeMeter(0, 'single')]);
+  const addMeter = () => setMeters((list) => [...list, makeMeter(list.length, 'single')]);
+  const removeMeter = (i: number) =>
+    setMeters((list) => (list.length > 1 ? list.filter((_, j) => j !== i) : list));
+  const updateMeter = (i: number, patch: Partial<MeterFormItem>) =>
+    setMeters((list) =>
+      list.map((m, j) => {
+        if (j !== i) return m;
+        const next = { ...m, ...patch };
+        if (patch.type && patch.type !== m.type) {
+          next.ctCoefficient = patch.type === 'three_tier' ? '40' : '60';
+        }
+        return next;
+      }),
+    );
+
+  type RecipientFormItem = { name: string; bank: string; account: string; percent: string };
+  const [recipients, setRecipients] = React.useState<RecipientFormItem[]>([]);
+  const addRecipient = () =>
+    setRecipients((list) => [...list, { name: '', bank: '', account: '', percent: '0' }]);
+  const removeRecipient = (i: number) =>
+    setRecipients((list) => (list.length > 1 ? list.filter((_, j) => j !== i) : list));
+  const updateRecipient = (i: number, patch: Partial<RecipientFormItem>) =>
+    setRecipients((list) => list.map((r, j) => (j === i ? { ...r, ...patch } : r)));
+  const [recipientsOpen, setRecipientsOpen] = React.useState(false);
+
+  // Saved Bank Accounts ("Дансны сан") — own IT, third-party service, and owner accounts
+  type BankAccountRole = 'OWN' | 'THIRD_PARTY' | 'OWNER';
+  type SavedBankAccount = {
+    id: string;
+    name: string;
+    bank: string;
+    account: string;
+    role: BankAccountRole;
+  };
+  const BANK_ACCOUNTS_KEY = 'eplug.report.bankAccounts';
+  const DEFAULT_BANK_ACCOUNTS: SavedBankAccount[] = [
+    {
+      id: 'own-jirkto',
+      name: 'ЖИРКТО ХХК /IT платформ/',
+      bank: 'Голомт',
+      account: '88001500 2255103877',
+      role: 'OWN',
+    },
+    {
+      id: '3p-sequoia',
+      name: 'СЕКУОИА ИНДАСТРИАЛ ХХК /Засвар үйлчилгээ/',
+      bank: 'Хаан',
+      account: '5111748965',
+      role: 'THIRD_PARTY',
+    },
+  ];
+  const [savedAccounts, setSavedAccounts] = React.useState<SavedBankAccount[]>(DEFAULT_BANK_ACCOUNTS);
+  const [accountsDirOpen, setAccountsDirOpen] = React.useState(false);
+  const [newAccName, setNewAccName] = React.useState('');
+  const [newAccBank, setNewAccBank] = React.useState('');
+  const [newAccNum, setNewAccNum] = React.useState('');
+  const [newAccRole, setNewAccRole] = React.useState<BankAccountRole>('THIRD_PARTY');
+
+  const persistBankAccounts = (next: SavedBankAccount[]) => {
+    setSavedAccounts(next);
+    try {
+      localStorage.setItem(BANK_ACCOUNTS_KEY, JSON.stringify(next));
+    } catch {
+      // ignore storage errors
+    }
+  };
+
+  const addSavedAccount = () => {
+    if (!newAccName.trim() || !newAccNum.trim()) return;
+    const item: SavedBankAccount = {
+      id: `acc-${Date.now()}`,
+      name: newAccName.trim(),
+      bank: newAccBank.trim(),
+      account: newAccNum.trim(),
+      role: newAccRole,
+    };
+    persistBankAccounts([...savedAccounts, item]);
+    setNewAccName('');
+    setNewAccBank('');
+    setNewAccNum('');
+  };
+
+  const removeSavedAccount = (id: string) => {
+    persistBankAccounts(savedAccounts.filter((a) => a.id !== id));
+  };
+
+  const saveRecipientToDirectory = (rc: RecipientFormItem, role: BankAccountRole = 'THIRD_PARTY') => {
+    if (!rc.name.trim() || !rc.account.trim()) return;
+    const exists = savedAccounts.some(
+      (a) => a.account.replace(/\s+/g, '') === rc.account.replace(/\s+/g, ''),
+    );
+    if (exists) {
+      toast.info('Энэ данс хадгалагдсан байна');
+      return;
+    }
+    persistBankAccounts([
+      ...savedAccounts,
+      {
+        id: `acc-${Date.now()}`,
+        name: rc.name.trim(),
+        bank: rc.bank.trim(),
+        account: rc.account.trim(),
+        role,
+      },
+    ]);
+    toast.success('Данс амжилттай хадгалагдлаа');
+  };
+
+  // Saved Station Groups ("Зайсан хилл", "Материал Импекс ХК", ...)
+  type StationGroup = { id: string; name: string; stationIds: string[] };
+  const STATION_GROUPS_KEY = 'eplug.report.stationGroups';
+  const [stationGroups, setStationGroups] = React.useState<StationGroup[]>([]);
+  const [activeGroupId, setActiveGroupId] = React.useState<string | null>(null);
+  const [reportStationIds, setReportStationIds] = React.useState<string[]>([]);
+  const [reportGroupName, setReportGroupName] = React.useState('');
+
+  const persistStationGroups = (next: StationGroup[]) => {
+    setStationGroups(next);
+    try {
+      localStorage.setItem(STATION_GROUPS_KEY, JSON.stringify(next));
+    } catch {
+      // ignore storage errors
+    }
+  };
+
   const [simCostInput, setSimCostInput] = React.useState('5000');
   // "Бусад зардал": any number of extra cost lines, each with a name, amount and optional note.
   type ExtraCostInput = { label: string; amount: string; note?: string };
@@ -511,123 +670,442 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
     setExtraCosts((list) => list.map((c, j) => (j === i ? { ...c, ...patch } : c)));
   const removeExtraCost = (i: number) => setExtraCosts((list) => list.filter((_, j) => j !== i));
 
-  const meterStorageKey = (stationId: string) => `eplug.report.meter.${stationId}`;
+  const targetStorageKey = (groupId: string | null, ids: string[]) => {
+    if (groupId) return `eplug.report.group.${groupId}`;
+    if (ids.length === 1) return `eplug.report.meter.${ids[0]}`;
+    return `eplug.report.multi.${[...ids].sort().join(',')}`;
+  };
+
+  function loadTargetSettings(groupId: string | null, ids: string[], accountsList: SavedBankAccount[]) {
+    const primaryId = ids[0];
+    const matchedCp = stationOptions.find((s) => s.id === primaryId || s.cpId === primaryId);
+    const matchedClient =
+      matchedCp?.client ||
+      (matchedCp?.clientId ? clientOptions.find((c) => c.id === matchedCp.clientId) : null);
+    const fullClient = matchedClient ? clientOptions.find((c) => c.id === matchedClient.id) : undefined;
+    const defaultOwner = matchedClient?.name ?? 'Станц эзэмшигч';
+    const clientFee = (matchedClient as { feePercent?: number } | null | undefined)?.feePercent;
+    const clientSharePct = clientFee != null ? Math.round((100 - clientFee) * 10) / 10 : 80;
+
+    type SavedReportState = {
+      end?: string;
+      meters?: Partial<MeterFormItem>[];
+      sim?: string;
+      extra?: ExtraCostInput[];
+      stationOwner?: string;
+      siteOwner?: string;
+      recipients?: RecipientFormItem[];
+      lastPeriodEnd?: string;
+    };
+    let saved: SavedReportState = {};
+    if (ids.length > 0) {
+      try {
+        saved = JSON.parse(localStorage.getItem(targetStorageKey(groupId, ids)) ?? '{}');
+      } catch {
+        saved = {};
+      }
+    }
+
+    setStationOwnerInput(saved.stationOwner ?? defaultOwner);
+    setSiteOwnerInput(saved.siteOwner ?? defaultOwner);
+    setLastPeriodEnd(saved.lastPeriodEnd);
+
+    if (Array.isArray(saved.meters) && saved.meters.length > 0) {
+      setMeters(
+        saved.meters.map((sm, idx) => ({
+          ...makeMeter(idx, sm.type === 'three_tier' ? 'three_tier' : 'single'),
+          label: sm.label || `Тоолуур ${idx + 1}`,
+          ctCoefficient: sm.ctCoefficient || (sm.type === 'three_tier' ? '40' : '60'),
+          start: sm.end ?? '',
+          end: '',
+          dayStart: sm.dayEnd ?? '',
+          dayEnd: '',
+          peakStart: sm.peakEnd ?? '',
+          peakEnd: '',
+          nightStart: sm.nightEnd ?? '',
+          nightEnd: '',
+        })),
+      );
+    } else {
+      const m = makeMeter(0, 'single');
+      m.start = saved.end ?? '';
+      setMeters([m]);
+    }
+
+    if (Array.isArray(saved.recipients) && saved.recipients.length > 0) {
+      setRecipients(saved.recipients);
+    } else {
+      const platRemain = Math.round((100 - clientSharePct) * 10) / 10;
+      const halfPlat = Math.round((platRemain / 2) * 10) / 10;
+      const ownAcc = accountsList.find((a) => a.role === 'OWN') ?? DEFAULT_BANK_ACCOUNTS[0];
+      const thirdAcc = accountsList.find((a) => a.role === 'THIRD_PARTY') ?? DEFAULT_BANK_ACCOUNTS[1];
+      setRecipients([
+        {
+          name: defaultOwner,
+          bank: fullClient?.payoutAccount?.bankName ?? '',
+          account: fullClient?.payoutAccount?.accountNumber ?? '',
+          percent: String(clientSharePct),
+        },
+        {
+          name: ownAcc.name,
+          bank: ownAcc.bank,
+          account: ownAcc.account,
+          percent: String(halfPlat),
+        },
+        {
+          name: thirdAcc.name,
+          bank: thirdAcc.bank,
+          account: thirdAcc.account,
+          percent: String(Math.round((platRemain - halfPlat) * 10) / 10),
+        },
+      ]);
+    }
+
+    setSimCostInput(saved.sim ?? '5000');
+    setExtraCosts(Array.isArray(saved.extra) ? saved.extra : []);
+  }
 
   function openRevenueForm() {
-    if (selectedStation === 'all') return;
-    // Last report's end reading is this report's start reading.
-    let saved: { end?: string; sim?: string; extra?: ExtraCostInput[] } = {};
+    let loadedAccounts = DEFAULT_BANK_ACCOUNTS;
     try {
-      saved = JSON.parse(localStorage.getItem(meterStorageKey(selectedStation)) ?? '{}');
+      const rawAcc = localStorage.getItem(BANK_ACCOUNTS_KEY);
+      if (rawAcc) {
+        const parsed = JSON.parse(rawAcc);
+        if (Array.isArray(parsed) && parsed.length > 0) loadedAccounts = parsed;
+      }
     } catch {
-      saved = {};
+      loadedAccounts = DEFAULT_BANK_ACCOUNTS;
     }
-    setMeterStartInput(saved.end ?? '');
-    setMeterEndInput('');
-    setSimCostInput(saved.sim ?? '5000');
-    // Recurring costs come back with their names; amounts are kept too so a
-    // monthly fixed cost doesn't need retyping.
-    setExtraCosts(Array.isArray(saved.extra) ? saved.extra : []);
+    setSavedAccounts(loadedAccounts);
+
+    let loadedGroups: StationGroup[] = [];
+    try {
+      const rawGrp = localStorage.getItem(STATION_GROUPS_KEY);
+      if (rawGrp) {
+        const parsed = JSON.parse(rawGrp);
+        if (Array.isArray(parsed)) loadedGroups = parsed;
+      }
+    } catch {
+      loadedGroups = [];
+    }
+    setStationGroups(loadedGroups);
+
+    const initialIds =
+      selectedStation !== 'all'
+        ? [selectedStation]
+        : stationOptions[0]?.id
+          ? [stationOptions[0].id]
+          : [];
+    const matchedGroup =
+      selectedStation !== 'all'
+        ? loadedGroups.find((g) => g.stationIds.includes(selectedStation) && g.stationIds.length === 1) ?? null
+        : null;
+
+    setActiveGroupId(matchedGroup?.id ?? null);
+    setReportStationIds(initialIds);
+    setReportGroupName(
+      matchedGroup?.name ??
+        (initialIds.length === 1
+          ? (stationOptions.find((s) => s.id === initialIds[0])?.name ?? '')
+          : ''),
+    );
+    setMeterDateInput(range.to);
+    setMeterTimeInput('23:59:00');
+    loadTargetSettings(matchedGroup?.id ?? null, initialIds, loadedAccounts);
+    setRecipientsOpen(false);
+    setAccountsDirOpen(false);
     setRevenueFormOpen(true);
   }
+
+  const selectGroupInModal = (group: StationGroup) => {
+    const validIds = group.stationIds.filter((id) => stationOptions.some((s) => s.id === id));
+    const ids = validIds.length > 0 ? validIds : group.stationIds;
+    setActiveGroupId(group.id);
+    setReportStationIds(ids);
+    setReportGroupName(group.name);
+    loadTargetSettings(group.id, ids, savedAccounts);
+  };
+
+  const toggleStationInModal = (stationId: string) => {
+    setActiveGroupId(null);
+    setReportStationIds((prev) => {
+      const next = prev.includes(stationId) ? prev.filter((id) => id !== stationId) : [...prev, stationId];
+      if (next.length === 1) {
+        setReportGroupName(stationOptions.find((s) => s.id === next[0])?.name ?? '');
+      }
+      if (next.length > 0) {
+        loadTargetSettings(null, next, savedAccounts);
+      }
+      return next;
+    });
+  };
+
+  const saveCurrentAsGroup = () => {
+    const name = reportGroupName.trim();
+    if (!name || reportStationIds.length === 0) {
+      toast.error('Бүлгийн нэр болон станцуудаа сонгоно уу');
+      return;
+    }
+    const existing = activeGroupId ? stationGroups.find((g) => g.id === activeGroupId) : undefined;
+    const id = existing?.id ?? `grp-${Date.now()}`;
+    const updated: StationGroup = { id, name, stationIds: reportStationIds };
+    const next = existing
+      ? stationGroups.map((g) => (g.id === id ? updated : g))
+      : [...stationGroups, updated];
+    persistStationGroups(next);
+    setActiveGroupId(id);
+    toast.success(`«${name}» бүлэг хадгалагдлаа`);
+  };
+
+  const deleteActiveGroup = () => {
+    if (!activeGroupId) return;
+    persistStationGroups(stationGroups.filter((g) => g.id !== activeGroupId));
+    setActiveGroupId(null);
+    toast.success('Бүлэг устгагдлаа');
+  };
 
   const parseNum = (s: string) => {
     const n = Number(s.replace(/[\s,]/g, ''));
     return s.trim() !== '' && Number.isFinite(n) ? n : undefined;
   };
-  const meterStart = parseNum(meterStartInput);
-  const meterEnd = parseNum(meterEndInput);
   const simCost = parseNum(simCostInput);
   const extraCostItems = extraCosts
     .map((c) => ({ label: c.label.trim(), amount: parseNum(c.amount) ?? 0, note: c.note?.trim() || undefined }))
     .filter((c) => c.label || c.amount);
-  const meterError =
-    meterStart != null && meterEnd != null && meterEnd < meterStart
-      ? 'Эцсийн заалт эхний заалтаас бага байж болохгүй'
+
+  const meterErrors = meters.map((m) => {
+    if (m.type === 'single') {
+      const s = parseNum(m.start);
+      const e = parseNum(m.end);
+      return s != null && e != null && e < s ? 'Эцсийн заалт эхний заалтаас бага байж болохгүй' : undefined;
+    }
+    const pairs: [string, string, string][] = [
+      ['Өдөр', m.dayStart, m.dayEnd],
+      ['Оргил', m.peakStart, m.peakEnd],
+      ['Шөнө', m.nightStart, m.nightEnd],
+    ];
+    for (const [lbl, sStr, eStr] of pairs) {
+      const s = parseNum(sStr);
+      const e = parseNum(eStr);
+      if (s != null && e != null && e < s) return `${lbl}: эцсийн заалт эхний заалтаас бага байна`;
+    }
+    return undefined;
+  });
+  const meterError = meterErrors.find(Boolean);
+
+  const recipientTotalPct = recipients.reduce((acc, r) => acc + (parseNum(r.percent) ?? 0), 0);
+  const recipientError =
+    recipients.length > 0 && Math.abs(recipientTotalPct - 100) > 0.05
+      ? `Хуваарилалтын нийлбэр 100% байх ёстой (одоо ${round2(recipientTotalPct)}%)`
       : undefined;
+
+  const totalPreviewKwh = meters.reduce((acc, m) => {
+    const ct = parseNum(m.ctCoefficient) ?? (m.type === 'three_tier' ? 40 : 60);
+    if (m.type === 'single') {
+      const s = parseNum(m.start);
+      const e = parseNum(m.end);
+      if (s != null && e != null && e >= s) return acc + (e - s) * ct * 1.025;
+      return acc;
+    }
+    const d = Math.max(0, (parseNum(m.dayEnd) ?? 0) - (parseNum(m.dayStart) ?? 0));
+    const p = Math.max(0, (parseNum(m.peakEnd) ?? 0) - (parseNum(m.peakStart) ?? 0));
+    const n = Math.max(0, (parseNum(m.nightEnd) ?? 0) - (parseNum(m.nightStart) ?? 0));
+    return acc + (d + p + n) * ct;
+  }, 0);
 
   async function submitRevenueForm(e: React.FormEvent) {
     e.preventDefault();
-    if (meterError) return;
-    try {
-      localStorage.setItem(
-        meterStorageKey(selectedStation),
-        JSON.stringify({
-          end: meterEndInput.trim(),
-          sim: simCostInput.trim(),
-          extra: extraCosts.filter((c) => c.label.trim() || c.amount.trim()),
-        }),
-      );
-    } catch {
-      // Remembering the reading is a convenience only.
-    }
-    const ok = await handleDownloadRevenueReport({
-      meterStart,
-      meterEnd,
+    if (meterError || recipientError) return;
+
+    const reportMeters: RevenueReportMeter[] = meters.map((m) => {
+      const ct = parseNum(m.ctCoefficient);
+      if (m.type === 'three_tier') {
+        return {
+          type: 'three_tier',
+          label: m.label.trim() || undefined,
+          ctCoefficient: ct,
+          dayStart: parseNum(m.dayStart),
+          dayEnd: parseNum(m.dayEnd),
+          peakStart: parseNum(m.peakStart),
+          peakEnd: parseNum(m.peakEnd),
+          nightStart: parseNum(m.nightStart),
+          nightEnd: parseNum(m.nightEnd),
+        };
+      }
+      return {
+        type: 'single',
+        label: m.label.trim() || undefined,
+        ctCoefficient: ct,
+        startReading: parseNum(m.start),
+        endReading: parseNum(m.end),
+      };
+    });
+
+    const reportRecipients: RevenueReportRecipient[] = recipients
+      .filter((r) => r.name.trim())
+      .map((r) => ({
+        name: r.name.trim(),
+        bank: r.bank.trim(),
+        account: r.account.trim(),
+        share: (parseNum(r.percent) ?? 0) / 100,
+      }));
+
+    const result = await handleDownloadRevenueReport({
+      meters: reportMeters,
+      meterDate: meterDateInput.trim() || undefined,
+      meterTime: meterTimeInput.trim() || undefined,
+      stationOwner: stationOwnerInput.trim() || undefined,
+      siteOwner: siteOwnerInput.trim() || undefined,
+      recipients: reportRecipients.length ? reportRecipients : undefined,
+      periodStartOverride: lastPeriodEnd,
       simCost,
       extraCosts: extraCostItems,
     });
-    if (ok) setRevenueFormOpen(false);
+    if (result.ok) {
+      try {
+        localStorage.setItem(
+          targetStorageKey(activeGroupId, reportStationIds),
+          JSON.stringify({
+            end: meters[0]?.end?.trim() ?? '',
+            meters: meters.map((m) => ({
+              type: m.type,
+              label: m.label.trim(),
+              ctCoefficient: m.ctCoefficient.trim(),
+              end: m.end.trim(),
+              dayEnd: m.dayEnd.trim(),
+              peakEnd: m.peakEnd.trim(),
+              nightEnd: m.nightEnd.trim(),
+            })),
+            sim: simCostInput.trim(),
+            extra: extraCosts.filter((c) => c.label.trim() || c.amount.trim()),
+            stationOwner: stationOwnerInput.trim(),
+            siteOwner: siteOwnerInput.trim(),
+            recipients,
+            lastPeriodEnd: result.periodEndIso ?? lastPeriodEnd,
+          }),
+        );
+      } catch {
+        // Remembering the reading is a convenience only.
+      }
+      setRevenueFormOpen(false);
+    }
   }
 
   async function handleDownloadRevenueReport(inputs: {
-    meterStart?: number;
-    meterEnd?: number;
+    meters?: RevenueReportMeter[];
+    meterDate?: string;
+    meterTime?: string;
+    stationOwner?: string;
+    siteOwner?: string;
+    recipients?: RevenueReportRecipient[];
+    periodStartOverride?: string;
     simCost?: number;
     extraCosts?: { label: string; amount: number; note?: string }[];
-  }): Promise<boolean> {
-    if (selectedStation === 'all') return false;
+  }): Promise<{ ok: boolean; periodEndIso?: string }> {
+    const ids = reportStationIds.length > 0 ? reportStationIds : selectedStation !== 'all' ? [selectedStation] : [];
+    if (ids.length === 0) {
+      toast.error('Станц эсвэл бүлэг сонгоно уу');
+      return { ok: false };
+    }
     setRevenueReportLoading(true);
     try {
-      const rep = await fetcher<StationSessionsExport>(
-        apiUrl('reports/sessions-export', {
-          chargePointId: selectedStation,
-          from: rangeStart(range.from),
-          to: rangeEnd(range.to),
-        }),
+      const exportsList = await Promise.all(
+        ids.map((id) =>
+          fetcher<StationSessionsExport>(
+            apiUrl('reports/sessions-export', {
+              chargePointId: id,
+              from: rangeStart(range.from),
+              to: rangeEnd(range.to),
+            }),
+          ),
+        ),
       );
 
-      const st = rep.station;
-      const matchedCp = stationOptions.find((s) => s.id === selectedStation || s.cpId === selectedStation);
+      const isMulti = exportsList.length > 1;
+      let sessions = exportsList.flatMap((rep) =>
+        rep.sessions.map((s) => ({
+          ...s,
+          stationLabel: isMulti ? (rep.station.name || rep.station.cpId) : undefined,
+        })),
+      );
+      sessions.sort((a, b) => a.startTimestamp.localeCompare(b.startTimestamp));
+
+      // Filter sessions up to meter reading cutoff (if specified)
+      let periodEndIso: string | undefined;
+      if (inputs.meterDate) {
+        const tStr = inputs.meterTime || '23:59:59';
+        const cutoff = new Date(`${inputs.meterDate}T${tStr}`);
+        if (!Number.isNaN(cutoff.getTime())) {
+          const cutoffMs = cutoff.getTime();
+          sessions = sessions.filter((s) => {
+            const ts = new Date(s.stopTimestamp || s.startTimestamp).getTime();
+            return Number.isNaN(ts) || ts <= cutoffMs;
+          });
+          const stops = sessions
+            .map((s) => s.stopTimestamp || s.startTimestamp)
+            .filter(Boolean)
+            .sort();
+          periodEndIso = stops.at(-1) ?? cutoff.toISOString();
+        }
+      }
+
+      const primary = exportsList[0];
+      const st = isMulti
+        ? {
+            ...primary.station,
+            name: reportGroupName.trim() || exportsList.map((e) => e.station.name || e.station.cpId).join(' + '),
+            cpId: exportsList.map((e) => e.station.cpId).join(', '),
+          }
+        : primary.station;
+
+      const matchedCp = stationOptions.find((s) => s.id === ids[0] || s.cpId === ids[0]);
       const matchedClient =
-        rep.client ||
+        primary.client ||
         matchedCp?.client ||
         (matchedCp?.clientId ? clientOptions.find((c) => c.id === matchedCp.clientId) : null);
 
-      // Bank account for the client's share (Орлого хуваарилалт section).
       const fullClient = matchedClient ? clientOptions.find((c) => c.id === matchedClient.id) : undefined;
       const payoutAccount =
         fullClient?.payoutAccount ?? (data?.client?.id === matchedClient?.id ? data?.client?.payoutAccount : null);
+
+      const platformKwh = round2(sessions.reduce((a, s) => a + (s.energyKwh || 0), 0));
+      const grossRevenue = round2(sessions.reduce((a, s) => a + (s.cost || 0), 0));
 
       const params: RevenueReportParams = {
         station: st,
         client: matchedClient
           ? {
               id: matchedClient.id,
-              name: matchedClient.name,
-              feePercent: (matchedClient as any).feePercent,
+              name: inputs.stationOwner || matchedClient.name,
+              feePercent: (matchedClient as { feePercent?: number }).feePercent,
               payoutAccount,
             }
-          : null,
+          : inputs.stationOwner
+            ? { name: inputs.stationOwner }
+            : null,
+        siteOwnerName: inputs.siteOwner,
         from: range.from,
         to: range.to,
-        sessionsCount: rep.totals.sessionsCount,
-        platformKwh: rep.totals.energyKwh,
-        grossRevenue: rep.totals.gross,
-        // Entered in the form; any left empty stay blank in Excel for manual entry.
-        meterStartReading: inputs.meterStart,
-        meterEndReading: inputs.meterEnd,
+        periodStartOverride: inputs.periodStartOverride,
+        periodEndOverride: periodEndIso,
+        sessionsCount: sessions.length,
+        platformKwh,
+        grossRevenue,
+        meters: inputs.meters,
+        meterDate: inputs.meterDate,
+        meterTime: inputs.meterTime,
+        recipients: inputs.recipients,
         otherDirectCosts: inputs.simCost,
         extraCosts: inputs.extraCosts,
       };
 
-      const wb = await buildStationRevenueWorkbook(params, rep.sessions);
+      const wb = await buildStationRevenueWorkbook(params, sessions);
       await downloadWorkbook(wb, revenueReportFileName(params));
       toast.success('Орлого хуваарилалтын Excel тайлан амжилттай татагдлаа');
-      return true;
+      return { ok: true, periodEndIso };
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Тайлан татахад алдаа гарлаа');
-      return false;
+      return { ok: false };
     } finally {
       setRevenueReportLoading(false);
     }
@@ -1065,18 +1543,9 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
               variant="secondary"
               size="sm"
               onClick={openRevenueForm}
-              disabled={selectedStation === 'all' || revenueReportLoading}
-              className={cn(
-                'text-xs h-8 font-medium gap-1 transition-all',
-                selectedStation !== 'all'
-                  ? 'border-emerald-500/50 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 font-semibold shadow-xs'
-                  : '',
-              )}
-              title={
-                selectedStation === 'all'
-                  ? 'Эхлээд станц сонгоно уу'
-                  : 'EV цэнэглэх станцын орлого хуваарилалтын тайлан татах (.xlsx)'
-              }
+              disabled={revenueReportLoading}
+              className="text-xs h-8 font-medium gap-1 transition-all border-emerald-500/50 text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 font-semibold shadow-xs"
+              title="Станц эсвэл бүлэг (нэгдсэн) орлого хуваарилалтын тайлан татах (.xlsx)"
             >
               <FileSpreadsheet className="h-3.5 w-3.5 text-emerald-500" />
               {revenueReportLoading ? 'Бэлдэж байна…' : 'Тайлан'}
@@ -1644,9 +2113,13 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
       <Modal
         open={revenueFormOpen}
         onClose={() => setRevenueFormOpen(false)}
+        size="lg"
         title="Тайлан татах"
         description={`${
-          stationOptions.find((s) => s.id === selectedStation)?.name ?? ''
+          reportGroupName.trim() ||
+          (reportStationIds.length === 1
+            ? (stationOptions.find((s) => s.id === reportStationIds[0])?.name ?? '')
+            : `${reportStationIds.length} станцын нэгдсэн тайлан`)
         } · ${range.from} — ${range.to}`}
         footer={
           <>
@@ -1656,7 +2129,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
             <Button
               type="submit"
               form="revenue-report-form"
-              disabled={revenueReportLoading || !!meterError}
+              disabled={revenueReportLoading || reportStationIds.length === 0 || !!meterError || !!recipientError}
               className="gap-1 bg-emerald-600 hover:bg-emerald-700 text-white"
             >
               <FileSpreadsheet className="h-3.5 w-3.5" />
@@ -1665,28 +2138,266 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
           </>
         }
       >
-        <form id="revenue-report-form" onSubmit={submitRevenueForm} className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <Field label="Тоолуурын эхний заалт" htmlFor="meter-start" hint="Өмнөх тайлангийн эцсийн заалт">
+        <form id="revenue-report-form" onSubmit={submitRevenueForm} className="space-y-4 max-h-[75vh] overflow-y-auto pr-1">
+          {/* 0. Station Group & Multi-station selector */}
+          <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)]/25 p-3 space-y-2.5">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-xs font-semibold uppercase tracking-wider text-[var(--color-fg-muted)]">
+                Станц / Бүлэг ({reportStationIds.length} сонгогдсон)
+              </span>
+              {stationGroups.length > 0 && (
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {stationGroups.map((g) => (
+                    <button
+                      key={g.id}
+                      type="button"
+                      onClick={() => selectGroupInModal(g)}
+                      className={cn(
+                        'px-2 py-0.5 rounded-full text-[11px] font-medium border transition-colors',
+                        activeGroupId === g.id
+                          ? 'bg-emerald-600 text-white border-emerald-600'
+                          : 'bg-[var(--color-surface-2)] text-[var(--color-fg)] border-[var(--color-border)] hover:border-emerald-500/60',
+                      )}
+                    >
+                      {g.name} ({g.stationIds.length})
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 max-h-32 overflow-y-auto pr-1">
+              {stationOptions.map((st) => {
+                const checked = reportStationIds.includes(st.id);
+                return (
+                  <label
+                    key={st.id}
+                    className={cn(
+                      'flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs cursor-pointer transition-colors',
+                      checked
+                        ? 'border-emerald-500/60 bg-emerald-500/10 text-[var(--color-fg)] font-medium'
+                        : 'border-[var(--color-border)] text-[var(--color-fg-muted)] hover:bg-[var(--color-surface-2)]/40',
+                    )}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleStationInModal(st.id)}
+                      className="accent-emerald-600"
+                    />
+                    <span className="truncate">{st.name || st.cpId}</span>
+                  </label>
+                );
+              })}
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2 pt-1">
               <Input
-                id="meter-start"
-                inputMode="decimal"
-                value={meterStartInput}
-                onChange={(e) => setMeterStartInput(e.target.value)}
-                placeholder="0.00"
+                value={reportGroupName}
+                onChange={(e) => setReportGroupName(e.target.value)}
+                placeholder="Нэгдсэн тайлан / бүлгийн нэр (ж.нь: Зайсан хилл)"
+                className="h-8 flex-1 min-w-[12rem] text-xs"
+              />
+              <Button
+                type="button"
+                variant="secondary"
+                size="sm"
+                onClick={saveCurrentAsGroup}
+                disabled={reportStationIds.length === 0 || !reportGroupName.trim()}
+                className="h-8 text-xs"
+              >
+                {activeGroupId ? 'Бүлэг шинэчлэх' : 'Бүлэг хадгалах'}
+              </Button>
+              {activeGroupId && (
+                <button
+                  type="button"
+                  onClick={deleteActiveGroup}
+                  aria-label="Бүлэг устгах"
+                  className="grid size-8 place-items-center rounded-md text-[var(--color-fg-muted)] hover:bg-rose-500/10 hover:text-rose-500"
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* 1. Meter reading date/time & owners */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <Field label="Тоолуурын заалтын огноо" htmlFor="meter-date">
+              <Input
+                id="meter-date"
+                type="date"
+                value={meterDateInput}
+                onChange={(e) => setMeterDateInput(e.target.value)}
               />
             </Field>
-            <Field label="Тоолуурын эцсийн заалт" htmlFor="meter-end" error={meterError}>
+            <Field label="Тоолуурын заалтын цаг, минут" htmlFor="meter-time">
               <Input
-                id="meter-end"
-                inputMode="decimal"
-                value={meterEndInput}
-                onChange={(e) => setMeterEndInput(e.target.value)}
-                placeholder="0.00"
-                autoFocus
+                id="meter-time"
+                type="time"
+                step="1"
+                value={meterTimeInput}
+                onChange={(e) => setMeterTimeInput(e.target.value)}
+              />
+            </Field>
+            <Field label="Станц эзэмшигч" htmlFor="station-owner">
+              <Input
+                id="station-owner"
+                value={stationOwnerInput}
+                onChange={(e) => setStationOwnerInput(e.target.value)}
+                placeholder="Станц эзэмшигч"
+              />
+            </Field>
+            <Field label="Талбай эзэмшигч" htmlFor="site-owner">
+              <Input
+                id="site-owner"
+                value={siteOwnerInput}
+                onChange={(e) => setSiteOwnerInput(e.target.value)}
+                placeholder="Талбай эзэмшигч"
               />
             </Field>
           </div>
+
+          {/* 2. Dynamic Meters (1, 2, 3...) */}
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <span className="text-xs font-semibold uppercase tracking-wider text-[var(--color-fg-muted)]">
+                Тоолуурууд ({meters.length})
+              </span>
+              <Button type="button" variant="secondary" size="sm" onClick={addMeter} className="h-7 gap-1 text-xs">
+                <Plus className="h-3.5 w-3.5" />
+                Тоолуур нэмэх
+              </Button>
+            </div>
+
+            {meters.map((m, idx) => (
+              <div
+                key={idx}
+                className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)]/30 p-3 space-y-2.5"
+              >
+                <div className="flex flex-wrap items-center gap-2">
+                  <Input
+                    aria-label={`Тоолуур ${idx + 1} нэр`}
+                    value={m.label}
+                    onChange={(e) => updateMeter(idx, { label: e.target.value })}
+                    className="h-8 w-32 text-xs font-medium"
+                  />
+                  <Select
+                    aria-label={`Тоолуур ${idx + 1} төрөл`}
+                    value={m.type}
+                    onChange={(e) =>
+                      updateMeter(idx, { type: e.target.value as 'single' | 'three_tier' })
+                    }
+                    className="h-8 text-xs"
+                  >
+                    <option value="single">1 тарифт (Энгийн)</option>
+                    <option value="three_tier">3 тарифт (Өдөр / Оргил / Шөнө)</option>
+                  </Select>
+                  <div className="flex items-center gap-1 ml-auto">
+                    <span className="text-[11px] text-[var(--color-fg-muted)]">Коэф:</span>
+                    <Input
+                      aria-label={`Тоолуур ${idx + 1} коэффициент`}
+                      inputMode="decimal"
+                      value={m.ctCoefficient}
+                      onChange={(e) => updateMeter(idx, { ctCoefficient: e.target.value })}
+                      className="h-8 w-16 text-xs text-center"
+                    />
+                    {meters.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeMeter(idx)}
+                        aria-label="Тоолуур устгах"
+                        className="grid size-7 place-items-center rounded-md text-[var(--color-fg-muted)] hover:bg-rose-500/10 hover:text-rose-500"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+
+                {m.type === 'single' ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                    <Field label="Эхний заалт" hint="Өмнөх тайлангийн эцсийн заалт">
+                      <Input
+                        inputMode="decimal"
+                        value={m.start}
+                        onChange={(e) => updateMeter(idx, { start: e.target.value })}
+                        placeholder="0.00"
+                      />
+                    </Field>
+                    <Field label="Эцсийн заалт" error={meterErrors[idx]}>
+                      <Input
+                        inputMode="decimal"
+                        value={m.end}
+                        onChange={(e) => updateMeter(idx, { end: e.target.value })}
+                        placeholder="0.00"
+                        autoFocus={idx === 0}
+                      />
+                    </Field>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="grid grid-cols-3 gap-2 text-center text-[11px] font-medium text-[var(--color-fg-muted)]">
+                      <span>Өдөр (278₮)</span>
+                      <span>Оргил (417₮)</span>
+                      <span>Шөнө (168₮)</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <Input
+                        inputMode="decimal"
+                        value={m.dayStart}
+                        onChange={(e) => updateMeter(idx, { dayStart: e.target.value })}
+                        placeholder="Өдөр эхний"
+                        className="h-8 text-xs"
+                      />
+                      <Input
+                        inputMode="decimal"
+                        value={m.peakStart}
+                        onChange={(e) => updateMeter(idx, { peakStart: e.target.value })}
+                        placeholder="Оргил эхний"
+                        className="h-8 text-xs"
+                      />
+                      <Input
+                        inputMode="decimal"
+                        value={m.nightStart}
+                        onChange={(e) => updateMeter(idx, { nightStart: e.target.value })}
+                        placeholder="Шөнө эхний"
+                        className="h-8 text-xs"
+                      />
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <Input
+                        inputMode="decimal"
+                        value={m.dayEnd}
+                        onChange={(e) => updateMeter(idx, { dayEnd: e.target.value })}
+                        placeholder="Өдөр эцсийн"
+                        className="h-8 text-xs"
+                      />
+                      <Input
+                        inputMode="decimal"
+                        value={m.peakEnd}
+                        onChange={(e) => updateMeter(idx, { peakEnd: e.target.value })}
+                        placeholder="Оргил эцсийн"
+                        className="h-8 text-xs"
+                      />
+                      <Input
+                        inputMode="decimal"
+                        value={m.nightEnd}
+                        onChange={(e) => updateMeter(idx, { nightEnd: e.target.value })}
+                        placeholder="Шөнө эцсийн"
+                        className="h-8 text-xs"
+                      />
+                    </div>
+                    {meterErrors[idx] && (
+                      <p className="text-xs text-rose-500">{meterErrors[idx]}</p>
+                    )}
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* 3. Costs */}
           <Field label="Дата сим тогтмол зардал (₮)" htmlFor="sim-cost">
             <Input
               id="sim-cost"
@@ -1696,11 +2407,9 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
               placeholder="5000"
             />
           </Field>
-          {/* Each added cost is its own field: a title you can rename, then the amount. */}
           {extraCosts.map((c, i) => (
             <div key={i} className="space-y-1.5">
               <div className="flex items-center gap-1.5">
-                {/* Looks like an editable chip (pencil + dashed box) so it's clear the name can be changed. */}
                 <label className="group inline-flex min-w-0 max-w-[80%] cursor-text items-center gap-1.5 rounded-md border border-dashed border-[var(--color-border)] bg-[var(--color-surface-2)]/40 px-2 py-1 hover:border-[var(--color-brand)] focus-within:border-solid focus-within:border-[var(--color-brand)]">
                   <Pencil className="h-3.5 w-3.5 shrink-0 text-[var(--color-fg-muted)] group-hover:text-[var(--color-brand)]" aria-hidden="true" />
                   <input
@@ -1745,14 +2454,179 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
             <Plus className="h-3.5 w-3.5" />
             Бусад зардал нэмэх
           </Button>
+
+          {/* 4. Revenue split recipients */}
+          <div className="rounded-lg border border-[var(--color-border)] p-3 space-y-2">
+            <button
+              type="button"
+              onClick={() => setRecipientsOpen((o) => !o)}
+              className="flex w-full items-center justify-between text-xs font-semibold text-[var(--color-fg)]"
+            >
+              <span>
+                Орлого хуваарилалт ({recipients.length} хүлээн авагч · {round2(recipientTotalPct)}%)
+              </span>
+              {recipientsOpen ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+            </button>
+            {recipientError && <p className="text-xs text-rose-500">{recipientError}</p>}
+            {recipientsOpen && (
+              <div className="space-y-2.5 pt-2">
+                {recipients.map((rc, idx) => (
+                  <div key={idx} className="space-y-1 rounded-md border border-[var(--color-border)]/70 p-2 bg-[var(--color-surface-2)]/20">
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <Select
+                        aria-label="Хадгалсан данснаас сонгох"
+                        value=""
+                        onChange={(e) => {
+                          const acc = savedAccounts.find((a) => a.id === e.target.value);
+                          if (acc) {
+                            updateRecipient(idx, {
+                              name: acc.name,
+                              bank: acc.bank,
+                              account: acc.account,
+                            });
+                          }
+                        }}
+                        className="h-7 text-[11px] max-w-[14rem]"
+                      >
+                        <option value="">Дансны сангаас сонгох…</option>
+                        {savedAccounts.map((acc) => (
+                          <option key={acc.id} value={acc.id}>
+                            [{acc.role === 'OWN' ? 'Манай' : acc.role === 'OWNER' ? 'Эзэмшигч' : '3-дагч'}] {acc.name} ({acc.account})
+                          </option>
+                        ))}
+                      </Select>
+                      <button
+                        type="button"
+                        onClick={() => saveRecipientToDirectory(rc, 'THIRD_PARTY')}
+                        className="ml-auto text-[11px] font-medium text-emerald-600 hover:underline dark:text-emerald-400"
+                      >
+                        + Данс хадгалах
+                      </button>
+                      {recipients.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeRecipient(idx)}
+                          aria-label="Устгах"
+                          className="grid size-6 place-items-center rounded text-[var(--color-fg-muted)] hover:text-rose-500"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-12 gap-1.5 items-center">
+                      <Input
+                        value={rc.name}
+                        onChange={(e) => updateRecipient(idx, { name: e.target.value })}
+                        placeholder="Хүлээн авагч"
+                        className="col-span-5 h-8 text-xs"
+                      />
+                      <Input
+                        value={rc.bank}
+                        onChange={(e) => updateRecipient(idx, { bank: e.target.value })}
+                        placeholder="Банк"
+                        className="col-span-2 h-8 text-xs"
+                      />
+                      <Input
+                        value={rc.account}
+                        onChange={(e) => updateRecipient(idx, { account: e.target.value })}
+                        placeholder="Данс"
+                        className="col-span-3 h-8 text-xs"
+                      />
+                      <Input
+                        inputMode="decimal"
+                        value={rc.percent}
+                        onChange={(e) => updateRecipient(idx, { percent: e.target.value })}
+                        placeholder="%"
+                        className="col-span-2 h-8 text-xs text-center px-1"
+                      />
+                    </div>
+                  </div>
+                ))}
+
+                <div className="flex flex-wrap items-center justify-between gap-2">
+                  <Button type="button" variant="secondary" size="sm" onClick={addRecipient} className="h-7 gap-1 text-xs">
+                    <Plus className="h-3 w-3" />
+                    Хүлээн авагч нэмэх
+                  </Button>
+                  <button
+                    type="button"
+                    onClick={() => setAccountsDirOpen((v) => !v)}
+                    className="text-xs font-medium text-[var(--color-fg-muted)] hover:text-[var(--color-fg)] underline"
+                  >
+                    {accountsDirOpen ? 'Дансны сан хаах' : `Дансны сан удирдах (${savedAccounts.length})`}
+                  </button>
+                </div>
+
+                {accountsDirOpen && (
+                  <div className="rounded-md border border-dashed border-[var(--color-border)] p-2.5 space-y-2 bg-[var(--color-surface-2)]/30">
+                    <div className="text-[11px] font-semibold text-[var(--color-fg-muted)]">
+                      Хадгалсан дансууд (Манай IT / Эзэмшигч / Гуравдагч тал)
+                    </div>
+                    <div className="space-y-1 max-h-32 overflow-y-auto">
+                      {savedAccounts.map((acc) => (
+                        <div key={acc.id} className="flex items-center justify-between gap-2 text-xs py-0.5">
+                          <span className="truncate">
+                            <span className="font-mono text-[10px] px-1.5 py-0.5 rounded bg-[var(--color-surface-2)] mr-1.5">
+                              {acc.role === 'OWN' ? 'Манай' : acc.role === 'OWNER' ? 'Эзэмшигч' : '3-дагч'}
+                            </span>
+                            <span className="font-medium">{acc.name}</span> · {acc.bank} · <span className="font-mono">{acc.account}</span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => removeSavedAccount(acc.id)}
+                            aria-label="Данс устгах"
+                            className="text-[var(--color-fg-muted)] hover:text-rose-500"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <div className="grid grid-cols-12 gap-1.5 pt-1 border-t border-[var(--color-border)]/60">
+                      <Input
+                        value={newAccName}
+                        onChange={(e) => setNewAccName(e.target.value)}
+                        placeholder="Нэр (ж.нь: СЕКУОИА...)"
+                        className="col-span-4 h-7 text-xs"
+                      />
+                      <Input
+                        value={newAccBank}
+                        onChange={(e) => setNewAccBank(e.target.value)}
+                        placeholder="Банк"
+                        className="col-span-2 h-7 text-xs"
+                      />
+                      <Input
+                        value={newAccNum}
+                        onChange={(e) => setNewAccNum(e.target.value)}
+                        placeholder="Дансны дугаар"
+                        className="col-span-3 h-7 text-xs"
+                      />
+                      <Select
+                        value={newAccRole}
+                        onChange={(e) => setNewAccRole(e.target.value as BankAccountRole)}
+                        className="col-span-2 h-7 text-[11px]"
+                      >
+                        <option value="OWN">Манай</option>
+                        <option value="OWNER">Эзэмшигч</option>
+                        <option value="THIRD_PARTY">3-дагч</option>
+                      </Select>
+                      <Button type="button" variant="secondary" size="sm" onClick={addSavedAccount} className="col-span-1 h-7 px-1 text-xs">
+                        +
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
           <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-surface-2)]/40 px-3 py-2 text-xs text-[var(--color-fg-muted)]">
-            Тоолуурын хэрэглээ:{' '}
+            Нийт тоолуурын хэрэглээ:{' '}
             <span className="font-mono font-semibold text-[var(--color-fg)]">
-              {meterStart != null && meterEnd != null && !meterError
-                ? `${formatNumber((meterEnd - meterStart) * 60 * 1.025, 2)} кВтц`
+              {totalPreviewKwh > 0 && !meterError
+                ? `${formatNumber(totalPreviewKwh, 2)} кВтц`
                 : '—'}
             </span>
-            <span className="ml-1">= (эцсийн − эхний) × 60 × 1.025</span>
             <div className="mt-1">Хоосон үлдээвэл Excel дээр гараар оруулж болно.</div>
           </div>
         </form>

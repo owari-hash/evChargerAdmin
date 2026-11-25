@@ -38,6 +38,8 @@ export interface RevenueReportClient {
 export interface RevenueReportSessionItem {
   id: number;
   connectorId: number;
+  /** Optional short station name when multiple stations are combined into one united report. */
+  stationLabel?: string;
   idTag: string;
   driverName?: string;
   driverPhone?: string;
@@ -69,21 +71,70 @@ export interface RevenueReportSessionItem {
   stopReason?: string;
 }
 
+export interface SingleTierMeterConfig {
+  type: 'single';
+  label?: string;
+  startReading?: number;
+  endReading?: number;
+  ctCoefficient?: number;
+  basePrice?: number;
+  cosPhiLoss?: number;
+  capacityChargeFormula?: string;
+  renewablePerKwh?: number;
+}
+
+export interface ThreeTierMeterConfig {
+  type: 'three_tier';
+  label?: string;
+  ctCoefficient?: number;
+  dayStart?: number;
+  dayEnd?: number;
+  peakStart?: number;
+  peakEnd?: number;
+  nightStart?: number;
+  nightEnd?: number;
+  dayPrice?: number;
+  peakPrice?: number;
+  nightPrice?: number;
+  peakPowerCoeff?: number;
+  peakCapacityPrice?: number;
+  vatRate?: number;
+}
+
+export type RevenueReportMeter = SingleTierMeterConfig | ThreeTierMeterConfig;
+
+export interface RevenueReportRecipient {
+  name: string;
+  bank?: string;
+  account?: string;
+  share: number;
+}
+
 export interface RevenueReportParams {
   station: RevenueReportStation;
   client?: RevenueReportClient | null;
+  /** Separate site owner (Талбай эзэмшигч); defaults to client.name when omitted. */
+  siteOwnerName?: string;
   from: string; // "YYYY-MM-DD"
   to: string; // "YYYY-MM-DD"
+  /** Optional explicit report period start/end timestamps (e.g. carried over from previous report). */
+  periodStartOverride?: string;
+  periodEndOverride?: string;
   sessionsCount: number;
   platformKwh: number;
   grossRevenue: number;
-  /** Meter readings (Эхний / Эцсийн заалт). Left blank when omitted, for manual entry. */
+  /** Dynamic list of 1, 2, 3... meters (each single-tariff or 3-tier Өдөр/Оргил/Шөнө). */
+  meters?: RevenueReportMeter[];
+  /** Legacy single-meter fields (used when `meters` is not supplied). */
   meterStartReading?: number;
   meterEndReading?: number;
   /** Not used by this layout (the bill is computed from meter readings); kept for callers. */
   meterKwh?: number;
   electricityCost?: number;
-  meterDate?: string;
+  meterDate?: string; // "YYYY-MM-DD" or "YYYY-MM-DD HH:mm"
+  meterTime?: string; // "HH:mm:ss" or "HH:mm"
+  /** Explicit recipients list for Section 5 (Орлого хуваарилалт). */
+  recipients?: RevenueReportRecipient[];
   /** Client's share of distributable revenue, e.g. 0.8. Defaults to 1 − feePercent. */
   clientShare?: number;
   /** Payment-provider fee as a fraction of revenue, e.g. 0.01. */
@@ -145,9 +196,9 @@ const FMT = {
   pct: '0%',
   pct1: '0.0%',
   pct1Signed: '0.0%;-0.0%;-',
-  dateTime: 'yyyy-mm-dd hh:mm',
+  dateTime: 'yyyy-mm-dd hh:mm:ss',
   date: 'yyyy-mm-dd',
-  time: 'h:mm',
+  time: 'hh:mm:ss',
   perKwh: '#,##0.0 ₮',
 };
 
@@ -310,6 +361,34 @@ function buildCtx(params: RevenueReportParams, sessions: RevenueReportSessionIte
 // Sheet 1 — Хураангуй
 // ---------------------------------------------------------------------------
 
+const THREE_TIER_DEFAULTS = {
+  ctCoefficient: 40,
+  dayPrice: 278,
+  peakPrice: 417,
+  nightPrice: 168,
+  peakPowerCoeff: 150,
+  peakCapacityPrice: 16275,
+  vatRate: 0.1,
+};
+
+function parseMeterDate(dateStr: string | undefined, fallback: Date): Date {
+  if (!dateStr) return excelDay(fallback);
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(dateStr.trim());
+  if (!m) return excelDay(fallback);
+  return new Date(Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3])));
+}
+
+function parseMeterTime(timeStr: string | undefined, dateStr: string | undefined, fallback: Date): Date {
+  const src = timeStr?.trim() || (dateStr?.includes(' ') ? dateStr.split(' ')[1]?.trim() : '');
+  if (src) {
+    const m = /^(\d{1,2}):(\d{2})(?::(\d{2}))?/.exec(src);
+    if (m) {
+      return new Date(Date.UTC(1899, 11, 30, Number(m[1]), Number(m[2]), Number(m[3] ?? 0)));
+    }
+  }
+  return new Date(Date.UTC(1899, 11, 30, fallback.getHours(), fallback.getMinutes(), fallback.getSeconds()));
+}
+
 function buildSummarySheet(wb: ExcelJS.Workbook, ctx: Ctx) {
   const { params, totals } = ctx;
   const st = params.station;
@@ -325,13 +404,16 @@ function buildSummarySheet(wb: ExcelJS.Workbook, ctx: Ctx) {
     },
   });
   ws.views = [{ showGridLines: false }];
-  ws.columns = [{ width: 35.66 }, { width: 17.55 }, { width: 9.01 }, { width: 32.66 }, { width: 17.55 }];
+  ws.columns = [{ width: 35.66 }, { width: 17.55 }, { width: 11 }, { width: 30.66 }, { width: 17.55 }];
 
   const clientName = params.client?.name || 'Станц эзэмшигч';
+  const siteOwnerName = params.siteOwnerName?.trim() || clientName;
   const fromDate = parseYmd(params.from);
   const reportNumber =
     params.reportNumber ||
-    `${reportCode(st)} ${fromDate.getFullYear()}-${String(fromDate.getMonth() + 1).padStart(2, '0')}`;
+    `${fromDate.getFullYear()}-${String(fromDate.getMonth() + 1).padStart(2, '0')}`;
+  const periodStartDate = params.periodStartOverride ? new Date(params.periodStartOverride) : (ctx.firstStart ?? fromDate);
+  const periodEndDate = params.periodEndOverride ? new Date(params.periodEndOverride) : (ctx.lastStop ?? ctx.periodEnd);
 
   // Title
   putMerged(ws, 'A1:E1', 'EV ЦЭНЭГЛЭХ СТАНЦЫН ТАЙЛАН', {
@@ -361,15 +443,15 @@ function buildSummarySheet(wb: ExcelJS.Workbook, ctx: Ctx) {
 
   putMerged(ws, 'A8:A9', 'Тайлант хугацаа', label({ bold: true }));
   putMerged(ws, 'B8:C8', 'Эхлэх огноо цаг', val());
-  putMerged(ws, 'D8:E8', excelLocal(ctx.firstStart ?? fromDate), label({ fmt: FMT.dateTime }));
+  putMerged(ws, 'D8:E8', excelLocal(periodStartDate), label({ fmt: FMT.dateTime }));
   putMerged(ws, 'B9:C9', 'Дуусах огноо цаг', val());
-  putMerged(ws, 'D9:E9', excelLocal(ctx.periodEnd), label({ fmt: FMT.dateTime }));
+  putMerged(ws, 'D9:E9', excelLocal(periodEndDate), label({ fmt: FMT.dateTime }));
 
   putMerged(ws, 'A10:A11', 'Тайлан хүлээн авагч', label({ bold: true }));
   putMerged(ws, 'B10:C10', 'Станц эзэмшигч', val());
   putMerged(ws, 'D10:E10', clientName, label());
   putMerged(ws, 'B11:C11', 'Талбай эзэмшигч', val());
-  putMerged(ws, 'D11:E11', f('D10', clientName), label());
+  putMerged(ws, 'D11:E11', siteOwnerName === clientName ? f('D10', clientName) : siteOwnerName, label());
 
   put(ws, 'A12', 'Оператор', label({ bold: true }));
   putMerged(ws, 'B12:E12', params.operatorName || DEFAULTS.operatorName, label());
@@ -377,7 +459,7 @@ function buildSummarySheet(wb: ExcelJS.Workbook, ctx: Ctx) {
   putMerged(ws, 'B13:E13', params.platformName || DEFAULTS.platformName, label());
   ws.getRow(14).height = 9;
 
-  // 2. Эрчим хүчний төлбөрийн тооцоолол --------------------------------------
+  // 2. Эрчим хүчний төлбөрийн тооцоолол (Dynamic: 1, 2, 3... meters; single or 3-tier)
   sectionTitle(ws, 'A15', '2. Эрчим хүчний төлбөрийн тооцоолол');
   put(ws, 'A16', 'Үзүүлэлт', header());
   put(ws, 'B16', 'Утга', header());
@@ -385,10 +467,8 @@ function buildSummarySheet(wb: ExcelJS.Workbook, ctx: Ctx) {
   put(ws, 'E16', 'Утга 1', header());
   ws.getRow(16).height = 22.05;
 
-  const meterDay = excelDay(ctx.periodEnd);
-  const meterTime = new Date(
-    Date.UTC(1899, 11, 30, ctx.periodEnd.getHours(), ctx.periodEnd.getMinutes()),
-  );
+  const meterDay = parseMeterDate(params.meterDate, ctx.periodEnd);
+  const meterTime = parseMeterTime(params.meterTime, params.meterDate, ctx.periodEnd);
   put(ws, 'A17', 'Тоолуурын заалтын огноо', label());
   put(ws, 'B17', meterDay, val({ fmt: FMT.date }));
   putMerged(ws, 'C17:D17', '', label());
@@ -398,81 +478,264 @@ function buildSummarySheet(wb: ExcelJS.Workbook, ctx: Ctx) {
   putMerged(ws, 'C18:D18', '', label());
   put(ws, 'E18', null, val());
 
-  putMerged(ws, 'A19:A20', 'Тоолуурын заалт', label());
-  put(ws, 'B19', params.meterStartReading ?? null, val({ fmt: FMT.num2, bg: 'FFFFF8E1' }));
-  putMerged(ws, 'C19:D19', 'Эхний заалт', label());
-  put(ws, 'E19', null, val());
-  put(ws, 'B20', params.meterEndReading ?? null, val({ fmt: FMT.num2, bg: 'FFFFF8E1' }));
-  putMerged(ws, 'C20:D20', 'Эцсийн заалт', label());
-  put(ws, 'E20', null, val());
+  const meters: RevenueReportMeter[] =
+    params.meters && params.meters.length > 0
+      ? params.meters
+      : [
+          {
+            type: 'single',
+            startReading: params.meterStartReading,
+            endReading: params.meterEndReading,
+          },
+        ];
 
-  const elecRows: [number, string, string, string, ExcelJS.CellValue, string][] = [
-    [21, 'Тоолуурын хэрэглээ (кВтц)', '(B20-B19)*E21*1.025', DEFAULTS.ctCoefficientLabel, DEFAULTS.ctCoefficient, FMT.num2],
-    [22, 'Ашигласан цахилгааны үнэ', 'B21*E22', 'Нэгж Квтц-ийн суурь үнэ', DEFAULTS.basePricePerKwh, FMT.num2],
-    [23, 'Cosinus фи-гийн алдагдал', 'B22*E23', `Cosinus фи-гийн алдагдал ${DEFAULTS.cosPhiLoss * 100}%`, DEFAULTS.cosPhiLoss, FMT.pct],
-    [24, 'Чадал', 'B20/365*E24', '365 хоногоор тооцох', f(DEFAULTS.capacityChargeFormula), FMT.num2],
-    [25, 'Сэргээгдэх эрчим хүч', 'B20*E25', '', DEFAULTS.renewablePerKwh, FMT.num2],
-  ];
-  for (const [r, name, formula, desc, input, inputFmt] of elecRows) {
-    put(ws, `A${r}`, name, label());
-    put(ws, `B${r}`, f(formula), val({ fmt: FMT.num2 }));
-    putMerged(ws, `C${r}:D${r}`, desc, label());
-    put(ws, `E${r}`, input, val({ fmt: inputFmt, align: 'center' }));
+  let curRow = 19;
+  const meterKwhCells: string[] = [];
+  const meterCostCells: string[] = [];
+  const hasMultipleMeters = meters.length > 1;
+
+  meters.forEach((meter, idx) => {
+    const meterTitle = meter.label?.trim() || `Тоолуур ${idx + 1}`;
+    if (meter.type === 'three_tier') {
+      // 3-tier meter: Өдөр / Оргил / Шөнө
+      const hdrRow = curRow;
+      put(ws, `A${hdrRow}`, hasMultipleMeters ? `${meterTitle} (Өдөр/Оргил/Шөнө)` : 'Тоолуурын хэрэглээ', total({ align: 'left', indent: 1 }));
+      put(ws, `B${hdrRow}`, 'Өдөр', total({ align: 'center' }));
+      put(ws, `C${hdrRow}`, 'Оргил', total({ align: 'center' }));
+      put(ws, `D${hdrRow}`, 'Шөнө', total({ align: 'center' }));
+      put(ws, `E${hdrRow}`, 'НИЙТ', total({ align: 'center' }));
+      curRow++;
+
+      const rStart = curRow++;
+      const rEnd = curRow++;
+      const rDiff = curRow++;
+      const rCoeff = curRow++;
+      const rKwh = curRow++;
+      const rTariff = curRow++;
+      const rEnergyCost = curRow++;
+      const rPeakCoeff = curRow++;
+      const rCapTariff = curRow++;
+      const rCapCost = curRow++;
+      const rSubTotal = curRow++;
+      const rVat = curRow++;
+      const rTotal = curRow++;
+
+      const ctCoeff = meter.ctCoefficient ?? THREE_TIER_DEFAULTS.ctCoefficient;
+      const dayP = meter.dayPrice ?? THREE_TIER_DEFAULTS.dayPrice;
+      const peakP = meter.peakPrice ?? THREE_TIER_DEFAULTS.peakPrice;
+      const nightP = meter.nightPrice ?? THREE_TIER_DEFAULTS.nightPrice;
+      const peakPowerCoeff = meter.peakPowerCoeff ?? THREE_TIER_DEFAULTS.peakPowerCoeff;
+      const peakCapPrice = meter.peakCapacityPrice ?? THREE_TIER_DEFAULTS.peakCapacityPrice;
+      const vatRate = meter.vatRate ?? THREE_TIER_DEFAULTS.vatRate;
+
+      put(ws, `A${rStart}`, 'Эхний заалт', label());
+      put(ws, `B${rStart}`, meter.dayStart ?? 0, val({ fmt: FMT.num2, bg: 'FFFFF8E1' }));
+      put(ws, `C${rStart}`, meter.peakStart ?? 0, val({ fmt: FMT.num2, bg: 'FFFFF8E1' }));
+      put(ws, `D${rStart}`, meter.nightStart ?? 0, val({ fmt: FMT.num2, bg: 'FFFFF8E1' }));
+      put(ws, `E${rStart}`, f(`SUM(B${rStart}:D${rStart})`), val({ fmt: FMT.num2 }));
+
+      put(ws, `A${rEnd}`, 'Эцсийн заалт', label());
+      put(ws, `B${rEnd}`, meter.dayEnd ?? 0, val({ fmt: FMT.num2, bg: 'FFFFF8E1' }));
+      put(ws, `C${rEnd}`, meter.peakEnd ?? 0, val({ fmt: FMT.num2, bg: 'FFFFF8E1' }));
+      put(ws, `D${rEnd}`, meter.nightEnd ?? 0, val({ fmt: FMT.num2, bg: 'FFFFF8E1' }));
+      put(ws, `E${rEnd}`, null, val());
+
+      put(ws, `A${rDiff}`, 'Тоолуурын заалт', label());
+      put(ws, `B${rDiff}`, f(`B${rEnd}-B${rStart}`), val({ fmt: FMT.num2 }));
+      put(ws, `C${rDiff}`, f(`C${rEnd}-C${rStart}`), val({ fmt: FMT.num2 }));
+      put(ws, `D${rDiff}`, f(`D${rEnd}-D${rStart}`), val({ fmt: FMT.num2 }));
+      put(ws, `E${rDiff}`, null, val());
+
+      put(ws, `A${rCoeff}`, 'Тоолуурын коэффициент', label());
+      put(ws, `B${rCoeff}`, ctCoeff, val({ fmt: FMT.int, align: 'center' }));
+      put(ws, `C${rCoeff}`, ctCoeff, val({ fmt: FMT.int, align: 'center' }));
+      put(ws, `D${rCoeff}`, ctCoeff, val({ fmt: FMT.int, align: 'center' }));
+      put(ws, `E${rCoeff}`, null, val());
+
+      put(ws, `A${rKwh}`, 'Хэрэглээ (кВтц)', label({ bold: true }));
+      put(ws, `B${rKwh}`, f(`B${rDiff}*B${rCoeff}`), val({ fmt: FMT.num2 }));
+      put(ws, `C${rKwh}`, f(`C${rDiff}*C${rCoeff}`), val({ fmt: FMT.num2 }));
+      put(ws, `D${rKwh}`, f(`D${rDiff}*D${rCoeff}`), val({ fmt: FMT.num2 }));
+      put(ws, `E${rKwh}`, f(`SUM(B${rKwh}:D${rKwh})`), val({ bold: true, fmt: FMT.num2 }));
+
+      put(ws, `A${rTariff}`, 'Тариф төг/кВт.ц', label());
+      put(ws, `B${rTariff}`, dayP, val({ fmt: FMT.num2, align: 'center' }));
+      put(ws, `C${rTariff}`, peakP, val({ fmt: FMT.num2, align: 'center' }));
+      put(ws, `D${rTariff}`, nightP, val({ fmt: FMT.num2, align: 'center' }));
+      put(ws, `E${rTariff}`, null, val());
+
+      put(ws, `A${rEnergyCost}`, 'Ашигласан цахилгааны үнэ', label());
+      put(ws, `B${rEnergyCost}`, f(`B${rKwh}*B${rTariff}`), val({ fmt: FMT.money }));
+      put(ws, `C${rEnergyCost}`, f(`C${rKwh}*C${rTariff}`), val({ fmt: FMT.money }));
+      put(ws, `D${rEnergyCost}`, f(`D${rKwh}*D${rTariff}`), val({ fmt: FMT.money }));
+      put(ws, `E${rEnergyCost}`, f(`SUM(B${rEnergyCost}:D${rEnergyCost})`), val({ bold: true, fmt: FMT.money }));
+
+      put(ws, `A${rPeakCoeff}`, 'Оргил цагийн тарифын коэффициент', label());
+      put(ws, `B${rPeakCoeff}`, peakPowerCoeff, val({ fmt: FMT.int, align: 'center' }));
+      putMerged(ws, `C${rPeakCoeff}:D${rPeakCoeff}`, 'Оргил цагийн хэрэглээ (кВтц)', label());
+      put(ws, `E${rPeakCoeff}`, f(`C${rKwh}`), val({ fmt: FMT.num2 }));
+
+      put(ws, `A${rCapTariff}`, 'Тариф төг/кВт.ц', label());
+      put(ws, `B${rCapTariff}`, peakCapPrice, val({ fmt: FMT.moneyInt, align: 'center' }));
+      putMerged(ws, `C${rCapTariff}:E${rCapTariff}`, '', label());
+
+      put(ws, `A${rCapCost}`, 'ЦЭХ чадлын төлбөр', label());
+      put(ws, `B${rCapCost}`, f(`IFERROR(E${rPeakCoeff}/B${rPeakCoeff}*B${rCapTariff},0)`), val({ fmt: FMT.money }));
+      putMerged(ws, `C${rCapCost}:E${rCapCost}`, '', label());
+
+      put(ws, `A${rSubTotal}`, 'Нийт цахилгааны дүн', label({ bold: true }));
+      put(ws, `B${rSubTotal}`, f(`E${rEnergyCost}+B${rCapCost}`), val({ bold: true, fmt: FMT.money }));
+      putMerged(ws, `C${rSubTotal}:E${rSubTotal}`, '', label());
+
+      put(ws, `A${rVat}`, `НӨАТ, ${Math.round(vatRate * 100)}%`, label());
+      put(ws, `B${rVat}`, f(`B${rSubTotal}*E${rVat}`), val({ fmt: FMT.money }));
+      putMerged(ws, `C${rVat}:D${rVat}`, '', label());
+      put(ws, `E${rVat}`, vatRate, val({ fmt: FMT.pct, align: 'center' }));
+
+      put(ws, `A${rTotal}`, hasMultipleMeters ? `${meterTitle} нийт дүн (НӨАТ-тай)` : 'Нийт цахилгааны дүн, НӨАТ-тай', total({ align: 'left', indent: 1 }));
+      put(ws, `B${rTotal}`, f(`B${rSubTotal}+B${rVat}`), total({ align: 'right', fmt: FMT.money }));
+      putMerged(ws, `C${rTotal}:E${rTotal}`, '', total());
+
+      meterKwhCells.push(`E${rKwh}`);
+      meterCostCells.push(`B${rTotal}`);
+    } else {
+      // Single-tier meter (standard CT meter)
+      if (hasMultipleMeters) {
+        putMerged(ws, `A${curRow}:E${curRow}`, meterTitle, total({ align: 'left', indent: 1 }));
+        curRow++;
+      }
+      const rStart = curRow++;
+      const rEnd = curRow++;
+      const rKwh = curRow++;
+      const rBase = curRow++;
+      const rCos = curRow++;
+      const rCap = curRow++;
+      const rRen = curRow++;
+      const rTotal = curRow++;
+
+      putMerged(ws, `A${rStart}:A${rEnd}`, 'Тоолуурын заалт', label());
+      put(ws, `B${rStart}`, meter.startReading ?? null, val({ fmt: FMT.num2, bg: 'FFFFF8E1' }));
+      putMerged(ws, `C${rStart}:D${rStart}`, 'Эхний заалт', label());
+      put(ws, `E${rStart}`, null, val());
+      put(ws, `B${rEnd}`, meter.endReading ?? null, val({ fmt: FMT.num2, bg: 'FFFFF8E1' }));
+      putMerged(ws, `C${rEnd}:D${rEnd}`, 'Эцсийн заалт', label());
+      put(ws, `E${rEnd}`, null, val());
+
+      const ctCoeff = meter.ctCoefficient ?? DEFAULTS.ctCoefficient;
+      const basePrice = meter.basePrice ?? DEFAULTS.basePricePerKwh;
+      const cosPhi = meter.cosPhiLoss ?? DEFAULTS.cosPhiLoss;
+      const capFormula = meter.capacityChargeFormula ?? DEFAULTS.capacityChargeFormula;
+      const renPerKwh = meter.renewablePerKwh ?? DEFAULTS.renewablePerKwh;
+
+      const elecRows: [number, string, string, string, ExcelJS.CellValue, string][] = [
+        [rKwh, 'Тоолуурын хэрэглээ (кВтц)', `(B${rEnd}-B${rStart})*E${rKwh}*1.025`, DEFAULTS.ctCoefficientLabel, ctCoeff, FMT.num2],
+        [rBase, 'Ашигласан цахилгааны үнэ', `B${rKwh}*E${rBase}`, 'Нэгж Квтц-ийн суурь үнэ', basePrice, FMT.num2],
+        [rCos, 'Cosinus фи-гийн алдагдал', `B${rBase}*E${rCos}`, `Cosinus фи-гийн алдагдал ${Math.round(cosPhi * 100)}%`, cosPhi, FMT.pct],
+        [rCap, 'Чадал', `B${rEnd}/365*E${rCap}`, '365 хоногоор тооцох', f(capFormula), FMT.num2],
+        [rRen, 'Сэргээгдэх эрчим хүч', `B${rEnd}*E${rRen}`, '', renPerKwh, FMT.num2],
+      ];
+      for (const [r, name, formula, desc, input, inputFmt] of elecRows) {
+        put(ws, `A${r}`, name, label());
+        put(ws, `B${r}`, f(formula), val({ fmt: FMT.num2 }));
+        putMerged(ws, `C${r}:D${r}`, desc, label());
+        put(ws, `E${r}`, input, val({ fmt: inputFmt, align: 'center' }));
+      }
+      put(ws, `A${rTotal}`, hasMultipleMeters ? `${meterTitle} цахилгааны төлбөр` : 'Цахилгааны нийт төлбөр', total({ align: 'left', indent: 1 }));
+      put(ws, `B${rTotal}`, f(`B${rBase}+B${rCos}+B${rCap}+B${rRen}`), total({ align: 'right', fmt: FMT.money }));
+      putMerged(ws, `C${rTotal}:D${rTotal}`, 'Тоолуурын нэхэмжлэлийн дүн', total({ align: 'left', indent: 1 }));
+      put(ws, `E${rTotal}`, null, total());
+
+      meterKwhCells.push(`B${rKwh}`);
+      meterCostCells.push(`B${rTotal}`);
+    }
+  });
+
+  let totalMeterKwhRef = meterKwhCells[0];
+  let totalMeterCostRef = meterCostCells[0];
+
+  if (hasMultipleMeters) {
+    const rSumKwh = curRow++;
+    const rSumCost = curRow++;
+    put(ws, `A${rSumKwh}`, 'Нийт тоолуурын хэрэглээ (кВтц)', total({ align: 'left', indent: 1 }));
+    put(ws, `B${rSumKwh}`, f(meterKwhCells.join('+')), total({ align: 'right', fmt: FMT.num2 }));
+    putMerged(ws, `C${rSumKwh}:E${rSumKwh}`, `${meters.length} тоолуурын нийлбэр`, total({ align: 'left', indent: 1 }));
+
+    put(ws, `A${rSumCost}`, 'Цахилгааны нийт төлбөр', total({ align: 'left', indent: 1 }));
+    put(ws, `B${rSumCost}`, f(meterCostCells.join('+')), total({ align: 'right', fmt: FMT.money }));
+    putMerged(ws, `C${rSumCost}:E${rSumCost}`, 'Бүх тоолуурын нэхэмжлэлийн нийт дүн', total({ align: 'left', indent: 1 }));
+
+    totalMeterKwhRef = `B${rSumKwh}`;
+    totalMeterCostRef = `B${rSumCost}`;
   }
-  put(ws, 'A26', 'Цахилгааны нийт төлбөр', total({ align: 'left', indent: 1 }));
-  put(ws, 'B26', f('B22+B23+B24+B25'), total({ align: 'right', fmt: FMT.money }));
-  putMerged(ws, 'C26:D26', 'Тоолуурын нэхэмжлэлийн дүн', total({ align: 'left', indent: 1 }));
-  put(ws, 'E26', null, total());
-  ws.getRow(27).height = 7.8;
+
+  ws.getRow(curRow).height = 7.8;
+  curRow++;
 
   // 3. Платформын үзүүлэлт ---------------------------------------------------
-  sectionTitle(ws, 'A28', '3. Платформын үзүүлэлт');
-  put(ws, 'A29', 'Үзүүлэлт', header());
-  put(ws, 'B29', 'Утга', header());
-  putMerged(ws, 'C29:E29', 'Тайлбар', header());
-  ws.getRow(29).height = 22.05;
+  const sec3Title = curRow++;
+  const sec3Hdr = curRow++;
+  const rSessCount = curRow++;
+  const rSessStart = curRow++;
+  const rSessEnd = curRow++;
+  const rPlatKwh = curRow++;
+  const rGrossSales = curRow++;
+  const sec3Spacer = curRow++;
 
-  put(ws, 'A30', 'Дууссан нийт цэнэглэлт', label());
-  put(ws, 'B30', f(`COUNT(${ctx.col('B')})`, ctx.sessions.length), val({ fmt: FMT.int }));
-  putMerged(ws, 'C30:E30', 'Тайлант хугацаанд', label());
-  putMerged(ws, 'A31:A32', 'Тайлант хугацааны цэнэглэлт', label());
-  put(ws, 'B31', 'Эхлэх огноо цаг', val());
-  putMerged(ws, 'C31:E31', excelLocal(ctx.firstStart), label({ fmt: FMT.dateTime }));
-  put(ws, 'B32', 'Дуусах огноо цаг', val());
-  putMerged(ws, 'C32:E32', excelLocal(ctx.lastStop), label({ fmt: FMT.dateTime }));
-  put(ws, 'A33', 'Платформын хэрэглээ (кВтц)', label());
-  put(ws, 'B33', f(`SUM(${ctx.col('L')})`, totals.kwh), val({ fmt: FMT.num2 }));
-  putMerged(ws, 'C33:E33', 'DC гаралт', label());
-  put(ws, 'A34', 'Нийт борлуулалт', total({ align: 'left', indent: 1 }));
-  put(ws, 'B34', f('B38', totals.gross), total({ align: 'right', fmt: FMT.money }));
-  putMerged(ws, 'C34:E34', 'Цэнэглэлтийн орлого', total({ align: 'left', indent: 1 }));
-  ws.getRow(35).height = 8.4;
+  sectionTitle(ws, `A${sec3Title}`, '3. Платформын үзүүлэлт');
+  put(ws, `A${sec3Hdr}`, 'Үзүүлэлт', header());
+  put(ws, `B${sec3Hdr}`, 'Утга', header());
+  putMerged(ws, `C${sec3Hdr}:E${sec3Hdr}`, 'Тайлбар', header());
+  ws.getRow(sec3Hdr).height = 22.05;
+
+  put(ws, `A${rSessCount}`, 'Дууссан нийт сесс', label());
+  put(ws, `B${rSessCount}`, f(`COUNT(${ctx.col('B')})`, ctx.sessions.length), val({ fmt: FMT.int }));
+  putMerged(ws, `C${rSessCount}:E${rSessCount}`, 'Тайлант хугацаанд', label());
+  putMerged(ws, `A${rSessStart}:A${rSessEnd}`, 'Тайлант хугацааны цэнэглэлт', label());
+  put(ws, `B${rSessStart}`, 'Эхлэх огноо цаг', val());
+  putMerged(ws, `C${rSessStart}:E${rSessStart}`, excelLocal(periodStartDate), label({ fmt: FMT.dateTime }));
+  put(ws, `B${rSessEnd}`, 'Дуусах огноо цаг', val());
+  putMerged(ws, `C${rSessEnd}:E${rSessEnd}`, excelLocal(periodEndDate), label({ fmt: FMT.dateTime }));
+  put(ws, `A${rPlatKwh}`, 'Платформын хэрэглээ (кВтц)', label());
+  put(ws, `B${rPlatKwh}`, f(`SUM(${ctx.col('L')})`, totals.kwh), val({ fmt: FMT.num2 }));
+  putMerged(ws, `C${rPlatKwh}:E${rPlatKwh}`, 'Бодит DC гаралт', label());
 
   // 4. Орлого, зардлын тооцоо ------------------------------------------------
-  sectionTitle(ws, 'A36', '4. Орлого, зардлын тооцоо');
-  put(ws, 'A37', 'Үзүүлэлт', header());
-  put(ws, 'B37', 'Дүн', header());
-  putMerged(ws, 'C37:D37', 'Тайлбар', header());
-  put(ws, 'E37', 'Утга 1', header());
-  ws.getRow(37).height = 22.05;
+  ws.getRow(sec3Spacer).height = 8.4;
+  const sec4Title = curRow++;
+  const sec4Hdr = curRow++;
+  const rRev = curRow++;
+  const rElecCost = curRow++;
+  const rQpay = curRow++;
+  const rSimCost = curRow++;
+
+  // Back-fill "Нийт борлуулалт" formula once rRev is known
+  put(ws, `A${rGrossSales}`, 'Нийт борлуулалт', total({ align: 'left', indent: 1 }));
+  put(ws, `B${rGrossSales}`, f(`B${rRev}`, totals.gross), total({ align: 'right', fmt: FMT.money }));
+  putMerged(ws, `C${rGrossSales}:E${rGrossSales}`, 'Цэнэглэлтийн орлого', total({ align: 'left', indent: 1 }));
+
+  sectionTitle(ws, `A${sec4Title}`, '4. Орлого, зардлын тооцоо');
+  put(ws, `A${sec4Hdr}`, 'Үзүүлэлт', header());
+  put(ws, `B${sec4Hdr}`, 'Дүн', header());
+  putMerged(ws, `C${sec4Hdr}:D${sec4Hdr}`, 'Тайлбар', header());
+  put(ws, `E${sec4Hdr}`, 'Утга 1', header());
+  ws.getRow(sec4Hdr).height = 22.05;
 
   const qpayRate = params.qpayRate ?? DEFAULTS.qpayRate;
   const otherCost = params.otherDirectCosts ?? DEFAULTS.otherDirectCost;
   const costRows: [number, string, ExcelJS.CellValue, string, ExcelJS.CellValue, string?][] = [
-    [38, 'Цэнэглэлтийн орлого', f(`SUM(${ctx.col('Q')})`, totals.gross), `Платформын тайлан, ${ctx.sessions.length} цэнэглэлт`, null],
-    [39, 'Цахилгааны зардал', f('-B26'), 'Тоолуурын нэхэмжлэл', null],
-    [40, 'QPay шимтгэл', f('-B38*E40', -round2(totals.gross * qpayRate)), `Орлогын ${qpayRate * 100}%`, qpayRate, FMT.pct],
-    [41, 'Бусад шууд зардал', f('-E41', -otherCost), DEFAULTS.otherDirectCostLabel, otherCost, FMT.num2],
+    [rRev, 'Цэнэглэлтийн орлого', f(`SUM(${ctx.col('Q')})`, totals.gross), `Платформын тайлан, ${ctx.sessions.length} цэнэглэлт`, null],
+    [rElecCost, 'Цахилгааны зардал', f(`-${totalMeterCostRef}`), 'Тоолуурын нэхэмжлэл', null],
+    [rQpay, 'QPay шимтгэл', f(`-B${rRev}*E${rQpay}`, -round2(totals.gross * qpayRate)), `Орлогын ${qpayRate * 100}%`, qpayRate, FMT.pct],
+    [rSimCost, 'Бусад шууд зардал', f(`-E${rSimCost}`, -otherCost), DEFAULTS.otherDirectCostLabel, otherCost, FMT.num2],
   ];
   const extraCosts = (params.extraCosts ?? []).filter((c) => c.amount || c.label.trim());
-  extraCosts.forEach((c, i) => {
-    const row = 42 + i;
-    // The name typed in the form is the row's title; the description says what kind of cost it is.
+  extraCosts.forEach((c) => {
+    const row = curRow++;
     costRows.push([row, c.label.trim() || 'Бусад зардал', f(`-E${row}`, -c.amount), c.note?.trim() || 'Бусад зардал', c.amount, FMT.num2]);
   });
-  const lastCostRow = 41 + extraCosts.length;
-  const totalCostRow = lastCostRow + 1;
-  const netRow = totalCostRow + 1;
+  const lastCostRow = curRow - 1;
+  const totalCostRow = curRow++;
+  const netRow = curRow++;
   for (const [r, name, value, desc, input, inputFmt] of costRows) {
     put(ws, `A${r}`, name, label());
     put(ws, `B${r}`, value, val({ fmt: FMT.money }));
@@ -480,16 +743,15 @@ function buildSummarySheet(wb: ExcelJS.Workbook, ctx: Ctx) {
     put(ws, `E${r}`, input, val({ fmt: inputFmt, align: 'center' }));
   }
   put(ws, `A${totalCostRow}`, 'Нийт шууд зардал', label({ bold: true }));
-  put(ws, `B${totalCostRow}`, f(`SUM(B39:B${lastCostRow})`), val({ bold: true, fmt: FMT.money }));
+  put(ws, `B${totalCostRow}`, f(`SUM(B${rElecCost}:B${lastCostRow})`), val({ bold: true, fmt: FMT.money }));
   putMerged(ws, `C${totalCostRow}:D${totalCostRow}`, '', label());
   put(ws, `E${totalCostRow}`, null, val());
   put(ws, `A${netRow}`, 'Хуваарилагдах орлого', total({ align: 'left', indent: 1 }));
-  put(ws, `B${netRow}`, f(`B38+B${totalCostRow}`), total({ align: 'right', fmt: FMT.money }));
+  put(ws, `B${netRow}`, f(`B${rRev}+B${totalCostRow}`), total({ align: 'right', fmt: FMT.money }));
   putMerged(ws, `C${netRow}:D${netRow}`, 'Хувь тооцох суурь', total({ align: 'left', indent: 1 }));
   put(ws, `E${netRow}`, null, total());
 
   // 5. Орлого хуваарилалт ----------------------------------------------------
-  // Rows below shift down by one for every extra cost line.
   const allocTitleRow = netRow + 2;
   const allocHeaderRow = allocTitleRow + 1;
   const firstRecipient = allocHeaderRow + 1;
@@ -502,21 +764,30 @@ function buildSummarySheet(wb: ExcelJS.Workbook, ctx: Ctx) {
   const clientShare =
     params.clientShare ??
     (params.client?.feePercent != null ? round2((100 - params.client.feePercent) / 100) : 0.8);
-  const recipients = [
-    {
-      name: clientName,
-      bank: params.client?.payoutAccount?.bankName ?? '',
-      account: params.client?.payoutAccount?.accountNumber ?? '',
-      share: clientShare,
-    },
-    ...PLATFORM_RECIPIENTS.map((p) => ({ ...p, share: round2((1 - clientShare) * p.weight * 1000) / 1000 })),
-  ];
+  const recipients: RevenueReportRecipient[] =
+    params.recipients && params.recipients.length > 0
+      ? params.recipients
+      : [
+          {
+            name: clientName,
+            bank: params.client?.payoutAccount?.bankName ?? '',
+            account: params.client?.payoutAccount?.accountNumber ?? '',
+            share: clientShare,
+          },
+          ...PLATFORM_RECIPIENTS.map((p) => ({
+            name: p.name,
+            bank: p.bank,
+            account: p.account,
+            share: round2((1 - clientShare) * p.weight * 1000) / 1000,
+          })),
+        ];
+
   let r = firstRecipient;
   for (const rc of recipients) {
     put(ws, `A${r}`, rc.name, label({ wrap: true }));
     put(ws, `B${r}`, f(`$B$${netRow}*E${r}`), val({ fmt: FMT.money }));
-    put(ws, `C${r}`, rc.bank, val({ align: 'center' }));
-    put(ws, `D${r}`, rc.account, val({ align: 'center' }));
+    put(ws, `C${r}`, rc.bank ?? '', val({ align: 'center' }));
+    put(ws, `D${r}`, rc.account ?? '', val({ align: 'center' }));
     put(ws, `E${r}`, rc.share, val({ align: 'center', fmt: FMT.pct1 }));
     r++;
   }
@@ -539,10 +810,10 @@ function buildSummarySheet(wb: ExcelJS.Workbook, ctx: Ctx) {
   ws.getRow(t + 1).height = 22.05;
   const a = t + 2;
   const recon: [string, string, string, string, string, string][] = [
-    ['Тоолуурын хэрэглээ (кВтц)', 'B21', FMT.num2, 'Цахилгааны өртөг, 1 кВтц', 'IFERROR(B26/B21,0)', FMT.perKwh],
-    ['Платформын хэрэглээ (кВтц)', 'B33', FMT.num2, 'Дундаж борлуулалтын үнэ, 1 кВтц', 'IFERROR(B38/B33,0)', FMT.perKwh],
-    ['Зөрүү (кВтц)', `B${a}-B${a + 1}`, FMT.num2, 'Цэвэр орлого, 1 кВтц', `IFERROR(B${netRow}/B33,0)`, FMT.perKwh],
-    ['Зөрүү / тоолуур', `IFERROR(B${a + 2}/B${a},0)`, FMT.pct1Signed, 'Цэвэр орлогын хувь', `IFERROR(B${netRow}/B38,0)`, FMT.pct1Signed],
+    ['Тоолуурын хэрэглээ (кВтц)', totalMeterKwhRef, FMT.num2, 'Цахилгааны өртөг, 1 кВтц', `IFERROR(${totalMeterCostRef}/${totalMeterKwhRef},0)`, FMT.perKwh],
+    ['Платформын хэрэглээ (кВтц)', `B${rPlatKwh}`, FMT.num2, 'Дундаж борлуулалтын үнэ, 1 кВтц', `IFERROR(B${rRev}/B${rPlatKwh},0)`, FMT.perKwh],
+    ['Зөрүү (кВтц)', `B${a}-B${a + 1}`, FMT.num2, 'Цэвэр орлого, 1 кВтц', `IFERROR(B${netRow}/B${rPlatKwh},0)`, FMT.perKwh],
+    ['Зөрүү / тоолуур', `IFERROR(B${a + 2}/B${a},0)`, FMT.pct1Signed, 'Цэвэр орлогын хувь', `IFERROR(B${netRow}/B${rRev},0)`, FMT.pct1Signed],
   ];
   recon.forEach(([l1, f1, fmt1, l2, f2, fmt2], i) => {
     put(ws, `A${a + i}`, l1, label());
@@ -633,8 +904,11 @@ function buildAnalysisSheet(wb: ExcelJS.Workbook, ctx: Ctx) {
     return m;
   };
 
+  const sessionGunLabel = (s: RevenueReportSessionItem) =>
+    s.stationLabel ? `${s.stationLabel} · Буу ${connectorLetter(s.connectorId)}` : `Буу ${connectorLetter(s.connectorId)}`;
+
   // 1. Буугаар
-  const byConnector = groupBy((s) => `Буу ${connectorLetter(s.connectorId)}`);
+  const byConnector = groupBy(sessionGunLabel);
   groupTable(
     '1. Буугаар',
     'Буу',
@@ -767,7 +1041,7 @@ function buildSessionsSheet(wb: ExcelJS.Workbook, ctx: Ctx) {
     const values: ExcelJS.CellValue[] = [
       i + 1,
       s.id,
-      `Буу ${connectorLetter(s.connectorId)}`,
+      s.stationLabel ? `${s.stationLabel} · Буу ${connectorLetter(s.connectorId)}` : `Буу ${connectorLetter(s.connectorId)}`,
       excelLocal(s.startTimestamp),
       excelLocal(s.stopTimestamp),
       f(`INT(D${r})`, excelDay(s.startTimestamp)),

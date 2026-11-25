@@ -888,6 +888,42 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
       : [...stationGroups, updated];
     persistStationGroups(next);
     setActiveGroupId(id);
+    // Also persist this group's own settings (meters, owners, recipients, costs) immediately
+    try {
+      localStorage.setItem(
+        targetStorageKey(id, reportStationIds),
+        JSON.stringify({
+          end: meters[0]?.end?.trim() ?? '',
+          meters: meters.map((m) => ({
+            type: m.type,
+            label: m.label.trim(),
+            ctCoefficient: m.ctCoefficient.trim(),
+            basePrice: m.basePrice.trim(),
+            cosPhiPercent: m.cosPhiPercent.trim(),
+            capacityChargeFormula: m.capacityChargeFormula.trim(),
+            renewablePerKwh: m.renewablePerKwh.trim(),
+            dayPrice: m.dayPrice.trim(),
+            peakPrice: m.peakPrice.trim(),
+            nightPrice: m.nightPrice.trim(),
+            peakPowerCoeff: m.peakPowerCoeff.trim(),
+            peakCapacityPrice: m.peakCapacityPrice.trim(),
+            vatPercent: m.vatPercent.trim(),
+            end: m.end.trim(),
+            dayEnd: m.dayEnd.trim(),
+            peakEnd: m.peakEnd.trim(),
+            nightEnd: m.nightEnd.trim(),
+          })),
+          sim: simCostInput.trim(),
+          extra: extraCosts.filter((c) => c.label.trim() || c.amount.trim()),
+          stationOwner: stationOwnerInput.trim(),
+          siteOwner: siteOwnerInput.trim(),
+          recipients,
+          lastPeriodEnd,
+        }),
+      );
+    } catch {
+      // ignore storage errors
+    }
     toast.success(`«${name}» бүлэг хадгалагдлаа`);
   };
 
@@ -2743,7 +2779,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                         <option value="">Данс…</option>
                         {savedAccounts.map((acc) => (
                           <option key={acc.id} value={acc.id}>
-                            [{acc.role === 'OWN' ? 'Манай' : acc.role === 'OWNER' ? 'Эзэмшигч' : '3-дагч'}] {acc.name}
+                            {acc.name}
                           </option>
                         ))}
                       </Select>
@@ -2779,9 +2815,6 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                     {savedAccounts.map((acc) => (
                       <div key={acc.id} className="flex items-center justify-between gap-2 text-sm py-1">
                         <span className="truncate">
-                          <span className="font-mono text-xs px-1.5 py-0.5 rounded bg-[var(--color-surface-2)] mr-2">
-                            {acc.role === 'OWN' ? 'Манай' : acc.role === 'OWNER' ? 'Эзэмшигч' : '3-дагч'}
-                          </span>
                           <span className="font-medium">{acc.name}</span> · {acc.bank} · <span className="font-mono">{acc.account}</span>
                         </span>
                         <button
@@ -2800,7 +2833,7 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                       value={newAccName}
                       onChange={(e) => setNewAccName(e.target.value)}
                       placeholder="Нэр (ж.нь: СЕКУОИА...)"
-                      className="col-span-4 h-9 text-sm"
+                      className="col-span-5 h-9 text-sm"
                     />
                     <Input
                       value={newAccBank}
@@ -2812,17 +2845,8 @@ export function ReportsView({ user }: { user: SessionUser | null }) {
                       value={newAccNum}
                       onChange={(e) => setNewAccNum(e.target.value)}
                       placeholder="Дансны дугаар"
-                      className="col-span-3 h-9 text-sm"
+                      className="col-span-4 h-9 text-sm"
                     />
-                    <Select
-                      value={newAccRole}
-                      onChange={(e) => setNewAccRole(e.target.value as BankAccountRole)}
-                      className="col-span-2 h-9 text-xs"
-                    >
-                      <option value="OWN">Манай</option>
-                      <option value="OWNER">Эзэмшигч</option>
-                      <option value="THIRD_PARTY">3-дагч</option>
-                    </Select>
                     <Button type="button" variant="secondary" size="sm" onClick={addSavedAccount} className="col-span-1 h-9 text-sm">
                       +
                     </Button>

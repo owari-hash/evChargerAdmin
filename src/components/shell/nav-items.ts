@@ -10,6 +10,7 @@ import {
   Cpu,
   FileSpreadsheet,
   FileText,
+  Globe,
   LayoutDashboard,
   Megaphone,
   MessageSquareText,
@@ -68,6 +69,7 @@ export const CLIENT_NAV_SECTIONS: NavSection[] = [
     items: [
       { href: '/drivers', label: 'Жолооч', icon: Users, prefix: true },
       { href: '/partner-merchants', label: 'Мерчант', icon: KeyRound, minRole: 'OPERATOR', prefix: true },
+      { href: '/ocpi', label: 'OCPI Роаминг', icon: Globe, minRole: 'OPERATOR' },
     ],
   },
 ];
@@ -93,6 +95,7 @@ export const NAV_SECTIONS: NavSection[] = [
     items: [
       { href: '/drivers', label: 'Жолооч', icon: Users, prefix: true },
       { href: '/partner-merchants', label: 'Мерчант', icon: KeyRound, minRole: 'OPERATOR', prefix: true },
+      { href: '/ocpi', label: 'OCPI Роаминг', icon: Globe, minRole: 'OPERATOR' },
     ],
   },
   {

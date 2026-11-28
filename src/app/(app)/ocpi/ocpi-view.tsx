@@ -251,6 +251,19 @@ export function OcpiView({ canAdmin = false }: { canAdmin?: boolean }) {
     });
   }
 
+  async function handleSaveCustomName(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editTarget) return;
+    await runAction(`rename-${editTarget.locationId}`, async () => {
+      await api.patch(`ocpi/locations/${encodeURIComponent(editTarget.locationId)}`, {
+        customName: editCustomName.trim() || null,
+      });
+      toast.success('Станцын нэр хадгалагдлаа');
+      setEditTarget(null);
+      await mutateLocs();
+    });
+  }
+
   return (
     <div className="space-y-5">
       <Card>

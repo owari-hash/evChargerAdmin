@@ -9,6 +9,7 @@ import {
   CheckCircle2,
   Globe,
   Link2,
+  Pencil,
   Play,
   Receipt,
   RefreshCw,
@@ -73,6 +74,7 @@ interface OcpiLocationItem {
   id: string;
   locationId: string;
   name?: string;
+  customName?: string;
   address?: string;
   city?: string;
   evses?: Array<{
@@ -151,6 +153,8 @@ export function OcpiView({ canAdmin = false }: { canAdmin?: boolean }) {
 
   const [startTarget, setStartTarget] = React.useState<{ locationId: string; evseUid: string } | null>(null);
   const [startTokenUid, setStartTokenUid] = React.useState('TEST-ADMIN-01');
+  const [editTarget, setEditTarget] = React.useState<OcpiLocationItem | null>(null);
+  const [editCustomName, setEditCustomName] = React.useState('');
 
   const { data: statusData, mutate: mutateStatus } = useSWR<OcpiStatusResponse>(
     apiUrl('ocpi/status'),
@@ -412,7 +416,12 @@ export function OcpiView({ canAdmin = false }: { canAdmin?: boolean }) {
                         <TR key={`${loc.locationId}-${evse.uid}`}>
                           <TD className="font-mono text-xs">{evse.evse_id ?? evse.uid}</TD>
                           <TD>
-                            <div className="font-medium">{loc.name ?? loc.locationId}</div>
+                            <div className="font-medium">{loc.customName?.trim() || loc.name || loc.locationId}</div>
+                            {loc.customName?.trim() && loc.name && loc.customName.trim() !== loc.name && (
+                              <div className="text-[11px] text-[var(--color-fg-muted)]">
+                                Гуравдагч тал: {loc.name}
+                              </div>
+                            )}
                             <div className="text-xs text-[var(--color-fg-muted)]">{loc.address}</div>
                           </TD>
                           <TD className="font-mono text-xs">{evse.uid}</TD>
@@ -425,14 +434,26 @@ export function OcpiView({ canAdmin = false }: { canAdmin?: boolean }) {
                             {kw} · {conn0?.standard ?? '—'}
                           </TD>
                           <TD>
-                            <Button
-                              size="sm"
-                              variant="secondary"
-                              disabled={!connected || evse.status !== 'AVAILABLE'}
-                              onClick={() => setStartTarget({ locationId: loc.locationId, evseUid: evse.uid })}
-                            >
-                              <Play className="h-3 w-3" /> Эхлүүлэх
-                            </Button>
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => {
+                                  setEditTarget(loc);
+                                  setEditCustomName(loc.customName ?? loc.name ?? '');
+                                }}
+                              >
+                                <Pencil className="h-3 w-3" /> Нэр засах
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                disabled={!connected || evse.status !== 'AVAILABLE'}
+                                onClick={() => setStartTarget({ locationId: loc.locationId, evseUid: evse.uid })}
+                              >
+                                <Play className="h-3 w-3" /> Эхлүүлэх
+                              </Button>
+                            </div>
                           </TD>
                         </TR>
                       );
@@ -652,6 +673,41 @@ export function OcpiView({ canAdmin = false }: { canAdmin?: boolean }) {
             </Button>
             <Button type="submit" variant="primary" disabled={busy === 'start'}>
               <Play className="h-4 w-4" /> START_SESSION илгээх
+            </Button>
+          </div>
+        </form>
+      </Modal>
+
+      <Modal open={!!editTarget} onClose={() => setEditTarget(null)} title="Станцын нэр засах">
+        <form onSubmit={handleSaveCustomName} className="space-y-4">
+          <div className="text-xs text-[var(--color-fg-muted)] space-y-1">
+            <div>
+              Location ID: <span className="font-mono">{editTarget?.locationId}</span>
+            </div>
+            {editTarget?.name && (
+              <div>
+                Гуравдагч талын нэр: <span className="font-medium text-[var(--color-fg)]">{editTarget.name}</span>
+              </div>
+            )}
+          </div>
+          <div className="space-y-1.5">
+            <label className="text-xs font-medium">Манай системд харагдах нэр</label>
+            <Input
+              value={editCustomName}
+              onChange={(e) => setEditCustomName(e.target.value)}
+              placeholder={editTarget?.name || 'Станцын нэр оруулах'}
+              maxLength={120}
+            />
+            <p className="text-[11px] text-[var(--color-fg-muted)]">
+              Хоосон үлдээж хадгалбал гуравдагч талын анхны нэрээр харагдана. OCPI синк хийхэд энэ нэр устахгүй.
+            </p>
+          </div>
+          <div className="flex items-center justify-end gap-2">
+            <Button type="button" variant="ghost" onClick={() => setEditTarget(null)}>
+              Болих
+            </Button>
+            <Button type="submit" variant="primary" disabled={busy === `rename-${editTarget?.locationId}`}>
+              Хадгалах
             </Button>
           </div>
         </form>
